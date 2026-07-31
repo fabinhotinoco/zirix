@@ -99,12 +99,44 @@ Quitação   R$ 700  →  R$  70 comissão (sua conta)  +  R$ 630 (conta do guia
 Você nunca recebe e repassa. Sua receita tributável é só a comissão, e não há risco de você ficar
 devendo repasse a guia nenhum.
 
-**Prazo de quitação:** `app_settings.prazo_quitacao_dias` (padrão: 3 dias antes da pescaria), com
-override por guia. Não pago no prazo, a política de cancelamento decide o destino — o padrão é
-cancelar a reserva, reter o sinal e liberar a data para a lista de espera.
+**Contas envolvidas:** a **conta coletora da plataforma já existe** e é a sua — é dentro dela que se
+cria a aplicação Marketplace (client_id/client_secret). **Só os guias precisam conectar as contas
+deles**, por OAuth, uma única vez no onboarding.
+
+**Prazo de quitação:** `app_settings.prazo_quitacao_dias` (**padrão: 7 dias antes da pescaria**), com
+override por guia. O prazo é deliberadamente maior que a última faixa da política de cancelamento:
+assim, quando chega a janela em que a retenção é alta, **o dinheiro já está dentro da plataforma** —
+é isso que torna a retenção efetiva em vez de teórica. Não pago no prazo, a reserva é cancelada pela
+política e a data volta para a lista de espera.
 
 **Regra de porta:** guia sem Mercado Pago conectado **não consegue publicar agenda**. Sem isso, existiria
 reserva sem caminho de recebimento.
+
+### Cancelamento — motor de retenção
+
+Faixas configuráveis em `cancellation_rules`, com override por guia, congeladas em
+`bookings.politica_versao` no ato da reserva. Escala padrão proposta (dias corridos até a pescaria):
+
+| Antecedência | Retenção |
+|---|---|
+| ≥ 30 dias | só a taxa administrativa (5%) |
+| 15–29 dias | 25% |
+| 7–14 dias | 50% |
+| 3–6 dias | 75% |
+| < 48h ou não comparecimento | 100% |
+
+Três regras tornam essa escala defensável perante o CDC, e as três são obrigatórias:
+
+1. **`retencao = min(retencao_calculada, total_pago)`** — nunca há cobrança adicional após o cancelamento. Cobrar valor não pago é briga cara e de resultado incerto.
+2. **Devolução por revenda:** se a data cancelada for fechada por outro grupo, o valor retido é devolvido (menos a taxa administrativa), disparado pelo webhook da nova reserva no mesmo `boat_id` + `data`. É o que amarra a retenção ao prejuízo real, e não à punição.
+3. **Arrependimento de 7 dias (art. 49 do CDC)** prevalece sobre a escala, com devolução integral, desde que a pescaria ainda não tenha ocorrido.
+
+Alternativas oferecidas antes do cancelamento — remarcar data (1× sem custo até 15 dias antes),
+transferir a reserva para outra pessoa (até 48h antes) e reduzir participantes — reduzem a perda dos
+dois lados e reforçam a boa-fé da política.
+
+O valor retido é dividido entre guia e plataforma **na mesma proporção da comissão**: o estorno parcial
+no Mercado Pago já devolve proporcionalmente de ambas as contas, sem cálculo adicional.
 
 ---
 
@@ -118,6 +150,33 @@ reserva sem caminho de recebimento.
 
 O isolamento entre guias é o ponto mais sensível de segurança da plataforma e é resolvido no banco por
 RLS, com a função `is_guide_owner(guide_id)` — nunca por filtro na tela.
+
+---
+
+## Documentos legais e registro de aceite
+
+Cinco documentos versionados, guardados em `legal_documents` e editáveis no painel sem nova versão do
+app. As minutas já estão escritas em `docs/legal/`:
+
+| Documento | Quem aceita | Quando |
+|---|---|---|
+| **Contrato de Adesão — Guia** (`contrato-adesao-guia.md`) | guia | no cadastro |
+| **Termos de Uso — Pescador** (`contrato-uso-cliente.md`) | cliente | no cadastro |
+| **Política de Cancelamento** (`politica-cancelamento.md`) | cliente | na tela de pagamento, a cada reserva |
+| **Termo de Responsabilidade** | cliente | a cada reserva |
+| **Política de Privacidade** | ambos | no cadastro |
+
+**Como o aceite é coletado — cinco regras que decidem se ele vale como prova:**
+
+1. **Checkbox desmarcado por padrão.** Aceite pré-marcado não é manifestação de vontade; é vício. O botão de continuar fica desabilitado até o usuário marcar.
+2. **Um checkbox por documento**, cada um com link para ler o texto completo dentro do app. Nada de "aceito os termos e a política e o contrato" numa linha só.
+3. **Cláusulas limitativas em destaque** no texto (art. 54, §4º do CDC) — retenção escalonada, riscos da atividade, limitação de responsabilidade, não circunvenção.
+4. **Registro com `hash_sha256` do corpo do documento**, além de versão, IP, user-agent e timestamp. O hash é o que permite provar, meses depois, **exatamente qual texto** a pessoa aceitou — versão sozinha não prova, porque o corpo pode ter sido editado.
+5. **Nova versão exige novo aceite.** Publicado um texto novo, o app pede o aceite no próximo acesso; reservas já confirmadas permanecem regidas pela versão aceita à época.
+
+**Estas minutas precisam de revisão por advogado antes de ir para produção.** Escrevi como ponto de
+partida técnico, com os campos a preencher marcados entre colchetes. A peça de maior risco é a Política
+de Cancelamento, por tratar de retenção de valores em relação de consumo.
 
 ---
 
@@ -141,8 +200,9 @@ RLS, com a função `is_guide_owner(guide_id)` — nunca por filtro na tela.
 15. Termo de responsabilidade aceito no app, com data e IP
 16. Ranking mensal do maior peixe
 17. Avaliação pós-pescaria em D+1
-18. Política de cancelamento exibida e registrada no ato do pagamento
-19. Modo guia e modo master no app + painel web de gestão
+18. **Documentos legais versionados com aceite registrado** — contrato de adesão do guia, termos do pescador, política de cancelamento, termo de responsabilidade e política de privacidade
+19. **Motor de cancelamento com retenção escalonada**, devolução por revenda, remarcação e transferência de titular
+20. Modo guia e modo master no app + painel web de gestão
 
 **Fica para a v2:** WhatsApp oficial, Diamond por In-App Purchase, chat cliente–guia, venda de
 produtos, divisão do pagamento entre os participantes, programa de indicação.
@@ -193,7 +253,9 @@ zirix/
 | `subscriptions` | `id`, `user_id`, `plano` (`diamond`), `inicio`, `fim`, `status`, `valor_centavos`, `origem` (`manual`), `ativado_por` |
 | `app_settings` | `chave`, `valor` (jsonb) — comissão padrão, sinal padrão, preço do Diamond, checklist, termo, política |
 | `waitlist` | `id`, `user_id`, **`boat_id`**, `data`, `criado_em`, `notificado_em`, `status` |
-| `terms_acceptances` | `id`, `user_id`, `booking_id?`, `documento`, `versao`, `ip`, `user_agent`, `aceito_em` |
+| `legal_documents` | `id`, `slug` (`contrato_guia`\|`contrato_cliente`\|`termo_responsabilidade`\|`politica_cancelamento`\|`politica_privacidade`), `versao`, `titulo`, `corpo_markdown`, **`hash_sha256`**, `vigente_desde`, `publicado_por` |
+| `terms_acceptances` | `id`, `user_id`, `booking_id?`, `documento_slug`, `versao`, **`hash_sha256`**, `ip`, `user_agent`, `aceito_em` |
+| `cancellation_rules` | `id`, `guide_id?` (null = padrão da plataforma), `dias_min`, `dias_max`, `retencao_percentual`, `ordem`, `vigente_desde` |
 | `reviews` | `booking_id` (PK), `user_id`, `guide_id`, `nota` (1–5), `comentario`, `criado_em` |
 | `catches` | `id`, `user_id`, `booking_id?`, `guide_id?`, `foto_path`, `especie`, `peso_kg`, `comprimento_cm`, **`lat`**, **`lng`**, `regiao_nome`, **`isca`**, **`profundidade_m`**, **`hora_fisgada`**, **`condicao_tempo`**, `capturado_em` |
 | `catch_likes` | `catch_id`, `user_id` |
@@ -264,7 +326,7 @@ Vencida a assinatura, o acesso cai sozinho — sem job e sem intervenção manua
 ## Fluxos principais
 
 ### 1. Onboarding do guia
-1. Guia se cadastra pelo app informando operação, documento, cidade e contato → `guides.status = pendente`.
+1. Guia se cadastra pelo app informando operação, documento, cidade e contato, e **marca os checkboxes do Contrato de Adesão e da Política de Privacidade** → `guides.status = pendente`, aceites gravados com hash, versão, IP e user-agent.
 2. Master recebe push e aprova no painel, definindo (ou deixando no padrão) a **comissão daquele guia**.
 3. Guia conecta o Mercado Pago por OAuth — a plataforma guarda `mp_user_id` e os tokens cifrados.
 4. Guia cadastra barcos e abre datas. **Só é possível publicar agenda com o Mercado Pago conectado.**
@@ -297,11 +359,13 @@ Vencida a assinatura, o acesso cai sozinho — sem job e sem intervenção manua
 Como o split acontece na origem, o extrato é **registro do que já aconteceu**, não uma fila de
 pagamentos a executar — o que elimina a classe inteira de bugs de repasse.
 
-### 5. Cancelamento e lista de espera
-1. Cliente entra na fila de um barco/data ocupado.
-2. Cancelamento ou expiração dispara `avisar-lista-espera`: push + SMS por ordem de entrada, Diamond na frente.
-3. A data reaparece livre; quem pagar primeiro fecha. A trava única continua sendo a única fonte da verdade.
-4. A política vigente decide o destino do sinal, e o app mostra o efeito antes de o cliente confirmar. **Estorno reverte a comissão**, com lançamento negativo no `ledger_entries`.
+### 5. Cancelamento, retenção e lista de espera
+1. Cliente pede cancelamento. O app **calcula no servidor** a faixa aplicável e mostra, antes de confirmar, o valor exato do reembolso — junto com as alternativas (remarcar, transferir, reduzir participantes).
+2. Confirmado, o estorno parcial é enviado ao Mercado Pago. Como o pagamento era dividido, o estorno já sai proporcionalmente da conta do guia e da comissão; o `ledger_entries` recebe o lançamento negativo.
+3. Cancelamento ou expiração dispara `avisar-lista-espera`: push + SMS por ordem de entrada, Diamond na frente.
+4. A data reaparece livre; quem pagar primeiro fecha. A trava única continua sendo a única fonte da verdade.
+5. **Se a data for revendida**, o webhook da nova reserva dispara a devolução do valor retido ao cliente que cancelou, descontada a taxa administrativa — a regra que sustenta juridicamente a escala de retenção.
+6. Cancelamento por guia, clima ou autoridade → reembolso integral sem retenção, e a penalidade contratual do guia é registrada.
 
 ### 6. Postar captura e visibilidade do local
 Foto → remoção de EXIF → marca d'água no dispositivo (`react-native-view-shot`) → upload → `catches` com
@@ -332,12 +396,15 @@ membros Diamond · configurações e textos globais · exportação CSV.
 
 ## Etapas de implementação
 
-**Fase 0 — Contas e credenciais (você providencia):** conta Mercado Pago **com aplicação Marketplace
-criada** (client_id/client_secret para o OAuth dos guias), Twilio ou Zenvia, Resend + domínio, Apple
-Developer (US$ 99/ano), Google Play (US$ 25), chave do Google Maps, logo em PNG transparente.
+**Fase 0 — Contas e credenciais (você providencia):** **aplicação Marketplace criada dentro da sua
+conta Mercado Pago existente** (client_id/client_secret para o OAuth dos guias — só os guias conectam
+conta, a coletora é a sua), Twilio ou Zenvia, Resend + domínio, Apple Developer (US$ 99/ano), Google
+Play (US$ 25), chave do Google Maps, logo em PNG transparente, **minutas legais revisadas por
+advogado** e os campos entre colchetes preenchidos.
 
-**Fase 1 — Fundação e papéis:** monorepo, Expo, Supabase, schema completo, RLS com `is_master`,
-`is_guide_owner` e `is_diamond`, login por telefone, termo versionado com IP.
+**Fase 1 — Fundação, papéis e documentos legais:** monorepo, Expo, Supabase, schema completo, RLS com
+`is_master`, `is_guide_owner` e `is_diamond`, login por telefone, `legal_documents` com versionamento e
+hash, **telas de cadastro com checkboxes separados** e `terms_acceptances`.
 
 **Fase 2 — Guias e flotilha:** cadastro do guia, aprovação pelo master, OAuth do Mercado Pago,
 CRUD de barcos, agenda por barco com preços.
@@ -345,9 +412,10 @@ CRUD de barcos, agenda por barco com preços.
 **Fase 3 — Reserva:** busca de guias/barcos, calendário, `criar-reserva` com cálculo e cascata de
 comissão no servidor, participantes, minhas reservas, cancelamento, job de expiração.
 
-**Fase 4 — Pagamento e split:** Mercado Pago Marketplace com `marketplace_fee` rateada,
-`mercadopago-webhook` idempotente, **cobrança de quitação com prazo, lembretes e job de vencimento**,
-`ledger_entries`, política de cancelamento com aceite, reversão de comissão no estorno.
+**Fase 4 — Pagamento, split e cancelamento:** Mercado Pago Marketplace com `marketplace_fee` rateada,
+`mercadopago-webhook` idempotente, cobrança de quitação com prazo, lembretes e job de vencimento,
+`ledger_entries`, **motor de retenção (`cancellation_rules`, estorno parcial, devolução por revenda,
+arrependimento de 7 dias, remarcação e transferência de titular)**, reversão de comissão no estorno.
 
 **Fase 5 — Extratos:** painel do guia e consolidado do master, filtros por período e exportação.
 
@@ -402,6 +470,7 @@ aparece no perfil dele e no painel do master. Nota ≤ 3 gera alerta imediato.
 - **Rejeição na App Store por causa do Diamond.** Enquanto a assinatura for vendida fora do app, o aplicativo não pode ter botão de compra, preço com CTA nem link de pagamento. Levar o Diamond para dentro do app exige In-App Purchase (~15%) — planejado para a v2.
 - **Tokens do Mercado Pago dos guias** são credenciais de terceiros. Ficam cifrados, acessíveis só pela `service_role` nas Edge Functions, nunca expostos ao app.
 - **Inadimplência do saldo.** Com tudo passando pela plataforma, surge um risco que antes não existia: o cliente paga o sinal e some. Por isso a quitação tem prazo (padrão: 3 dias antes), lembretes em D-10, D-5 e no vencimento, alerta no painel do guia e um job que aplica a política automaticamente — cancelar, reter o sinal e devolver a data para a lista de espera. A data não pode ficar bloqueada por uma reserva que não vai acontecer.
+- **A política de cancelamento é a peça de maior risco jurídico do app.** Retenção de valor em relação de consumo é terreno onde cláusula mal redigida é anulada e a plataforma devolve tudo, com custas. As três salvaguardas — teto no valor pago, devolução por revenda e arrependimento de 7 dias — existem para amarrar a retenção ao prejuízo real, que é o que a torna defensável. **Nenhuma das minutas em `docs/legal/` deve ir para produção sem revisão de advogado.**
 - **Exposição a estorno aumentou.** Antes só o sinal passava pelo app; agora é o valor cheio, e um chargeback pode vir semanas depois de o guia já ter recebido a parte dele. O Pix aparece primeiro na tela de pagamento justamente por isso. Num estorno, sua comissão é revertida junto e o `ledger_entries` registra o lançamento negativo — mas o acerto com o guia sobre a parte dele é contratual, não automático. Vale estar no contrato de adesão do guia.
 - **Recebimento do guia:** cartão parcelado no Mercado Pago libera conforme a política da conta dele, não no ato. O guia precisa entender que "reserva quitada" não é o mesmo que "dinheiro disponível" — o extrato mostra as duas coisas separadas para evitar essa confusão.
 - **LGPD:** participantes são terceiros cadastrados por outra pessoa — aviso de autorização, registro do aceite e exclusão de dados. Alertas de captura exigem opt-in separado.
@@ -431,6 +500,10 @@ Google Maps dentro da cota gratuita nesse volume · Mercado Pago por transação
 7. **Vencimento do saldo:** criar reserva, pagar só o sinal e forçar a passagem do prazo → lembretes disparam nas datas certas, o alerta aparece no painel do guia e o job aplica a política (cancela, retém o sinal, dispara a lista de espera).
 8. **Check-in:** tela do dia do guia mostra corretamente quem está quitado e quem não está.
 9. **Estorno:** estornar um pagamento → reserva cancelada, comissão revertida e lançamento negativo no `ledger_entries`.
+9.1. **Escala de retenção:** cancelar a mesma reserva a 40, 20, 10, 4 e 1 dia da data → reembolso bate com cada faixa; com apenas o sinal pago, a retenção é limitada ao sinal e nunca gera cobrança adicional.
+9.2. **Devolução por revenda:** cancelar dentro de uma faixa com retenção, depois fechar a mesma data e o mesmo barco com outro cliente → o primeiro recebe de volta o valor retido menos a taxa administrativa, automaticamente.
+9.3. **Arrependimento:** cancelar em até 7 dias da reserva, com a pescaria ainda no futuro → devolução integral, inclusive da taxa administrativa, ignorando a escala.
+9.4. **Aceites:** checkbox nunca vem marcado; o botão só habilita com todos marcados; `terms_acceptances` grava versão, hash, IP e user-agent. Publicar nova versão do documento → o app pede aceite de novo no próximo acesso e a reserva antiga mantém a versão antiga.
 10. **Porta de entrada:** guia aprovado sem Mercado Pago conectado tenta publicar agenda → bloqueado.
 11. **Blindagem do Diamond:** com token de cliente comum, chamar o feed por `curl` → `lat`, `lng`, `isca`, `profundidade_m`, `hora_fisgada` e `condicao_tempo` voltam `null`. Baixar a foto do Storage e inspecionar o EXIF → sem GPS. Ler a marca d'água → sem coordenada.
 12. **Ciclo da assinatura:** ativar Diamond → área desbloqueia; mudar `fim` para ontem → bloqueia sozinha e os campos voltam a vir nulos.
