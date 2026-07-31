@@ -322,10 +322,17 @@ language sql stable security definer as $$
 $$;
 ```
 
-A tabela `catches` não é lida diretamente pelo cliente. O feed lê uma view que anula os campos sensíveis:
+A tabela `catches` não é lida diretamente pelo cliente. O feed lê uma view que anula os campos sensíveis.
+
+> **Correção apurada na implementação:** a view precisa ser **`security_invoker = false`** (o padrão do
+> Postgres), e não `true`, como este documento afirmava. Com `security_invoker = true` a leitura
+> aconteceria com a permissão de quem chama — e seria preciso liberar `catches` para todos os usuários,
+> o que tornaria a proteção inútil. Sendo *security definer*, a view lê a tabela como dona, e o acesso
+> direto a `catches` pode ser revogado por completo. Está assim em `supabase/migrations/0001_init.sql`,
+> com teste que confirma o bloqueio.
 
 ```sql
-create view v_catches_feed with (security_invoker = true) as
+create view v_catches_feed as
 select
   c.id, c.user_id, c.guide_id, c.foto_path, c.especie, c.peso_kg,
   c.comprimento_cm, c.regiao_nome, c.capturado_em,
