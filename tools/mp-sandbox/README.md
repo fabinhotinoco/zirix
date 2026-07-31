@@ -98,10 +98,15 @@ Anote o resultado real do extrato. É informação que não dá para deduzir da 
 
 ---
 
-## Depois do teste
+## Resultado registrado
 
-Me diga o que aconteceu em cada passo — principalmente o passo 3 — e eu ajusto o planejamento com o
-comportamento observado antes de escrevermos a Edge Function de pagamento.
+**Passo 3 — respondido: o estorno parcial debita proporcionalmente da conta do guia e da comissão da
+plataforma.** O motor de cancelamento, portanto, só precisa enviar o valor a devolver; não há
+compensação manual de comissão. A consequência para o `ledger_entries` está em
+`docs/PLANEJAMENTO.md`, na seção "Cancelamento — motor de retenção".
+
+Os scripts continuam úteis como bancada: use-os para reconferir o comportamento com os valores reais
+da operação antes de a Fase 4 ir para produção, e sempre que o Mercado Pago mudar algo na API.
 
 ## Segurança
 

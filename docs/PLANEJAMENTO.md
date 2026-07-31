@@ -136,11 +136,24 @@ Alternativas oferecidas antes do cancelamento — remarcar data (1× sem custo a
 transferir a reserva para outra pessoa (até 48h antes) e reduzir participantes — reduzem a perda dos
 dois lados e reforçam a boa-fé da política.
 
-O valor retido é dividido entre guia e plataforma **na mesma proporção da comissão**. A hipótese é que
-o estorno parcial no Mercado Pago já devolva proporcionalmente de ambas as contas, dispensando cálculo
-adicional — **e isso precisa ser confirmado na prática antes da Fase 4**, porque, se a devolução sair
-inteira da conta do guia, o motor de cancelamento passa a ter de compensar a comissão manualmente.
-O kit em `tools/mp-sandbox/` existe para responder exatamente essa pergunta.
+O valor retido é dividido entre guia e plataforma **na mesma proporção da comissão**.
+
+**Comportamento do estorno parcial — confirmado:** o Mercado Pago debita proporcionalmente da conta do
+guia **e** da comissão da plataforma. Isso simplifica bastante o motor de cancelamento: basta enviar o
+valor a devolver; **não há compensação manual de comissão a fazer**, e o rateio se mantém sozinho.
+
+Duas consequências que o código precisa refletir:
+
+```
+comissao_revertida = round(fee_da_cobranca × valor_estornado ÷ valor_da_cobranca)
+comissao_liquida   = fee_da_cobranca − Σ comissoes_revertidas
+```
+
+1. O `ledger_entries` do estorno registra **apenas a comissão proporcional revertida**, não a comissão inteira. Estorno de metade devolve metade da comissão.
+2. **Reembolso integral zera a comissão daquela reserva** — é o que acontece no arrependimento de 7 dias. Correto e esperado: sem serviço prestado, não há intermediação a remunerar.
+
+A devolução por revenda da data (cláusula 2.2 da política) é um **segundo estorno parcial sobre o mesmo
+pagamento** e segue a mesma regra proporcional, sem tratamento especial.
 
 ---
 
@@ -503,7 +516,7 @@ Google Maps dentro da cota gratuita nesse volume · Mercado Pago por transação
 6. **Quitação integral no ato:** reservar escolhendo "pagar tudo agora" → uma única cobrança, comissão inteira, `status_pagamento = quitada` direto.
 7. **Vencimento do saldo:** criar reserva, pagar só o sinal e forçar a passagem do prazo → lembretes disparam nas datas certas, o alerta aparece no painel do guia e o job aplica a política (cancela, retém o sinal, dispara a lista de espera).
 8. **Check-in:** tela do dia do guia mostra corretamente quem está quitado e quem não está.
-9. **Estorno:** estornar um pagamento → reserva cancelada, comissão revertida e lançamento negativo no `ledger_entries`.
+9. **Estorno:** estornar um pagamento → reserva cancelada e lançamento negativo no `ledger_entries` com a **comissão proporcional** ao valor devolvido (estorno de metade reverte metade da comissão; estorno integral zera). Conferir contra o extrato das duas contas do Mercado Pago.
 9.1. **Escala de retenção:** cancelar a mesma reserva a 40, 20, 10, 4 e 1 dia da data → reembolso bate com cada faixa; com apenas o sinal pago, a retenção é limitada ao sinal e nunca gera cobrança adicional.
 9.2. **Devolução por revenda:** cancelar dentro de uma faixa com retenção, depois fechar a mesma data e o mesmo barco com outro cliente → o primeiro recebe de volta o valor retido menos a taxa administrativa, automaticamente.
 9.3. **Arrependimento:** cancelar em até 7 dias da reserva, com a pescaria ainda no futuro → devolução integral, inclusive da taxa administrativa, ignorando a escala.
