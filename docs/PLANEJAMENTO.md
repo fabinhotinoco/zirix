@@ -1,28 +1,102 @@
-# Pesca Vertical — App de Agendamento de Pescarias (v1)
+# Plataforma de Pescarias — Planejamento da v1
 
 ## Contexto
 
-A Pesca Vertical hoje organiza suas pescarias fora de um sistema (WhatsApp/agenda manual), o que gera
-risco de data duplicada, cobrança solta e cadastro de participantes espalhado. O objetivo desta v1 é um
-app iOS + Android onde o cliente vê a agenda real, reserva um **dia inteiro exclusivo** para sua equipe,
-paga um **sinal** que trava a data automaticamente, recebe confirmação com número de reserva, e onde
-todos os pescadores cadastrados acompanham um feed de capturas com foto marcada.
+O projeto começou como o sistema de agendamento de uma única operação (Pesca Vertical) e evoluiu para
+uma **plataforma multi-guia**: vários guias de pesca, cada um com sua própria agenda e sua própria
+flotilha de barcos, vendendo passeios para os mesmos clientes dentro de um app iOS + Android.
 
-A localização exata das capturas **não é pública**: ela é o principal benefício do plano **Diamond**,
-uma assinatura anual que dá acesso à Área Diamond dentro do app. O cliente comum vê apenas o nome da
-região. Isso protege os pontos de pesca e cria uma receita recorrente independente da ocupação do barco.
+O administrador master (dono da plataforma) ganha **comissão configurável caso a caso sobre toda
+transação financeira feita no app**, mais a receita integral das assinaturas **Diamond**. Os guias são
+remunerados por passeio e por passageiro, recebendo o valor deles direto na própria conta.
+
+A localização exata das capturas não é pública: é o principal benefício do plano Diamond, que vale para
+o feed inteiro da plataforma. O cliente comum vê apenas o nome da região.
 
 O repositório `fabinhotinoco/zirix` está vazio (nenhum commit). Tudo abaixo é construção nova.
 
-**Decisões fechadas com o cliente:**
-dia inteiro exclusivo · sinal + saldo no dia · React Native (Expo) + Supabase · Mercado Pago ·
-SMS/e-mail/push na v1 (WhatsApp na v2) · painel web + modo admin no app ·
-**Diamond vendido fora do app e ativado pelo painel** · não-Diamond vê só o nome da região ·
-Área Diamond inclui localização exata, mapa de calor, reserva antecipada, desconto e detalhes técnicos.
+### Premissas adotadas (me avise se alguma estiver errada)
 
-**A definir (valores de negócio, não bloqueiam o desenvolvimento — são configuráveis no painel):**
-preço anual do Diamond · percentual de desconto Diamond nas pescarias · dias de antecedência exclusiva
-na agenda · percentual do sinal.
+Estas quatro decisões ficaram em aberto e eu segui com a opção que considero mais defensável:
+
+| Tema | Premissa adotada | Por quê |
+|---|---|---|
+| Base da comissão | Incide sobre o **valor total do passeio**, mas é **retida integralmente do sinal** que passa pelo app | Você não depende do guia declarar o saldo recebido em mãos |
+| Repasse ao guia | **Split automático do Mercado Pago** (cada guia conecta a própria conta) | A receita bruta dos guias nunca transita no seu CNPJ — evita um problema fiscal sério |
+| Formação de preço | **Valor do barco/dia + valor por passageiro** (qualquer um dos dois pode ser zero) | Cobre os dois modelos citados numa fórmula só |
+| Entrada de guias | Guia se cadastra → **você aprova** → ele define barcos, agenda e preços | Escala sem você virar gargalo, mantendo o controle na porta de entrada |
+
+**A definir (valores de negócio; são configuráveis no painel e não bloqueiam o desenvolvimento):**
+comissão padrão da plataforma · preço anual do Diamond · percentual do sinal · desconto Diamond ·
+dias de antecedência exclusiva na agenda · prazo da política de cancelamento.
+
+---
+
+## Modelo de negócio e fluxo do dinheiro
+
+Três fontes de receita para o administrador master:
+
+1. **Comissão por passeio** — percentual configurável, resolvido em cascata (detalhe abaixo).
+2. **Assinatura Diamond** — 100% sua, vendida fora do app e ativada pelo painel.
+3. **Comissão sobre qualquer outra venda futura no app** (produtos, iscas, pacotes) — a tabela de
+   lançamentos já nasce genérica para suportar isso sem refazer nada.
+
+### Cascata da comissão (o "caso a caso")
+
+```
+comissão = coalesce(
+  reserva.comissao_percentual_override,   -- negociação pontual de uma reserva
+  barco.comissao_percentual,              -- barco específico
+  guia.comissao_percentual,               -- acordo com aquele guia
+  app_settings.comissao_padrao            -- padrão da plataforma
+)
+```
+
+O percentual resolvido é **congelado na reserva** no momento da criação (`bookings.comissao_percentual`).
+Mudar a comissão de um guia amanhã não pode alterar o valor de uma reserva fechada ontem.
+
+### Cálculo de uma reserva
+
+```
+valor_total   = preco_barco + (preco_por_passageiro × qtd_pescadores)
+desconto      = desconto Diamond, se o guia oferecer (sai da parte do guia)
+valor_liquido = valor_total − desconto
+comissao      = round(valor_liquido × comissao_percentual)
+sinal         = round(valor_liquido × sinal_percentual)     ← pago no app
+saldo         = valor_liquido − sinal                        ← pago ao guia no dia
+```
+
+**Regra de integridade obrigatória:** `sinal ≥ comissao`. Se um guia configurar sinal de 5% com
+comissão de 15%, a comissão não cabe no que passa pelo app. O sistema recusa a configuração no ato,
+com mensagem clara — é uma validação, não um erro de tempo de execução.
+
+### Split no pagamento
+
+O sinal é cobrado via **Mercado Pago Marketplace**. O guia conecta a conta dele por OAuth; o pagamento
+é criado em nome do guia com `marketplace_fee = comissao_centavos`. O Mercado Pago divide na origem:
+
+```
+Sinal R$ 300  →  R$ 100 comissão (sua conta)  +  R$ 200 (conta do guia)
+```
+
+Você nunca recebe e repassa. Sua receita tributável é só a comissão, e não há risco de você ficar
+devendo repasse a guia nenhum.
+
+**Regra de porta:** guia sem Mercado Pago conectado **não consegue publicar agenda**. Sem isso, existiria
+reserva sem caminho de recebimento.
+
+---
+
+## Papéis e permissões
+
+| Papel | Pode |
+|---|---|
+| `master` | Aprovar/suspender guias, definir comissão por guia/barco/reserva, ver extrato consolidado de toda a plataforma, gerenciar Diamond, editar textos e configurações globais |
+| `guia` | Gerenciar seus barcos, sua agenda e seus preços; ver suas reservas, participantes e extrato; fazer check-in; **nunca** vê dados de outro guia |
+| `cliente` | Buscar guias e barcos, reservar, pagar, cadastrar participantes, postar capturas, acessar a Área Diamond se for membro |
+
+O isolamento entre guias é o ponto mais sensível de segurança da plataforma e é resolvido no banco por
+RLS, com a função `is_guide_owner(guide_id)` — nunca por filtro na tela.
 
 ---
 
@@ -30,35 +104,36 @@ na agenda · percentual do sinal.
 
 **Entra:**
 1. Cadastro/login por telefone (OTP via SMS)
-2. Agenda em calendário com dias livres/ocupados/bloqueados e preço por dia
-3. Reserva de dia exclusivo + cadastro dos participantes (nome + telefone)
-4. Pagamento do sinal por Pix, crédito ou débito (Mercado Pago)
-5. Confirmação automática: número da reserva por SMS, e-mail e push
-6. Lembretes automáticos D-3 e D-1
-7. Feed de capturas: foto com marca d'água do app + espécie/peso + **nome da região**
-8. **Plano Diamond**: assinatura anual ativada pelo painel, com Área Diamond (localização exata, mapa de calor, agenda antecipada, desconto, detalhes técnicos)
-9. Modo administrador no app + painel web de gestão
-10. **Lista de espera** para datas ocupadas, com aviso imediato quando libera
-11. **Previsão do tempo** do dia da pescaria na tela da reserva
-12. **Checklist** no lembrete D-3/D-1 (o que levar, ponto e horário de encontro)
-13. **Termo de responsabilidade** aceito no app, com data e IP registrados
-14. **Ranking mensal do maior peixe**
-15. **Avaliação pós-pescaria** disparada em D+1
-16. **Política de cancelamento** exibida e registrada no ato do pagamento
+2. **Onboarding de guias**: inscrição, aprovação pelo master, conexão do Mercado Pago via OAuth
+3. **Flotilha**: cada guia cadastra vários barcos (capacidade, fotos, equipamentos)
+4. **Agenda por barco**, com preço por dia (valor do barco + valor por passageiro)
+5. Busca de guias e barcos, com agenda visível ao cliente
+6. Reserva de dia exclusivo por barco + participantes (nome + telefone)
+7. Pagamento do sinal por Pix, crédito ou débito **com split automático e retenção da comissão**
+8. Confirmação automática: número da reserva por SMS, e-mail e push
+9. **Extrato financeiro**: consolidado da plataforma para o master, individual para cada guia
+10. Lembretes automáticos D-3 e D-1 com checklist
+11. Feed de capturas: foto com marca d'água + espécie/peso + **nome da região**
+12. **Plano Diamond**: assinatura anual ativada pelo painel, com Área Diamond (localização exata, mapa de calor, agenda antecipada, desconto, detalhes técnicos)
+13. Lista de espera para datas ocupadas
+14. Previsão do tempo do dia da pescaria
+15. Termo de responsabilidade aceito no app, com data e IP
+16. Ranking mensal do maior peixe
+17. Avaliação pós-pescaria em D+1
+18. Política de cancelamento exibida e registrada no ato do pagamento
+19. Modo guia e modo master no app + painel web de gestão
 
-**Fica para a v2 (proposital, para a v1 sair rápido):** WhatsApp oficial, compra do Diamond dentro do
-app por In-App Purchase, pagamento do saldo pelo app, chat interno, split de pagamento, indicação.
+**Fica para a v2:** WhatsApp oficial, Diamond por In-App Purchase, pagamento do saldo pelo app, chat
+cliente–guia, venda de produtos, split entre participantes, programa de indicação.
 
 ---
 
 ## Arquitetura
 
-Monorepo simples:
-
 ```
 zirix/
-  apps/mobile/        # Expo (React Native + TypeScript) — app do cliente e modo admin
-  apps/admin/         # Next.js — painel web da Pesca Vertical
+  apps/mobile/        # Expo (React Native + TypeScript) — cliente, guia e master
+  apps/admin/         # Next.js — painel web (master e guias)
   supabase/
     migrations/       # schema SQL + RLS
     functions/        # Edge Functions (Deno)
@@ -67,18 +142,18 @@ zirix/
 
 | Camada | Escolha | Por quê |
 |---|---|---|
-| App | Expo SDK + expo-router + TypeScript | um código para iOS/Android, build na nuvem via EAS, OTA update sem passar pela loja |
-| Backend | Supabase (Postgres + Auth + Storage + Edge Functions) | banco, login por telefone, armazenamento de fotos e webhooks num só lugar |
-| Pagamento | Mercado Pago Checkout API | Pix instantâneo + crédito/débito, webhook de confirmação |
-| SMS | Twilio (ou Zenvia, mais barato no BR) | usado tanto no OTP de login quanto na confirmação — um provedor só |
+| App | Expo SDK + expo-router + TypeScript | um código para iOS/Android, build via EAS, atualização OTA sem passar pela loja |
+| Backend | Supabase (Postgres + Auth + Storage + Edge Functions) | banco, login, fotos e webhooks num só lugar; RLS resolve o isolamento entre guias |
+| Pagamento | **Mercado Pago Marketplace** (OAuth + `marketplace_fee`) | Pix e cartão com split na origem e comissão retida automaticamente |
+| SMS | Twilio (ou Zenvia, mais barato no BR) | mesmo provedor para OTP de login e avisos |
 | E-mail | Resend | API simples, domínio próprio |
-| Push | Expo Push Notifications | grátis, funciona em iOS e Android |
+| Push | Expo Push Notifications | grátis, iOS e Android |
 | Mapa | `react-native-maps` | mapa de calor e pino do ponto na Área Diamond |
 | Painel web | Next.js na Vercel | mesmo Supabase, deploy grátis |
 
 **Regras das lojas (crítico):**
-- Pescaria é serviço do mundo real → pagar a reserva por Mercado Pago dentro do app é **permitido** (Guideline 3.1.3(e) da Apple).
-- Assinatura Diamond desbloqueia conteúdo digital → se fosse vendida dentro do app, a Apple exigiria In-App Purchase. Como será **vendida fora do app** (Pix/WhatsApp/presencial) e ativada pelo painel, o app **não pode conter botão de compra, preço com CTA, nem link para pagar**. A Área Diamond, para quem não é membro, mostra apenas o que ela oferece, de forma informativa, sem chamada para compra.
+- Passeio de pesca é serviço do mundo real → pagar pelo Mercado Pago dentro do app é **permitido**, e a sua comissão sobre ele também (Guideline 3.1.3(e) da Apple).
+- Assinatura Diamond desbloqueia conteúdo digital → como será **vendida fora do app** e ativada pelo painel, o app **não pode ter botão de compra, preço com chamada para ação, nem link para pagar**. A Área Diamond, para não-membros, é informativa.
 
 ---
 
@@ -86,37 +161,49 @@ zirix/
 
 | Tabela | Campos principais |
 |---|---|
-| `profiles` | `id`(=auth.uid), `nome`, `telefone`, `email`, `avatar_url`, `role` (`cliente`\|`admin`), `aceite_termos_at` |
-| `subscriptions` | `id`, `user_id`, `plano` (`diamond`), `inicio`, `fim`, `status` (`ativa`\|`expirada`\|`cancelada`), `valor_centavos`, `origem` (`manual`), `ativado_por`, `observacao` |
-| `app_settings` | `chave`, `valor` (jsonb) — desconto Diamond, dias de antecedência, sinal padrão, preço do plano |
-| `availability_days` | `data` (PK), `status` (`aberto`\|`bloqueado`), `preco_centavos`, `sinal_percentual`, `aberto_em`, `observacao` |
-| `bookings` | `id`, `codigo` (ex. `PV-2026-0042`), `user_id`, `data`, `qtd_pescadores`, `valor_total_centavos`, `desconto_centavos`, `sinal_centavos`, `saldo_centavos`, `status` (`pendente`\|`confirmada`\|`cancelada`\|`expirada`), `expira_em`, `confirmada_em`, `cancelada_em`, `termo_versao`, `politica_versao` |
+| `profiles` | `id`(=auth.uid), `nome`, `telefone`, `email`, `avatar_url`, `role` (`master`\|`guia`\|`cliente`) |
+| `guides` | `id`, `user_id`, `nome_operacao`, `documento`, `cidade`, `bio`, `foto_url`, `status` (`pendente`\|`aprovado`\|`suspenso`), **`comissao_percentual`** (nullable), `sinal_percentual`, `oferece_desconto_diamond`, `desconto_diamond_percentual`, `mp_user_id`, `mp_access_token` (cifrado), `mp_refresh_token`, `mp_conectado_em`, `aprovado_por`, `aprovado_em` |
+| `boats` | `id`, `guide_id`, `nome`, `modelo`, `capacidade_min`, `capacidade_max`, `fotos` (jsonb), `equipamentos`, **`comissao_percentual`** (nullable), `status` |
+| `boat_availability` | **PK (`boat_id`, `data`)**, `status` (`aberto`\|`bloqueado`), `preco_barco_centavos`, `preco_passageiro_centavos`, `aberto_em`, `observacao` |
+| `bookings` | `id`, `codigo`, `user_id`, **`guide_id`**, **`boat_id`**, `data`, `qtd_pescadores`, `preco_barco_centavos`, `preco_passageiro_centavos`, `valor_total_centavos`, `desconto_centavos`, **`comissao_percentual`**, **`comissao_centavos`**, **`repasse_guia_centavos`**, `sinal_centavos`, `saldo_centavos`, `status`, `expira_em`, `confirmada_em`, `cancelada_em`, `termo_versao`, `politica_versao` |
 | `booking_participants` | `booking_id`, `nome`, `telefone` |
-| `waitlist` | `id`, `user_id`, `data`, `criado_em`, `notificado_em`, `status` (`aguardando`\|`avisado`\|`convertido`\|`removido`) |
-| `terms_acceptances` | `id`, `user_id`, `booking_id?`, `documento` (`termo`\|`politica_cancelamento`), `versao`, `ip`, `user_agent`, `aceito_em` |
-| `reviews` | `booking_id` (PK), `user_id`, `nota` (1–5), `comentario`, `criado_em` |
-| `payments` | `id`, `booking_id`, `provider_payment_id`, `metodo` (`pix`\|`credito`\|`debito`), `valor_centavos`, `status`, `payload_bruto` (jsonb) |
-| `catches` | `id`, `user_id`, `booking_id?`, `foto_path`, `especie`, `peso_kg`, `comprimento_cm`, **`lat`**, **`lng`**, `regiao_nome`, **`isca`**, **`profundidade_m`**, **`hora_fisgada`**, **`condicao_tempo`**, `capturado_em` |
+| `payments` | `id`, `booking_id`, `provider_payment_id`, `metodo`, `valor_centavos`, `marketplace_fee_centavos`, `status`, `payload_bruto` (jsonb) |
+| `ledger_entries` | `id`, `tipo` (`comissao_passeio`\|`assinatura_diamond`\|`estorno`\|`outro`), `booking_id?`, `subscription_id?`, `guide_id?`, `valor_bruto_centavos`, `comissao_centavos`, `repasse_centavos`, `status`, `ocorrido_em` |
+| `subscriptions` | `id`, `user_id`, `plano` (`diamond`), `inicio`, `fim`, `status`, `valor_centavos`, `origem` (`manual`), `ativado_por` |
+| `app_settings` | `chave`, `valor` (jsonb) — comissão padrão, sinal padrão, preço do Diamond, checklist, termo, política |
+| `waitlist` | `id`, `user_id`, **`boat_id`**, `data`, `criado_em`, `notificado_em`, `status` |
+| `terms_acceptances` | `id`, `user_id`, `booking_id?`, `documento`, `versao`, `ip`, `user_agent`, `aceito_em` |
+| `reviews` | `booking_id` (PK), `user_id`, `guide_id`, `nota` (1–5), `comentario`, `criado_em` |
+| `catches` | `id`, `user_id`, `booking_id?`, `guide_id?`, `foto_path`, `especie`, `peso_kg`, `comprimento_cm`, **`lat`**, **`lng`**, `regiao_nome`, **`isca`**, **`profundidade_m`**, **`hora_fisgada`**, **`condicao_tempo`**, `capturado_em` |
 | `catch_likes` | `catch_id`, `user_id` |
 | `devices` | `user_id`, `expo_push_token`, `plataforma` |
 | `notification_log` | `destino`, `canal`, `template`, `status`, `erro`, `enviado_em` |
 
 Campos em **negrito** em `catches` são exclusivos do Diamond e nunca saem do servidor para um cliente comum.
 
-### Trava anti-conflito de data (crítico)
+### Trava anti-conflito — agora por barco
 
 ```sql
-create unique index bookings_data_ativa
-  on bookings (data) where status in ('pendente','confirmada');
+create unique index bookings_barco_data_ativa
+  on bookings (boat_id, data) where status in ('pendente','confirmada');
 ```
 
-Isso torna impossível dois clientes fecharem o mesmo dia mesmo clicando ao mesmo tempo. Reserva
-`pendente` expira em 20 minutos (job `pg_cron`) e libera a data.
+Dois clientes não conseguem fechar o mesmo barco no mesmo dia, mesmo clicando ao mesmo tempo. Barcos
+diferentes do mesmo guia seguem independentes. Reserva `pendente` expira em 20 minutos (`pg_cron`).
 
-### Controle de acesso Diamond (crítico)
+### Isolamento entre guias
 
-Toda a regra vive no banco. O app **nunca** recebe a coordenada e esconde na tela — dado que sai do
-servidor é dado vazado.
+```sql
+create function is_guide_owner(g uuid) returns boolean
+language sql stable security definer as $$
+  select exists (select 1 from guides where id = g and user_id = auth.uid());
+$$;
+```
+
+Toda tabela com `guide_id` recebe política `using (is_guide_owner(guide_id) or is_master())`. Um guia
+que chame a API direto por `curl` com o próprio token não enxerga nem uma linha de outro guia.
+
+### Controle de acesso Diamond
 
 ```sql
 create function is_diamond(uid uuid) returns boolean
@@ -129,12 +216,12 @@ language sql stable security definer as $$
 $$;
 ```
 
-A tabela `catches` fica sem `select` direto para clientes. O feed lê uma view:
+A tabela `catches` não é lida diretamente pelo cliente. O feed lê uma view que anula os campos sensíveis:
 
 ```sql
 create view v_catches_feed with (security_invoker = true) as
 select
-  c.id, c.user_id, c.foto_path, c.especie, c.peso_kg,
+  c.id, c.user_id, c.guide_id, c.foto_path, c.especie, c.peso_kg,
   c.comprimento_cm, c.regiao_nome, c.capturado_em,
   case when is_diamond(auth.uid()) then c.lat end            as lat,
   case when is_diamond(auth.uid()) then c.lng end            as lng,
@@ -145,191 +232,177 @@ select
 from catches c;
 ```
 
-Quando a assinatura vence, `is_diamond` passa a retornar falso e o acesso cai sozinho — sem job, sem
-intervenção manual.
+Vencida a assinatura, o acesso cai sozinho — sem job e sem intervenção manual.
 
 **Duas armadilhas que o código precisa evitar:**
-1. **A marca d'água não pode conter a coordenada.** Ela é gravada na imagem no momento da postagem e fica igual para todo mundo. A marca leva logo + espécie + peso + data + **região**. A coordenada é dado separado, entregue só pela view.
-2. **O EXIF da foto precisa ser removido no upload.** Foto de celular carrega o GPS nos metadados; sem limpar, qualquer cliente baixa a imagem e lê o ponto. O `expo-image-manipulator` recodifica a imagem e descarta o EXIF antes do upload — isso é obrigatório, não opcional.
-
-### Demais regras (RLS)
-Cliente lê/escreve só o que é dele; `availability_days` é leitura para autenticados; escrita em
-`availability_days`, `subscriptions`, `payments` e mudança de status de reserva só por `role = 'admin'`
-ou pela `service_role` das Edge Functions.
+1. **A marca d'água não pode conter a coordenada** — ela é gravada na imagem e fica igual para todos. A marca leva logo + espécie + peso + data + **região**.
+2. **O EXIF da foto precisa ser removido no upload** — foto de celular carrega o GPS nos metadados; sem limpar, qualquer cliente baixa a imagem e lê o ponto. O `expo-image-manipulator` recodifica e descarta o EXIF. Obrigatório, não opcional.
 
 ---
 
 ## Fluxos principais
 
-### 1. Reserva + pagamento
-1. Cliente escolhe a data livre no calendário → informa nº de pescadores e os participantes (nome + telefone).
-2. App chama Edge Function `criar-reserva`. Ela **recalcula o preço no servidor** (valor do dia, desconto Diamond se aplicável, sinal), cria o `booking` **pendente** — a trava única segura a data por 20 min — e gera a cobrança do sinal no Mercado Pago (Pix copia-e-cola/QR ou cartão). O preço enviado pelo app nunca é aceito.
-3. Cliente paga. O Mercado Pago chama a Edge Function `mercadopago-webhook`.
-4. Webhook (idempotente por `provider_payment_id`) valida o valor, marca `payments.status = aprovado`, muda a reserva para **confirmada** e gera o código `PV-AAAA-NNNN`.
-5. Dispara `enviar-notificacao`: SMS + e-mail + push com o número da reserva, data, saldo a pagar e ponto de encontro.
-6. Se não pagar em 20 min, o job expira a reserva e a data volta a aparecer livre.
+### 1. Onboarding do guia
+1. Guia se cadastra pelo app informando operação, documento, cidade e contato → `guides.status = pendente`.
+2. Master recebe push e aprova no painel, definindo (ou deixando no padrão) a **comissão daquele guia**.
+3. Guia conecta o Mercado Pago por OAuth — a plataforma guarda `mp_user_id` e os tokens cifrados.
+4. Guia cadastra barcos e abre datas. **Só é possível publicar agenda com o Mercado Pago conectado.**
 
-> A confirmação **nunca** depende do app estar aberto — quem confirma é o webhook. Se o cliente fechar o app durante o Pix, a reserva confirma do mesmo jeito.
+### 2. Reserva, pagamento e split
+1. Cliente escolhe guia → barco → data livre → nº de pescadores → participantes.
+2. Edge Function `criar-reserva` **recalcula tudo no servidor**: preço (barco + passageiros), desconto Diamond se o guia oferecer, comissão pela cascata, sinal e saldo. Valida `sinal ≥ comissao`. Cria o `booking` **pendente** — a trava única segura o barco por 20 min.
+3. Gera o pagamento no Mercado Pago **em nome do guia**, com `marketplace_fee = comissao_centavos`.
+4. Cliente paga (Pix ou cartão). O Mercado Pago chama `mercadopago-webhook`.
+5. Webhook (idempotente por `provider_payment_id`) confere o valor, confirma a reserva, gera o código `PV-AAAA-NNNN` e grava o `ledger_entries` da comissão.
+6. Notifica cliente (número da reserva, saldo, ponto de encontro) **e o guia** (nova reserva, participantes, quanto recebeu).
+7. Sem pagamento em 20 min, a reserva expira e a data volta a ficar livre.
 
-### 2. Agenda antecipada do Diamond
-`app_settings.diamond_dias_antecipacao` (ex.: 14). Um dia recém-aberto pelo admin fica reservável só
-por Diamond até `aberto_em + N dias`. O cliente comum enxerga a data marcada como *"abre em 12 dias"* —
-mostra o benefício sem esconder a agenda e sem virar propaganda de compra.
+> A confirmação nunca depende do app estar aberto — quem confirma é o webhook.
 
-### 3. Postar captura e visibilidade do local
-1. Pescador tira/escolhe a foto, informa espécie, peso e — opcionalmente — isca, profundidade e condição do tempo; o app captura o GPS (`expo-location`).
-2. A foto passa pelo `expo-image-manipulator` (**remove EXIF**) e recebe a marca d'água renderizada no dispositivo: logo Pesca Vertical + espécie/peso/data/**região**, capturada com `react-native-view-shot`.
-3. Upload para o Storage → insere em `catches` com a coordenada exata → Edge Function `notificar-captura` faz o fan-out de push para todos os `devices` e e-mail para quem optou por receber.
-4. **Cliente comum** vê foto, espécie, peso e o nome da região. **Diamond** vê, além disso, o pino exato no mapa, isca, profundidade, horário da fisgada e clima.
+### 3. Extrato financeiro
+- **Guia:** recebimentos por passeio, comissão descontada, saldo a receber em mãos no dia, filtro por período, exportação CSV.
+- **Master:** comissão consolidada por período, por guia e por barco; receita de Diamond; ticket médio; taxa de conversão de reserva; datas ociosas por guia.
 
-### 4. Ciclo do Diamond
-1. Venda acontece fora do app (Pix, WhatsApp ou presencial).
-2. Admin ativa no painel: escolhe o cliente, informa valor e data de início → cria `subscriptions` com `fim = inicio + 12 meses`.
-3. Cliente recebe SMS/e-mail/push: *"Seu acesso Diamond está ativo até 29/07/2027"*. A Área Diamond desbloqueia na hora.
-4. Avisos automáticos de vencimento em D-30 e D-7, e no dia do vencimento — a renovação é o momento de maior risco de perder o cliente.
-5. Vencido, o acesso cai automaticamente e o app volta a mostrar só o nome da região.
+Como o split acontece na origem, o extrato é **registro do que já aconteceu**, não uma fila de
+pagamentos a executar — o que elimina a classe inteira de bugs de repasse.
 
-### 5. Cancelamento e lista de espera
-1. Numa data ocupada, o cliente toca em **"Avisar se liberar"** → entra na `waitlist`.
-2. Quando a reserva daquele dia é cancelada (pelo cliente ou pelo admin) ou expira por falta de pagamento, um trigger no Postgres chama a Edge Function `avisar-lista-espera`.
-3. A fila é avisada **por ordem de entrada**, com Diamond na frente, via push + SMS: *"Liberou 14/03! Reserve agora."* — este é um dos poucos casos em que o SMS se paga, porque a janela de decisão é curta.
-4. A data volta a aparecer livre no calendário para todos; quem chegar primeiro fecha. Sem reserva de vaga silenciosa — a trava única do banco continua sendo a única fonte da verdade.
-5. No cancelamento, a política vigente decide o destino do sinal; o app mostra o resultado antes de confirmar (*"Faltam 4 dias: o sinal não é devolvido. Confirmar cancelamento?"*).
+### 4. Cancelamento e lista de espera
+1. Cliente entra na fila de um barco/data ocupado.
+2. Cancelamento ou expiração dispara `avisar-lista-espera`: push + SMS por ordem de entrada, Diamond na frente.
+3. A data reaparece livre; quem pagar primeiro fecha. A trava única continua sendo a única fonte da verdade.
+4. A política vigente decide o destino do sinal, e o app mostra o efeito antes de o cliente confirmar. **Estorno reverte a comissão**, com lançamento negativo no `ledger_entries`.
+
+### 5. Postar captura e visibilidade do local
+Foto → remoção de EXIF → marca d'água no dispositivo (`react-native-view-shot`) → upload → `catches` com
+coordenada exata → `notificar-captura` (push para todos, e-mail para quem optou). Cliente comum vê foto,
+espécie, peso e região; Diamond vê o pino exato, isca, profundidade, horário e clima.
+
+### 6. Ciclo do Diamond
+Venda fora do app → master ativa no painel (`fim = inicio + 12 meses`) → cliente é avisado e a área
+desbloqueia na hora → avisos automáticos em D-30, D-7 e no vencimento → vencido, o acesso cai sozinho.
 
 ---
 
 ## Telas
 
-**App — cliente:** Login por telefone · Agenda (calendário) · Detalhe do dia e reserva · Participantes ·
-Pagamento · Minhas reservas · Feed de capturas · Postar captura · Perfil ·
-**Área Diamond** (mapa de calor dos pontos com filtro por espécie e época, mapa da captura individual,
-detalhes técnicos, selo e validade da assinatura). Para quem não é membro, a Área Diamond mostra a lista
-de benefícios em modo informativo, sem botão nem link de compra.
+**Cliente:** login · busca de guias e barcos · perfil do guia (barcos, fotos, avaliações) · agenda do
+barco · reserva e participantes · pagamento · minhas reservas · feed · postar captura · **Área Diamond**
+(mapa de calor, mapa da captura, detalhes técnicos, validade) · perfil.
 
-**App — admin:** agenda do dia, lista de reservas, check-in, bloquear data.
+**Guia:** minha agenda (por barco) · abrir/bloquear datas e preços · meus barcos · reservas e
+participantes · check-in do dia · **meu extrato** · avaliações recebidas.
 
-**Painel web:** calendário e preços · reservas e participantes · pagamentos · **membros Diamond**
-(ativar, renovar, ver vencimentos próximos) · configurações (desconto, dias de antecedência, sinal) ·
-exportar CSV · disparo manual de aviso.
+**Master:** aprovação de guias · comissão por guia/barco/reserva · **extrato consolidado** ·
+membros Diamond · configurações e textos globais · exportação CSV.
 
 ---
 
 ## Etapas de implementação
 
-**Fase 0 — Contas e credenciais (você providencia; eu não consigo criar):**
-conta Mercado Pago (chaves de produção + teste), Twilio ou Zenvia, Resend + domínio, Apple Developer
-(US$ 99/ano), Google Play (US$ 25 único), chave do Google Maps para Android, e o logo em PNG com fundo
-transparente para a marca d'água.
+**Fase 0 — Contas e credenciais (você providencia):** conta Mercado Pago **com aplicação Marketplace
+criada** (client_id/client_secret para o OAuth dos guias), Twilio ou Zenvia, Resend + domínio, Apple
+Developer (US$ 99/ano), Google Play (US$ 25), chave do Google Maps, logo em PNG transparente.
 
-**Fase 1 — Fundação:** monorepo, projeto Expo com expo-router, projeto Supabase, migration com o schema
-e RLS acima, login por telefone com OTP, tela de perfil, **termo de responsabilidade versionado com
-registro de IP** e consentimentos de LGPD.
+**Fase 1 — Fundação e papéis:** monorepo, Expo, Supabase, schema completo, RLS com `is_master`,
+`is_guide_owner` e `is_diamond`, login por telefone, termo versionado com IP.
 
-**Fase 2 — Agenda e reserva (sem pagamento):** calendário lendo `availability_days`, detalhe do dia,
-formulário de participantes, Edge Function `criar-reserva`, "Minhas reservas", cancelamento pelo
-cliente, job de expiração.
+**Fase 2 — Guias e flotilha:** cadastro do guia, aprovação pelo master, OAuth do Mercado Pago,
+CRUD de barcos, agenda por barco com preços.
 
-**Fase 3 — Pagamento:** integração Mercado Pago (Pix + cartão), Edge Function `mercadopago-webhook`
-com validação de assinatura e idempotência, geração do código da reserva, tela de status com polling,
-**política de cancelamento com aceite registrado**.
+**Fase 3 — Reserva:** busca de guias/barcos, calendário, `criar-reserva` com cálculo e cascata de
+comissão no servidor, participantes, minhas reservas, cancelamento, job de expiração.
 
-**Fase 4 — Notificações:** Edge Function `enviar-notificacao` (SMS/e-mail/push com templates), registro
-de `expo_push_token`, lembretes D-3 e D-1 **com checklist e ponto de encontro**, `notification_log`,
-job `pg_cron`.
+**Fase 4 — Pagamento e split:** Mercado Pago Marketplace com `marketplace_fee`, `mercadopago-webhook`
+idempotente, `ledger_entries`, política de cancelamento com aceite, reversão de comissão no estorno.
 
-**Fase 5 — Feed de capturas:** foto + GPS, remoção de EXIF, marca d'água no cliente, upload, feed com
-região e curtidas, `notificar-captura`, **ranking mensal** (`v_ranking_mensal` + anúncio automático).
+**Fase 5 — Extratos:** painel do guia e consolidado do master, filtros por período e exportação.
 
-**Fase 6 — Diamond:** `subscriptions`, função `is_diamond`, view `v_catches_feed`, Área Diamond com
-mapa de calor e detalhes técnicos, regra de agenda antecipada, desconto aplicado no servidor, avisos de
-vencimento, gestão de membros no painel.
+**Fase 6 — Notificações:** `enviar-notificacao` (SMS/e-mail/push), avisos ao guia, lembretes D-3/D-1
+com checklist e ponto de encontro, `notification_log`.
 
-**Fase 7 — Retenção e operação:** **lista de espera** (trigger + `avisar-lista-espera`),
-**previsão do tempo** (Open-Meteo com cache), **avaliação pós-pescaria** em D+1 com alerta de nota
-baixa para o admin.
+**Fase 7 — Feed de capturas:** foto + GPS, remoção de EXIF, marca d'água, feed, ranking mensal.
 
-**Fase 8 — Administração:** modo admin no app e restante do painel web (preços, participantes,
-pagamentos, textos configuráveis, avaliações, exportação CSV).
+**Fase 8 — Diamond:** `subscriptions`, view `v_catches_feed`, Área Diamond com mapa de calor, agenda
+antecipada, desconto, avisos de vencimento, gestão de membros.
 
-**Fase 9 — Publicação:** build EAS, TestFlight + Play Internal Testing, política de privacidade,
+**Fase 9 — Retenção:** lista de espera, previsão do tempo (Open-Meteo com cache), avaliação em D+1 com
+alerta de nota baixa.
+
+**Fase 10 — Publicação:** build EAS, TestFlight + Play Internal Testing, política de privacidade,
 ícones/splash, submissão às lojas.
 
 ---
 
-## Funcionalidades complementares — aprovadas para a v1
+## Funcionalidades complementares (confirmadas)
 
-Todas confirmadas pelo cliente. Como implementar cada uma:
+**Lista de espera.** `waitlist` + trigger de cancelamento → `avisar-lista-espera` (push + SMS, Diamond
+primeiro). Um dos poucos casos em que o SMS se paga: a janela de decisão é curta.
 
-**1. Lista de espera para datas ocupadas.** Tabela `waitlist` + trigger de cancelamento/expiração →
-Edge Function `avisar-lista-espera` (push + SMS, Diamond primeiro). Fluxo detalhado acima. É a única
-funcionalidade da lista que gera receita direta: recupera dia que hoje ficaria vago.
+**Previsão do tempo.** Open-Meteo, gratuita e sem chave. Coordenadas de operação por guia. Exibida a
+partir de D-7 e embutida no lembrete D-1. Edge Function com cache de 1 hora.
 
-**2. Previsão do tempo.** API **Open-Meteo** — gratuita, sem chave e sem cadastro. As coordenadas da
-base de operação ficam em `app_settings.local_operacao`. Exibida na tela da reserva a partir de D-7
-(fora dessa janela a previsão não tem valor) e embutida no lembrete D-1. Consultada por uma Edge
-Function com cache de 1 hora, para não bater na API a cada abertura de tela.
+**Checklist no lembrete.** Configurável **por guia** (`guides` + `app_settings` como padrão), editável
+no painel sem nova versão do app. D-3 traz o que levar; D-1 traz ponto, horário e previsão.
 
-**3. Checklist no lembrete.** Texto configurável em `app_settings.checklist` e
-`app_settings.ponto_encontro` — editável no painel sem precisar de nova versão do app. Entra no corpo
-do lembrete D-3 (o que levar) e D-1 (ponto, horário e previsão do tempo).
+**Termo de responsabilidade.** Versionado e registrado em `terms_acceptances` com versão, IP e
+user-agent. Aceito no cadastro e **reconfirmado a cada reserva** — é o aceite por pescaria que tem valor
+probatório. Mudou o texto, o app pede aceite de novo.
 
-**4. Termo de responsabilidade.** Versionado em `app_settings.termo` e registrado em
-`terms_acceptances` com versão, IP e user-agent. Aceito no cadastro e **reconfirmado a cada reserva**
-(`bookings.termo_versao`) — é isso que dá valor probatório por pescaria, não só por cliente. Se o
-texto do termo mudar, o app pede novo aceite automaticamente.
+**Ranking mensal do maior peixe.** View `v_ranking_mensal` sobre `catches`, global e por guia. Anúncio
+automático do vencedor por push no primeiro dia do mês.
 
-**5. Ranking mensal do maior peixe.** View `v_ranking_mensal` sobre `catches` (maior `peso_kg` por mês,
-com filtro por espécie). Não precisa de tabela nova. No primeiro dia do mês, um job `pg_cron` anuncia o
-vencedor por push — o gancho que traz o pessoal de volta ao app entre pescarias.
+**Avaliação pós-pescaria.** Job em D+1 com deep link para nota (1–5) + comentário. Média por guia
+aparece no perfil dele e no painel do master. Nota ≤ 3 gera alerta imediato.
 
-**6. Avaliação pós-pescaria.** Job `pg_cron` em D+1 envia push com deep link para uma tela de nota
-(1–5) + comentário opcional, gravada em `reviews`. Média e comentários aparecem no painel. Nota ≤ 3
-gera alerta imediato para o admin — problema descoberto no dia seguinte ainda tem conserto.
-
-**7. Política de cancelamento.** Versionada em `app_settings.politica_cancelamento` (texto + prazo em
-dias). Exibida com aceite obrigatório na tela de pagamento, gravada em `bookings.politica_versao` e em
-`terms_acceptances`. O app calcula e mostra o efeito real antes de o cliente confirmar o cancelamento.
+**Política de cancelamento.** Versionada, com aceite obrigatório na tela de pagamento e registro em
+`bookings.politica_versao`. O app mostra o efeito real antes de confirmar o cancelamento.
 
 ---
 
 ## Riscos e pontos de atenção
 
-- **Rejeição na App Store por causa do Diamond.** É o maior risco desta v1. Enquanto a assinatura for vendida fora do app, o aplicativo não pode ter botão de compra, preço com chamada para ação, nem link para pagar. Se no futuro você quiser que o cliente assine sozinho pelo app, isso exige In-App Purchase (RevenueCat, ~15% para Apple e Google) — planejado para a v2.
-- **Vazamento do ponto por metadado.** Sem remover o EXIF da foto e sem filtrar a coordenada no servidor, o Diamond vira apenas um cadeado de tela, contornável em minutos. Por isso a regra vive na view do Postgres e a imagem é recodificada antes do upload.
-- **LGPD:** os participantes são terceiros cadastrados por outra pessoa. O app exibirá aviso de que o titular declara ter autorização, guardará o aceite e oferecerá exclusão de dados. O uso de telefone/e-mail para os alertas de captura precisa de opt-in separado no perfil.
-- **Custo de SMS:** ~R$ 0,08–0,15 por envio. Confirmação, lembretes e aviso de vencimento do Diamond: OK. Alerta de captura: **não** vai por SMS (só push e e-mail), senão o custo explode.
-- **Estorno de cartão (chargeback):** por isso o Pix aparece primeiro na tela de pagamento.
-- **Renovação manual do Diamond:** ativar no painel é simples, mas depende de alguém lembrar. Os avisos de D-30/D-7 e a lista de "vencendo em breve" no painel existem para isso.
-- **Aprovação nas lojas:** conte ~1 a 2 semanas entre a primeira submissão e a aprovação da Apple.
+- **O escopo praticamente dobrou.** Virar marketplace acrescenta onboarding de guias, isolamento de dados, split de pagamento, extratos e um terceiro perfil de usuário. A estimativa passa de ~7–9 semanas para **~13 a 16 semanas**. Se quiser encurtar: construa o modelo de dados multi-guia desde já (é barato agora, caríssimo depois) e **lance com a Pesca Vertical como primeiro guia**, abrindo o cadastro para outros guias 4 a 6 semanas depois. Você valida o produto com dinheiro real antes de depender de terceiros.
+- **Vazamento entre guias.** É o pior defeito possível numa plataforma como essa — um guia ver a carteira de clientes ou o faturamento do outro. Por isso a regra vive em RLS no banco, e o plano de verificação testa isso explicitamente com token real.
+- **Situação fiscal de intermediador.** Com o split, sua receita tributável é só a comissão, e cada guia responde pela dele. Mesmo assim, você passa a emitir nota de serviço de intermediação e a plataforma tem obrigações de marketplace perante o consumidor (CDC). Vale uma conversa com contador antes de abrir para guias de fora — é decisão de negócio, não de software, mas o software precisa gerar os relatórios que o contador vai pedir, e o `ledger_entries` existe para isso.
+- **Quem banca o desconto Diamond.** Adotei que o desconto sai da parte do guia, e que oferecê-lo é opcional para ele. O contrário faria você subsidiar venda alheia com dinheiro próprio.
+- **Rejeição na App Store por causa do Diamond.** Enquanto a assinatura for vendida fora do app, o aplicativo não pode ter botão de compra, preço com CTA nem link de pagamento. Levar o Diamond para dentro do app exige In-App Purchase (~15%) — planejado para a v2.
+- **Tokens do Mercado Pago dos guias** são credenciais de terceiros. Ficam cifrados, acessíveis só pela `service_role` nas Edge Functions, nunca expostos ao app.
+- **Estorno de cartão:** o Pix aparece primeiro na tela de pagamento; num chargeback, sua comissão é revertida junto e o `ledger_entries` registra o lançamento negativo.
+- **LGPD:** participantes são terceiros cadastrados por outra pessoa — aviso de autorização, registro do aceite e exclusão de dados. Alertas de captura exigem opt-in separado.
+- **Custo de SMS** (~R$ 0,08–0,15): confirmação, lembretes, lista de espera e vencimento do Diamond, sim. Alerta de captura, não — só push e e-mail.
+- **Aprovação nas lojas:** ~1 a 2 semanas na primeira submissão da Apple.
 
 ---
 
-## Custo mensal estimado (operação pequena)
+## Custo mensal estimado
 
-Supabase Free/Pro (US$ 0–25) · Vercel Free · Expo/EAS Free–US$ 19 · Resend Free (3k e-mails) ·
-SMS por uso (~R$ 30–80/mês) · Google Maps dentro da cota gratuita nesse volume ·
-Mercado Pago por transação (Pix ~0,99%, crédito ~4,98%) · Lojas: US$ 99/ano + US$ 25 uma vez.
-**Base fixa: de ~R$ 0 a ~R$ 250/mês.** Sem comissão de loja sobre o Diamond, já que a venda é externa.
+Supabase Pro (US$ 25, recomendado a partir do momento em que houver dinheiro de terceiros no sistema) ·
+Vercel Free · Expo/EAS Free–US$ 19 · Resend Free (3k e-mails) · SMS por uso (~R$ 30–120/mês) ·
+Google Maps dentro da cota gratuita nesse volume · Mercado Pago por transação (Pix ~0,99%, crédito
+~4,98%, sem custo adicional pelo split) · Lojas: US$ 99/ano + US$ 25 uma vez.
+**Base fixa: ~R$ 150 a R$ 400/mês**, independente do número de guias.
 
 ---
 
 ## Verificação
 
-1. **Conflito de agenda:** dois dispositivos tentam reservar a mesma data ao mesmo tempo → um recebe erro claro "data acabou de ser reservada"; o banco tem exatamente 1 registro ativo.
-2. **Pagamento (sandbox Mercado Pago):** pagar com Pix de teste → reserva vira `confirmada` em segundos, código gerado, SMS/e-mail/push chegam. Reenviar o mesmo webhook manualmente → nada duplica.
-3. **Expiração:** criar reserva e não pagar → após 20 min a data volta a aparecer livre.
-4. **Blindagem do Diamond (o teste mais importante):** com o token de um cliente comum, chamar a API do feed direto por `curl` → os campos `lat`, `lng`, `isca`, `profundidade_m`, `hora_fisgada` e `condicao_tempo` voltam `null`. Baixar a foto do Storage e inspecionar o EXIF → sem dados de GPS. Ler a marca d'água → sem coordenada.
-5. **Ciclo da assinatura:** ativar Diamond no painel → área desbloqueia; alterar `fim` para ontem → área bloqueia sozinha na próxima consulta e os campos voltam a vir nulos.
-6. **Desconto e agenda antecipada:** cliente Diamond vê data ainda fechada para os demais e o valor sai com desconto; cliente comum tentando reservar a mesma data pela API recebe recusa do servidor.
-7. **Feed:** postar captura → foto no Storage já marcada; push chega nos outros dispositivos.
-8. **Lista de espera:** dois clientes entram na fila de uma data ocupada (um Diamond, um comum) → cancelar a reserva → o Diamond é avisado primeiro, a data reaparece livre e o primeiro que pagar fecha; o segundo recebe a recusa correta.
-9. **Termo e política:** aceitar, publicar uma nova versão do texto no painel e reservar de novo → o app pede aceite outra vez e `terms_acceptances` guarda as duas versões com IP e data.
-10. **Avaliação:** forçar o job de D+1 numa reserva passada → push chega; nota 3 gera alerta para o admin.
-11. **Previsão do tempo:** abrir a reserva a 5 dias da data → previsão aparece; a 20 dias → tela não mostra previsão e não chama a API.
-12. **Permissões (RLS):** com token de cliente, tentar ler reservas de outro, alterar `availability_days` ou criar `subscriptions` → todos negados.
-13. **Ponta a ponta em device real:** build EAS de preview num iPhone e num Android, percorrendo cadastro → reserva → pagamento → confirmação → captura → Área Diamond.
+1. **Conflito de agenda:** dois dispositivos reservam o mesmo barco/data ao mesmo tempo → um recebe erro claro, o banco tem 1 registro ativo. Repetir com **barcos diferentes do mesmo guia** → ambas as reservas passam.
+2. **Isolamento entre guias (o teste mais importante da plataforma):** com o token do guia A, chamar a API direto por `curl` tentando ler `bookings`, `boats`, `ledger_entries` e clientes do guia B → zero linhas em todos os casos.
+3. **Cascata da comissão:** definir padrão 10%, guia 12%, barco 15% e override de reserva 8% → cada nível vence o anterior. Depois alterar a comissão do guia e reabrir uma reserva antiga → o valor histórico não muda.
+4. **Split (sandbox Mercado Pago):** pagar sinal de R$ 300 com comissão de R$ 100 → conta do guia recebe R$ 200, conta da plataforma R$ 100, `ledger_entries` bate com o extrato do Mercado Pago. Reenviar o webhook manualmente → nada duplica.
+5. **Validação sinal ≥ comissão:** guia tenta salvar sinal de 5% com comissão de 15% → recusa no ato, com mensagem clara.
+6. **Estorno:** estornar um pagamento → reserva cancelada, comissão revertida e lançamento negativo no `ledger_entries`.
+7. **Porta de entrada:** guia aprovado sem Mercado Pago conectado tenta publicar agenda → bloqueado.
+8. **Blindagem do Diamond:** com token de cliente comum, chamar o feed por `curl` → `lat`, `lng`, `isca`, `profundidade_m`, `hora_fisgada` e `condicao_tempo` voltam `null`. Baixar a foto do Storage e inspecionar o EXIF → sem GPS. Ler a marca d'água → sem coordenada.
+9. **Ciclo da assinatura:** ativar Diamond → área desbloqueia; mudar `fim` para ontem → bloqueia sozinha e os campos voltam a vir nulos.
+10. **Lista de espera:** dois clientes na fila (um Diamond) → cancelar → Diamond avisado primeiro, data reaparece livre, quem paga primeiro fecha.
+11. **Termo e política:** publicar nova versão do texto e reservar de novo → app pede aceite outra vez, `terms_acceptances` guarda as duas versões com IP e data.
+12. **Avaliação e previsão:** forçar o job D+1 → push chega e nota 3 alerta o admin; abrir reserva a 5 dias → previsão aparece; a 20 dias → não aparece e a API não é chamada.
+13. **Expiração:** criar reserva e não pagar → após 20 min o barco volta a aparecer livre.
+14. **Ponta a ponta em device real:** build EAS de preview num iPhone e num Android, percorrendo cadastro de guia → aprovação → barco → agenda → reserva do cliente → pagamento com split → confirmação → captura → Área Diamond → extrato dos dois lados.
 
-Testes automatizados na v1 ficam concentrados onde há dinheiro e onde há segredo: testes de integração
-das Edge Functions `criar-reserva` e `mercadopago-webhook` (Deno test) e testes SQL das políticas RLS e
-da view `v_catches_feed` — este último rodando com JWT de cliente comum e de Diamond, para garantir que
-a coordenada nunca escape. UI fica com verificação manual, para não inflar o tempo da primeira versão.
+Os testes automatizados da v1 se concentram onde há dinheiro e onde há segredo: testes de integração
+das Edge Functions `criar-reserva` e `mercadopago-webhook` (Deno test), testes de cálculo da cascata de
+comissão, e testes SQL das políticas RLS rodando com JWT de cliente comum, de Diamond, do guia A e do
+guia B — para garantir que nem a coordenada nem os dados de um guia escapem. A UI fica com verificação
+manual, para não inflar o tempo da primeira versão.
