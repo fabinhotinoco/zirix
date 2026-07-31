@@ -51,9 +51,27 @@ jobs:
               ;;
           esac
 
+          # Erro mais comum: copiar a linha do painel e esquecer de trocar o
+          # marcador pela senha real.
+          case "$URL" in
+            *YOUR-PASSWORD*|*'[senha]'*|*'[SENHA]'*)
+              echo "::error::O endereço ainda tem o marcador [YOUR-PASSWORD] no lugar da senha."
+              echo ""
+              echo "Troque [YOUR-PASSWORD] — inclusive os colchetes — pela senha real do banco."
+              echo "Se não souber qual é, gere outra em"
+              echo "Project Settings -> Database -> Reset database password."
+              exit 1
+              ;;
+          esac
+
           # O trecho depois do @ não é secreto: serve para você conferir se o
-          # endereço é mesmo o do seu projeto.
+          # endereço é mesmo o do seu projeto e se é o do pooler.
           echo "Vai conectar em: ${URL##*@}"
+
+          case "$URL" in
+            *pooler.supabase.com*) echo "Endereço do pooler: correto." ;;
+            *) echo "::warning::Este não parece o endereço do pooler. Se falhar, use a aba Session pooler." ;;
+          esac
 
       - name: Testar a conexão
         env:
