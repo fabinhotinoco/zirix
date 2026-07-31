@@ -86,8 +86,9 @@ com a comissão inteira.
 ### Split no pagamento
 
 Cada cobrança passa pelo **Mercado Pago Marketplace**. O guia conecta a conta dele por OAuth; o
-pagamento é criado em nome do guia com `marketplace_fee` igual à fatia da comissão daquela cobrança.
-O Mercado Pago divide na origem:
+pagamento é criado em nome do guia com a comissão daquela cobrança no campo de taxa da plataforma —
+que é **`application_fee`** ao usar a API de pagamentos (`POST /v1/payments`, o caminho do Pix) e
+`marketplace_fee` ao usar preferências do Checkout Pro. O Mercado Pago divide na origem:
 
 ```
 Passeio R$ 1.000 · comissão 10% (R$ 100) · sinal 30%
@@ -135,8 +136,11 @@ Alternativas oferecidas antes do cancelamento — remarcar data (1× sem custo a
 transferir a reserva para outra pessoa (até 48h antes) e reduzir participantes — reduzem a perda dos
 dois lados e reforçam a boa-fé da política.
 
-O valor retido é dividido entre guia e plataforma **na mesma proporção da comissão**: o estorno parcial
-no Mercado Pago já devolve proporcionalmente de ambas as contas, sem cálculo adicional.
+O valor retido é dividido entre guia e plataforma **na mesma proporção da comissão**. A hipótese é que
+o estorno parcial no Mercado Pago já devolva proporcionalmente de ambas as contas, dispensando cálculo
+adicional — **e isso precisa ser confirmado na prática antes da Fase 4**, porque, se a devolução sair
+inteira da conta do guia, o motor de cancelamento passa a ter de compensar a comissão manualmente.
+O kit em `tools/mp-sandbox/` existe para responder exatamente essa pergunta.
 
 ---
 
