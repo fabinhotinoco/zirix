@@ -15,14 +15,24 @@ O robô precisa de permissão para criar as tabelas no seu Supabase.
 
 1. Entre no <https://supabase.com/dashboard> e abra seu projeto
 2. Na engrenagem **Project Settings** (canto inferior esquerdo) → **Database**
-3. Procure a caixa **Connection string** e escolha a aba **URI**
-4. Marque a opção de exibir a senha, se houver, e **copie o texto inteiro**
+3. Procure a caixa **Connection string**
+4. **Escolha a aba `Session pooler`** — não a `Direct connection`
+5. Marque a opção de exibir a senha, se houver, e **copie o texto inteiro**
 
 Vai ser parecido com isto:
 
 ```
 postgresql://postgres.abcdefgh:SUA-SENHA@aws-0-sa-east-1.pooler.supabase.com:5432/postgres
 ```
+
+> **Por que o pooler e não a conexão direta?** O endereço direto
+> (`db.SEUPROJETO.supabase.co`) só responde em IPv6, e os servidores do GitHub
+> não têm IPv6 — a conexão falha com `Network is unreachable`, um erro que não
+> dá nenhuma pista da causa. O endereço do pooler funciona em IPv4.
+>
+> Dá para reconhecer o certo por dois sinais: o endereço contém
+> `pooler.supabase.com`, e o usuário é `postgres.SEUPROJETO` em vez de só
+> `postgres`.
 
 > Se aparecer `[YOUR-PASSWORD]` no lugar da senha, troque manualmente pela senha
 > que você definiu quando criou o projeto. Se não lembrar, na mesma página há a
@@ -148,3 +158,4 @@ Os erros mais comuns:
 | `Falta o segredo EXPO_TOKEN` | A preparação 2 não foi feita |
 | `Este banco já tem as tabelas` | O robô 1 já rodou antes. Não precisa rodar de novo |
 | `password authentication failed` | A senha dentro do endereço de conexão está errada |
+| `Network is unreachable` | Você copiou a conexão direta (IPv6). Troque pela aba **Session pooler** |

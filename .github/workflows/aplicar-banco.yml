@@ -64,14 +64,35 @@ jobs:
             echo ""
             sed 's/^/  /' /tmp/erro
             echo ""
-            echo "Causas mais comuns:"
-            echo "  - senha errada dentro do endereço"
-            echo "  - senha com caracteres especiais (/ * @ # ?), que quebram o endereço"
-            echo "  - o texto ainda tem [YOUR-PASSWORD] no lugar da senha"
-            echo ""
-            echo "Gere uma senha nova só com letras e números em"
-            echo "Project Settings -> Database -> Reset database password,"
-            echo "e atualize o segredo no GitHub."
+
+            # A conexão direta do Supabase (db.SEUPROJETO.supabase.co) só
+            # responde em IPv6, e os servidores do GitHub não têm IPv6.
+            # É a causa mais comum aqui, e o erro não deixa isso óbvio.
+            if grep -q "Network is unreachable" /tmp/erro; then
+              echo "CAUSA: você copiou a conexão DIRETA, que só funciona em IPv6."
+              echo "Os servidores do GitHub não têm IPv6, então nunca alcançam esse endereço."
+              echo ""
+              echo "SOLUÇÃO: use o endereço do POOLER, que funciona em IPv4."
+              echo ""
+              echo "No Supabase: Project Settings -> Database -> Connection string."
+              echo "Ali existem abas. Escolha *Session pooler* (porta 5432),"
+              echo "não *Direct connection*."
+              echo ""
+              echo "O endereço certo tem esta cara — repare no 'pooler.supabase.com'"
+              echo "e no usuário 'postgres.SEUPROJETO':"
+              echo "  postgresql://postgres.xxxx:SENHA@aws-0-sa-east-1.pooler.supabase.com:5432/postgres"
+              echo ""
+              echo "A senha é a mesma. Muda só o endereço e o usuário."
+            elif grep -qi "password authentication failed" /tmp/erro; then
+              echo "CAUSA: a senha dentro do endereço está errada."
+              echo ""
+              echo "Confira se você substituiu [YOUR-PASSWORD] pela senha real,"
+              echo "e se ela não tem caracteres especiais (/ * @ # ?), que quebram"
+              echo "o endereço. Se tiver, gere outra em"
+              echo "Project Settings -> Database -> Reset database password."
+            else
+              echo "Confira o endereço e a senha no segredo SUPABASE_DB_URL."
+            fi
             exit 1
           fi
           echo "Conexão bem-sucedida."
