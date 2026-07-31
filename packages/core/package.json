@@ -1,0 +1,14 @@
+{
+  "name": "@zirix/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Nucleo de calculo: preco, comissao e cancelamento. Sem dependencias.",
+  "exports": {
+    "./pricing": "./src/pricing.ts",
+    "./cancellation": "./src/cancellation.ts"
+  },
+  "scripts": {
+    "test": "node --test --experimental-strip-types test/*.test.ts"
+  }
+}
