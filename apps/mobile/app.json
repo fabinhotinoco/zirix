@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Zirix",
-    "slug": "zirix",
-    "scheme": "zirix",
+    "name": "PescaVerticalAPP",
+    "slug": "pescaverticalapp",
+    "scheme": "pescaverticalapp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -10,7 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.zirix.app",
+      "bundleIdentifier": "com.pescavertical.app",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Usamos sua localização para registrar o ponto da captura na foto que você publicar.",
         "NSCameraUsageDescription": "Usamos a câmera para você fotografar suas capturas.",
@@ -18,7 +18,7 @@
       }
     },
     "android": {
-      "package": "com.zirix.app",
+      "package": "com.pescavertical.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
