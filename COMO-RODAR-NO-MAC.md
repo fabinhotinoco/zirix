@@ -65,8 +65,13 @@ open -e .env
 ```
 
 O TextEdit vai abrir o arquivo. A linha da URL já vem preenchida. Na linha
-`EXPO_PUBLIC_SUPABASE_ANON_KEY=`, apague o texto `cole-aqui-a-chave-anon-public`
-e cole a chave **anon** do Supabase.
+`EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=`, apague o texto
+`cole-aqui-a-chave-publicavel` e cole a chave que o Supabase mostra como
+**publishable** (começa com `sb_publishable_`).
+
+Se o seu painel ainda mostrar apenas a chave antiga **anon** (um texto longo
+começando com `eyJ`), troque o nome da linha para
+`EXPO_PUBLIC_SUPABASE_ANON_KEY=` e cole essa. O app aceita as duas.
 
 Salve com **Cmd + S** e feche o TextEdit.
 
