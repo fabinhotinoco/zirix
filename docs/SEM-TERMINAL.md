@@ -26,11 +26,22 @@ postgresql://postgres.abcdefgh:SUA-SENHA@aws-0-sa-east-1.pooler.supabase.com:543
 
 > Se aparecer `[YOUR-PASSWORD]` no lugar da senha, troque manualmente pela senha
 > que você definiu quando criou o projeto. Se não lembrar, na mesma página há a
-> opção de gerar uma nova.
+> opção **Reset database password** para gerar uma nova.
 
-⚠️ **Esse texto é secreto de verdade** — diferente das outras chaves, ele dá
-acesso total ao banco. Não me mande por aqui e não cole em nenhum outro lugar
-além do passo seguinte.
+**Ao gerar a senha, prefira apenas letras e números.** Caracteres como `/`, `*`,
+`@`, `#` e `?` têm significado especial dentro de um endereço de conexão e
+quebram a autenticação — o erro que aparece é `password authentication failed`,
+que não dá nenhuma pista da causa real.
+
+⚠️ **Esse texto é secreto de verdade** — diferente das chaves publicáveis, ele
+dá acesso total ao banco: ler, alterar e apagar tudo, ignorando qualquer regra
+de segurança. O endereço `db.<projeto>.supabase.co` é acessível pela internet,
+então quem tiver a senha entra de qualquer lugar do mundo.
+
+**Ele vai em um lugar só: o campo de segredo do GitHub.** Não mande por
+mensagem, e-mail ou chat — inclusive para mim. Se isso acontecer por engano,
+**troque a senha imediatamente** em Project Settings → Database → Reset
+database password, e refaça este passo com a nova.
 
 ### b) Guardar no GitHub
 
