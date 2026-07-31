@@ -1,0 +1,80 @@
+name: Testes
+
+# Roda sozinho a cada envio de código. Se algo quebrar, aparece um X vermelho
+# no GitHub — ninguém precisa lembrar de testar.
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  nucleo:
+    name: Núcleo (preço, comissão, cancelamento, aceites)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Rodar os testes
+        run: node --test --experimental-strip-types packages/core/test/*.test.ts
+
+  banco:
+    name: Banco (segurança e isolamento entre guias)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGPASSWORD: postgres
+      PSQL: psql -h localhost -U postgres -d zirix -v ON_ERROR_STOP=1 -q
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Criar banco de teste
+        run: psql -h localhost -U postgres -c "create database zirix;"
+
+      - name: Aplicar migração e valores padrão
+        run: |
+          $PSQL -f supabase/tests/00_shim_auth.sql
+          $PSQL -f supabase/migrations/0001_init.sql
+          $PSQL -f supabase/seed.sql
+
+      - name: Publicar documentos legais
+        run: |
+          node tools/seed-legal.mjs > /tmp/legal.sql
+          $PSQL -f /tmp/legal.sql
+
+      - name: Conferir que o hash do banco bate com o do aplicativo
+        run: node tools/verificar-hashes.mjs
+
+      - name: Rodar os testes de segurança
+        run: psql -h localhost -U postgres -d zirix -v ON_ERROR_STOP=1 -f supabase/tests/01_rls_test.sql
+
+  aplicativo:
+    name: Aplicativo (tipos)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+      - run: npm ci
+      - run: npx tsc --noEmit

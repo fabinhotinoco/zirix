@@ -8,7 +8,9 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "APP_ENV": "development"
+        "APP_ENV": "development",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://ykdbdpdepkdtyxtcwwex.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_npV2ODt7TI8PfDGS8RTN9Q_Q9tl6aNm"
       }
     },
     "preview": {
@@ -17,13 +19,17 @@
         "buildType": "apk"
       },
       "env": {
-        "APP_ENV": "preview"
+        "APP_ENV": "preview",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://ykdbdpdepkdtyxtcwwex.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_npV2ODt7TI8PfDGS8RTN9Q_Q9tl6aNm"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "APP_ENV": "production"
+        "APP_ENV": "production",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://ykdbdpdepkdtyxtcwwex.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_npV2ODt7TI8PfDGS8RTN9Q_Q9tl6aNm"
       }
     }
   },

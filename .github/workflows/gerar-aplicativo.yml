@@ -1,0 +1,64 @@
+name: 2. Gerar o aplicativo para testar
+
+# Monta o aplicativo na nuvem (servidores da Expo) e devolve um link para você
+# instalar no celular. Nada é instalado no seu computador.
+#
+# Precisa de um segredo chamado EXPO_TOKEN. Como criá-lo está em
+# docs/SEM-TERMINAL.md.
+on:
+  workflow_dispatch:
+    inputs:
+      plataforma:
+        description: 'Para qual celular'
+        required: true
+        default: android
+        type: choice
+        options: [android, ios, all]
+
+jobs:
+  gerar:
+    name: Montar na nuvem
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Conferir se o segredo existe
+        env:
+          TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::Falta o segredo EXPO_TOKEN. Veja docs/SEM-TERMINAL.md."
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - run: npm ci
+
+      - name: Montar o aplicativo
+        run: |
+          eas build \
+            --platform ${{ inputs.plataforma }} \
+            --profile preview \
+            --non-interactive \
+            --wait
+
+      - name: Onde baixar
+        run: |
+          echo "Pronto. O link para instalar está em:"
+          echo "  https://expo.dev/accounts  ->  seu projeto  ->  Builds"
+          echo ""
+          echo "No Android, abra o link no celular e instale o arquivo .apk."
+          echo "No iPhone, o aplicativo aparece no TestFlight."

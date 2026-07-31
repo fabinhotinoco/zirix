@@ -1,0 +1,70 @@
+name: 1. Preparar o banco no Supabase
+
+# Você aperta um botão e este robô cria as tabelas, as regras de segurança, os
+# valores padrão e os documentos legais no seu projeto Supabase.
+#
+# Precisa de um segredo chamado SUPABASE_DB_URL. Como criá-lo está em
+# docs/SEM-TERMINAL.md.
+on:
+  workflow_dispatch:
+    inputs:
+      confirmar:
+        description: 'Digite APLICAR para confirmar'
+        required: true
+        default: ''
+
+jobs:
+  aplicar:
+    name: Aplicar no Supabase
+    runs-on: ubuntu-latest
+    steps:
+      - name: Conferir a confirmação
+        if: inputs.confirmar != 'APLICAR'
+        run: |
+          echo "::error::Para evitar execução acidental, digite APLICAR no campo de confirmação."
+          exit 1
+
+      - uses: actions/checkout@v4
+
+      - name: Conferir se o segredo existe
+        env:
+          URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$URL" ]; then
+            echo "::error::Falta o segredo SUPABASE_DB_URL. Veja docs/SEM-TERMINAL.md."
+            exit 1
+          fi
+
+      - name: Ver se o banco já foi preparado antes
+        env:
+          URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          JA=$(psql "$URL" -tAc "select count(*) from information_schema.tables
+                                 where table_schema='public' and table_name='bookings';")
+          if [ "$JA" != "0" ]; then
+            echo "::error::Este banco já tem as tabelas. Rodar de novo daria erro."
+            echo "Se quiser começar do zero, apague as tabelas no painel antes."
+            exit 1
+          fi
+          echo "Banco vazio: pode aplicar."
+
+      - name: Aplicar tabelas, segurança, padrões e documentos
+        env:
+          URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: psql "$URL" -v ON_ERROR_STOP=1 -f supabase/setup-completo.sql
+
+      - name: Conferir o resultado
+        env:
+          URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          echo "O que ficou no seu banco:"
+          psql "$URL" -c "
+            select
+              (select count(*) from information_schema.tables
+                where table_schema='public' and table_type='BASE TABLE') as tabelas,
+              (select count(*) from pg_policies where schemaname='public')  as regras_de_seguranca,
+              (select count(*) from public.app_settings)                    as configuracoes,
+              (select count(*) from public.cancellation_rules)              as faixas_cancelamento,
+              (select count(*) from public.legal_documents)                 as documentos_legais;"
+          echo ""
+          echo "Esperado: 19 tabelas, 35 regras, 14 configurações, 5 faixas, 5 documentos."
