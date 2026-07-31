@@ -108,15 +108,14 @@ Anote o resultado real do extrato. É informação que não dá para deduzir da 
 
 ---
 
-## Resultado registrado
+## Resultado
 
-**Passo 3 — respondido: o estorno parcial debita proporcionalmente da conta do guia e da comissão da
-plataforma.** O motor de cancelamento, portanto, só precisa enviar o valor a devolver; não há
-compensação manual de comissão. A consequência para o `ledger_entries` está em
-`docs/PLANEJAMENTO.md`, na seção "Cancelamento — motor de retenção".
+**Ainda não rodado.** Nenhum dos três passos foi executado contra a API real até agora — o que existe
+é a validação offline do cálculo de rateio. O comportamento do estorno parcial (passo 3) segue **em
+aberto** e precisa ser respondido antes da Fase 4.
 
-Os scripts continuam úteis como bancada: use-os para reconferir o comportamento com os valores reais
-da operação antes de a Fase 4 ir para produção, e sempre que o Mercado Pago mudar algo na API.
+Se você não tem familiaridade com terminal, siga o **[PASSO-A-PASSO.md](./PASSO-A-PASSO.md)**: ele
+lista só o que precisa ser feito por uma pessoa, e o resto é executado por mim.
 
 ## Segurança
 

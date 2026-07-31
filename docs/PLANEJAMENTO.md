@@ -138,11 +138,17 @@ dois lados e reforçam a boa-fé da política.
 
 O valor retido é dividido entre guia e plataforma **na mesma proporção da comissão**.
 
-**Comportamento do estorno parcial — confirmado:** o Mercado Pago debita proporcionalmente da conta do
-guia **e** da comissão da plataforma. Isso simplifica bastante o motor de cancelamento: basta enviar o
-valor a devolver; **não há compensação manual de comissão a fazer**, e o rateio se mantém sozinho.
+**Comportamento do estorno parcial — A VERIFICAR (não testado ainda).** A expectativa é que o Mercado
+Pago debite proporcionalmente da conta do guia **e** da comissão da plataforma. Se for assim, o motor
+de cancelamento fica simples: basta enviar o valor a devolver, sem compensação manual de comissão.
+**Se a devolução sair inteira da conta do guia, a Fase 4 muda** — passamos a ter de calcular e
+compensar a comissão por conta própria, e o guia fica exposto a devolver mais do que recebeu.
 
-Duas consequências que o código precisa refletir:
+O kit em `tools/mp-sandbox/` existe para responder isso, e o teste precisa acontecer **antes** de a
+Fase 4 começar. Enquanto não rodar, o texto abaixo descreve o desenho pretendido, não o comportamento
+observado.
+
+Duas consequências que o código precisa refletir, **se a proporcionalidade se confirmar**:
 
 ```
 comissao_revertida = round(fee_da_cobranca × valor_estornado ÷ valor_da_cobranca)
