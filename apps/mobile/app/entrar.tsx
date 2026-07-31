@@ -1,0 +1,206 @@
+/**
+ * Entrada por código de uso único.
+ *
+ * Telefone é o caminho pretendido, mas depende de um provedor de SMS
+ * configurado no Supabase. Enquanto isso não existe, o e-mail permite testar
+ * o fluxo inteiro — e continua útil depois, como alternativa para quem trocar
+ * de número.
+ */
+
+import { useState } from 'react';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { supabase } from '@/lib/supabase';
+import { Botao, Campo, Erro, Subtitulo, Titulo, cores } from '@/ui/componentes';
+
+type Meio = 'telefone' | 'email';
+type Etapa = 'identificacao' | 'codigo';
+
+/** O Supabase espera E.164: +5511987654321. */
+function paraE164(bruto: string): string | null {
+  const digitos = bruto.replace(/\D/g, '');
+  if (digitos.length === 10 || digitos.length === 11) return `+55${digitos}`;
+  if (digitos.length === 12 || digitos.length === 13) return `+${digitos}`;
+  return null;
+}
+
+export default function Entrar() {
+  const insets = useSafeAreaInsets();
+  const [meio, setMeio] = useState<Meio>('email');
+  const [etapa, setEtapa] = useState<Etapa>('identificacao');
+  const [valor, setValor] = useState('');
+  const [codigo, setCodigo] = useState('');
+  const [erro, setErro] = useState<string | null>(null);
+  const [enviando, setEnviando] = useState(false);
+
+  async function enviarCodigo() {
+    setErro(null);
+    setEnviando(true);
+    try {
+      if (meio === 'telefone') {
+        const telefone = paraE164(valor);
+        if (!telefone) throw new Error('Informe o telefone com DDD, por exemplo 11 98765-4321.');
+        const { error } = await supabase.auth.signInWithOtp({ phone: telefone });
+        if (error) throw error;
+      } else {
+        if (!valor.includes('@')) throw new Error('Informe um e-mail válido.');
+        const { error } = await supabase.auth.signInWithOtp({
+          email: valor.trim(),
+          options: { shouldCreateUser: true },
+        });
+        if (error) throw error;
+      }
+      setEtapa('codigo');
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Não foi possível enviar o código.');
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  async function confirmarCodigo() {
+    setErro(null);
+    setEnviando(true);
+    try {
+      const { error } =
+        meio === 'telefone'
+          ? await supabase.auth.verifyOtp({
+              phone: paraE164(valor)!,
+              token: codigo.trim(),
+              type: 'sms',
+            })
+          : await supabase.auth.verifyOtp({
+              email: valor.trim(),
+              token: codigo.trim(),
+              type: 'email',
+            });
+      if (error) throw error;
+      // O redirecionamento acontece sozinho: a sessão muda e app/index reavalia.
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Código inválido ou expirado.');
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      style={{ flex: 1 }}
+    >
+      <ScrollView
+        contentContainerStyle={[estilos.conteudo, { paddingTop: insets.top + 48 }]}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Titulo>PescaVerticalAPP</Titulo>
+
+        {etapa === 'identificacao' ? (
+          <>
+            <Subtitulo>
+              Enviamos um código de uso único para você entrar. Sem senha para esquecer.
+            </Subtitulo>
+
+            <View style={estilos.abas}>
+              {(['email', 'telefone'] as const).map((m) => (
+                <Pressable
+                  key={m}
+                  onPress={() => {
+                    setMeio(m);
+                    setValor('');
+                    setErro(null);
+                  }}
+                  style={[estilos.aba, meio === m && estilos.abaAtiva]}
+                >
+                  <Text style={[estilos.abaTexto, meio === m && estilos.abaTextoAtivo]}>
+                    {m === 'email' ? 'E-mail' : 'Telefone'}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
+            {meio === 'email' ? (
+              <Campo
+                rotulo="Seu e-mail"
+                value={valor}
+                onChangeText={setValor}
+                placeholder="voce@exemplo.com"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoComplete="email"
+              />
+            ) : (
+              <Campo
+                rotulo="Seu telefone"
+                value={valor}
+                onChangeText={setValor}
+                placeholder="(11) 98765-4321"
+                keyboardType="phone-pad"
+                autoComplete="tel"
+              />
+            )}
+
+            <Botao
+              titulo="Receber código"
+              onPress={enviarCodigo}
+              carregando={enviando}
+              desabilitado={valor.trim().length < 5}
+            />
+          </>
+        ) : (
+          <>
+            <Subtitulo>Digite o código de 6 dígitos que enviamos para {valor}.</Subtitulo>
+
+            <Campo
+              rotulo="Código"
+              value={codigo}
+              onChangeText={setCodigo}
+              placeholder="000000"
+              keyboardType="number-pad"
+              maxLength={6}
+              autoComplete="one-time-code"
+            />
+
+            <Botao
+              titulo="Entrar"
+              onPress={confirmarCodigo}
+              carregando={enviando}
+              desabilitado={codigo.trim().length < 6}
+            />
+
+            <Pressable
+              onPress={() => {
+                setEtapa('identificacao');
+                setCodigo('');
+                setErro(null);
+              }}
+              style={estilos.voltar}
+            >
+              <Text style={estilos.voltarTexto}>Corrigir {meio === 'email' ? 'e-mail' : 'telefone'}</Text>
+            </Pressable>
+          </>
+        )}
+
+        <Erro mensagem={erro} />
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
+const estilos = StyleSheet.create({
+  conteudo: { paddingHorizontal: 24, paddingBottom: 48 },
+  abas: { flexDirection: 'row', gap: 8, marginBottom: 20 },
+  aba: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: cores.borda,
+    alignItems: 'center',
+  },
+  abaAtiva: { backgroundColor: cores.aguaClara, borderColor: cores.agua },
+  abaTexto: { color: cores.suave, fontWeight: '600' },
+  abaTextoAtivo: { color: cores.agua },
+  voltar: { marginTop: 18, alignItems: 'center' },
+  voltarTexto: { color: cores.agua, fontWeight: '600' },
+});
