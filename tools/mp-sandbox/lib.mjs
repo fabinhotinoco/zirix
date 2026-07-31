@@ -96,3 +96,32 @@ export function ratearComissao(valorLiquidoCentavos, comissaoCentavos, cobrancas
 }
 
 export const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Falhas destes scripts são quase sempre configuração (token errado, host
+ * bloqueado, code expirado). Stack trace do Node não ajuda em nada nesses
+ * casos — melhor uma mensagem que diga o que fazer.
+ */
+export function instalarTratamentoDeErro() {
+  const tratar = (erro) => {
+    const msg = String(erro?.message ?? erro);
+    console.error(`\n✗ ${msg}\n`);
+
+    if (msg.includes('not in allowlist') || msg.includes('403')) {
+      console.error('Se a mensagem acima fala em allowlist, o bloqueio é da rede do ambiente,');
+      console.error('não do Mercado Pago. Libere api.mercadopago.com nas configurações de rede');
+      console.error('do ambiente, ou rode este script na sua máquina.\n');
+    } else if (msg.includes('401')) {
+      console.error('HTTP 401 = token inválido ou expirado. Refaça o passo 1 (oauth.mjs).\n');
+    } else if (msg.includes('400')) {
+      console.error('HTTP 400 = o Mercado Pago recusou os dados enviados. O corpo da resposta');
+      console.error('acima diz qual campo está errado.\n');
+    } else if (msg.includes('fetch failed') || msg.includes('ENOTFOUND')) {
+      console.error('Sem conexão com api.mercadopago.com. Verifique a internet ou o proxy.\n');
+    }
+    process.exit(1);
+  };
+
+  process.on('unhandledRejection', tratar);
+  process.on('uncaughtException', tratar);
+}

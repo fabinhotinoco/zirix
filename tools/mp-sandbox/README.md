@@ -9,8 +9,18 @@ do planejamento:
 
 Sem dependências. Só Node 18+ (aqui foi testado com Node 22).
 
-> **Rode na sua máquina.** O ambiente onde o planejamento foi escrito bloqueia `api.mercadopago.com`
-> por política de rede, então o teste não roda de lá.
+## Onde rodar
+
+Funciona em qualquer máquina com Node. Se for rodar dentro de uma sessão do Claude Code na web, o
+ambiente precisa ter `api.mercadopago.com` e `auth.mercadopago.com.br` **liberados na configuração de
+rede (egress allowlist)** — por padrão eles são bloqueados, e o script avisa com essa mensagem:
+
+```
+Host not in allowlist: api.mercadopago.com.
+Add this host to your network egress settings to allow access.
+```
+
+Liberando os dois hosts, o teste roda direto de lá.
 
 ---
 

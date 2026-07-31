@@ -7,8 +7,9 @@
 // Pago redireciona para a redirect_uri com ?code=... na barra de endereço.
 // Copie esse code e rode o segundo comando.
 
-import { carregarEnv, exigir, mp } from './lib.mjs';
+import { carregarEnv, exigir, mp, instalarTratamentoDeErro } from './lib.mjs';
 
+instalarTratamentoDeErro();
 carregarEnv();
 
 const comando = process.argv[2];

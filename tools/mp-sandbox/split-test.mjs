@@ -7,8 +7,9 @@
 // aguardando o pagamento do QR Code.
 
 import { randomUUID } from 'node:crypto';
-import { carregarEnv, exigir, mp, brl, ratearComissao, espera } from './lib.mjs';
+import { carregarEnv, exigir, mp, brl, ratearComissao, espera, instalarTratamentoDeErro } from './lib.mjs';
 
+instalarTratamentoDeErro();
 carregarEnv();
 
 const VALOR_TOTAL = Number(process.env.VALOR_TOTAL_CENTAVOS ?? 100000); // R$ 1.000,00

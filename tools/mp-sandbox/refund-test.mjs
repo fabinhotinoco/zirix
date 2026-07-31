@@ -13,8 +13,9 @@
 // contas depois de rodar.
 
 import { randomUUID } from 'node:crypto';
-import { carregarEnv, exigir, mp, brl } from './lib.mjs';
+import { carregarEnv, exigir, mp, brl, instalarTratamentoDeErro } from './lib.mjs';
 
+instalarTratamentoDeErro();
 carregarEnv();
 
 const paymentId = process.argv[2] ?? process.env.MP_PAYMENT_ID;
