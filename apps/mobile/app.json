@@ -1,25 +1,51 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "Zirix",
+    "slug": "zirix",
+    "scheme": "zirix",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.zirix.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Usamos sua localização para registrar o ponto da captura na foto que você publicar.",
+        "NSCameraUsageDescription": "Usamos a câmera para você fotografar suas capturas.",
+        "NSPhotoLibraryUsageDescription": "Usamos suas fotos para você publicar capturas no aplicativo."
+      }
     },
     "android": {
+      "package": "com.zirix.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA",
+        "READ_MEDIA_IMAGES"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/72aa036d-59ed-44e4-a8df-086bd877d2db"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "72aa036d-59ed-44e4-a8df-086bd877d2db"
+      }
     }
   }
 }
