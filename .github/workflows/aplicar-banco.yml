@@ -26,7 +26,7 @@ jobs:
 
       - uses: actions/checkout@v4
 
-      - name: Conferir se o segredo existe
+      - name: Conferir o segredo
         env:
           URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
@@ -34,6 +34,47 @@ jobs:
             echo "::error::Falta o segredo SUPABASE_DB_URL. Veja docs/SEM-TERMINAL.md."
             exit 1
           fi
+
+          # Sem o prefixo, o psql entende o texto como nome de um banco local e
+          # tenta conectar na própria máquina — erro que não indica a causa.
+          case "$URL" in
+            postgresql://*|postgres://*) ;;
+            *)
+              echo "::error::O segredo SUPABASE_DB_URL não começa com postgresql://"
+              echo ""
+              echo "Ele precisa ser o endereço completo, no formato:"
+              echo "  postgresql://postgres:SENHA@db.SEUPROJETO.supabase.co:5432/postgres"
+              echo ""
+              echo "No Supabase: Project Settings -> Database -> Connection string -> URI."
+              echo "Copie a linha inteira, não apenas a senha."
+              exit 1
+              ;;
+          esac
+
+          # O trecho depois do @ não é secreto: serve para você conferir se o
+          # endereço é mesmo o do seu projeto.
+          echo "Vai conectar em: ${URL##*@}"
+
+      - name: Testar a conexão
+        env:
+          URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if ! psql "$URL" -tAc "select 1" > /dev/null 2> /tmp/erro; then
+            echo "::error::Não consegui conectar no banco."
+            echo ""
+            sed 's/^/  /' /tmp/erro
+            echo ""
+            echo "Causas mais comuns:"
+            echo "  - senha errada dentro do endereço"
+            echo "  - senha com caracteres especiais (/ * @ # ?), que quebram o endereço"
+            echo "  - o texto ainda tem [YOUR-PASSWORD] no lugar da senha"
+            echo ""
+            echo "Gere uma senha nova só com letras e números em"
+            echo "Project Settings -> Database -> Reset database password,"
+            echo "e atualize o segredo no GitHub."
+            exit 1
+          fi
+          echo "Conexão bem-sucedida."
 
       - name: Ver se o banco já foi preparado antes
         env:
