@@ -33,6 +33,11 @@ postgresql://postgres.abcdefgh:SUA-SENHA@aws-0-sa-east-1.pooler.supabase.com:543
 > Dá para reconhecer o certo por dois sinais: o endereço contém
 > `pooler.supabase.com`, e o usuário é `postgres.SEUPROJETO` em vez de só
 > `postgres`.
+>
+> **Copie a linha inteira e edite só a senha.** Trocar apenas o endereço do
+> servidor numa linha antiga não funciona: o pooler recusa o usuário `postgres`
+> sozinho, e a mensagem de erro fala em senha errada — o que leva você a trocar
+> a senha à toa.
 
 > Se aparecer `[YOUR-PASSWORD]` no lugar da senha, troque manualmente pela senha
 > que você definiu quando criou o projeto. Se não lembrar, na mesma página há a
@@ -159,3 +164,4 @@ Os erros mais comuns:
 | `Este banco já tem as tabelas` | O robô 1 já rodou antes. Não precisa rodar de novo |
 | `password authentication failed` | A senha dentro do endereço de conexão está errada |
 | `Network is unreachable` | Você copiou a conexão direta (IPv6). Troque pela aba **Session pooler** |
+| `password authentication failed for user "postgres"` | No pooler o usuário precisa ser `postgres.SEUPROJETO`. Copie a linha inteira da aba Session pooler, sem editar o usuário |

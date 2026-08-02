@@ -68,8 +68,32 @@ jobs:
           # endereço é mesmo o do seu projeto e se é o do pooler.
           echo "Vai conectar em: ${URL##*@}"
 
+          SEM_ESQUEMA="${URL#*://}"
+          USUARIO="${SEM_ESQUEMA%%:*}"
+          echo "Usuário: ${USUARIO}"
+
           case "$URL" in
-            *pooler.supabase.com*) echo "Endereço do pooler: correto." ;;
+            *pooler.supabase.com*)
+              echo "Endereço do pooler: correto."
+              # O pooler exige usuário no formato postgres.SEUPROJETO. Com apenas
+              # "postgres" ele recusa a autenticação, e a mensagem fala em senha
+              # errada — mandando você trocar a senha à toa.
+              case "$USUARIO" in
+                postgres)
+                  echo "::error::O usuário está como 'postgres', mas o pooler exige 'postgres.SEUPROJETO'."
+                  echo ""
+                  echo "Você trocou o endereço do servidor, mas manteve o usuário antigo."
+                  echo "No endereço do Session pooler o usuário tem o código do projeto junto:"
+                  echo ""
+                  echo "  postgresql://postgres.SEUPROJETO:SENHA@aws-0-...pooler.supabase.com:5432/postgres"
+                  echo "                       ^^^^^^^^^^^^ esta parte falta"
+                  echo ""
+                  echo "O jeito mais seguro é copiar a linha inteira da aba Session pooler,"
+                  echo "sem editar nada além de trocar [YOUR-PASSWORD] pela senha."
+                  exit 1
+                  ;;
+              esac
+              ;;
             *) echo "::warning::Este não parece o endereço do pooler. Se falhar, use a aba Session pooler." ;;
           esac
 
