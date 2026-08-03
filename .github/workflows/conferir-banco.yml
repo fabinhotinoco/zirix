@@ -1,0 +1,86 @@
+name: 4. Conferir o que está gravado no banco
+
+# Só lê. Não altera nada, não apaga nada.
+#
+# Serve para confirmar que o que aconteceu na tela chegou mesmo ao banco — em
+# especial os aceites dos documentos legais, que precisam ter versão, hash do
+# texto e IP para valerem como prova.
+#
+# Usa o mesmo segredo SUPABASE_DB_URL do robô 1.
+on:
+  workflow_dispatch:
+
+jobs:
+  conferir:
+    name: Ler o estado do banco
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Conferir o segredo
+        env:
+          URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$URL" ]; then
+            echo "::error::Falta o segredo SUPABASE_DB_URL. Veja docs/SEM-TERMINAL.md."
+            exit 1
+          fi
+
+      - name: Quem já se cadastrou
+        env:
+          URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          psql "$URL" -c "
+            select role as papel, count(*) as pessoas
+            from public.profiles
+            group by role
+            order by role;"
+
+      - name: Aceites registrados
+        env:
+          URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          psql "$URL" -c "
+            select
+              documento_slug as documento,
+              versao,
+              count(*)                                   as aceites,
+              count(*) filter (where hash_sha256 <> '')  as com_hash,
+              count(*) filter (where ip is not null)     as com_ip
+            from public.terms_acceptances
+            group by documento_slug, versao
+            order by documento_slug;"
+
+      - name: Aceite bate com o texto publicado?
+        env:
+          URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          # O hash é o que permite provar, meses depois, exatamente qual texto a
+          # pessoa aceitou. Se não bater com o documento vigente, ou o texto foi
+          # editado sem nova versão, ou o aceite se refere a uma versão anterior
+          # — as duas coisas precisam aparecer, não ficar escondidas.
+          psql "$URL" -c "
+            select
+              a.documento_slug as documento,
+              a.versao,
+              count(*) as aceites,
+              case when bool_and(a.hash_sha256 = d.hash_sha256)
+                   then 'confere com o texto publicado'
+                   else 'ATENCAO: hash diferente do documento vigente' end as situacao
+            from public.terms_acceptances a
+            left join public.legal_documents d
+              on d.slug = a.documento_slug and d.versao = a.versao
+            group by a.documento_slug, a.versao
+            order by a.documento_slug;"
+
+      - name: Resumo
+        env:
+          URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          psql "$URL" -c "
+            select
+              (select count(*) from public.profiles)           as pessoas,
+              (select count(*) from public.terms_acceptances)  as aceites,
+              (select count(*) from public.guides)             as guias,
+              (select count(*) from public.boats)              as barcos,
+              (select count(*) from public.bookings)           as reservas;"

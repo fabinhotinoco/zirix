@@ -244,7 +244,21 @@ forma mais rápida de percorrer as telas, e não exige instalar nada.
 Não substitui o aplicativo de verdade: câmera, GPS e notificações se comportam
 diferente no navegador.
 
-## Robô 4 — Testes (roda sozinho)
+## Robô 4 — Conferir o que está gravado no banco
+
+1. Aba **Actions** → **4. Conferir o que está gravado no banco**
+2. **Run workflow** → mesma branch → **Run workflow**
+
+Só lê, não altera nada. Mostra quem se cadastrou, quantos aceites existem e —
+o que mais importa — se o **hash** de cada aceite ainda bate com o texto
+publicado. É esse hash que permite provar, meses depois, exatamente qual texto
+a pessoa aceitou.
+
+Se aparecer `ATENCAO: hash diferente do documento vigente`, ou o texto foi
+editado sem publicar nova versão, ou o aceite se refere a uma versão anterior.
+Nos dois casos vale investigar antes de o documento ser usado como prova.
+
+## Robô 5 — Testes (roda sozinho)
 
 Não precisa apertar nada. A cada alteração no código, ele confere as regras de
 segurança do banco e as contas de comissão e cancelamento. Se algo quebrar,
