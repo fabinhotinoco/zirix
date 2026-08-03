@@ -63,19 +63,33 @@ export default function Entrar() {
     setErro(null);
     setEnviando(true);
     try {
-      const { error } =
-        meio === 'telefone'
-          ? await supabase.auth.verifyOtp({
-              phone: paraE164(valor)!,
-              token: codigo.trim(),
-              type: 'sms',
-            })
-          : await supabase.auth.verifyOtp({
-              email: valor.trim(),
-              token: codigo.trim(),
-              type: 'email',
-            });
-      if (error) throw error;
+      if (meio === 'telefone') {
+        const { error } = await supabase.auth.verifyOtp({
+          phone: paraE164(valor)!,
+          token: codigo.trim(),
+          type: 'sms',
+        });
+        if (error) throw error;
+      } else {
+        // O Supabase emite o código por dois caminhos diferentes conforme o
+        // endereço já exista ou não: quem já entrou alguma vez recebe pelo
+        // modelo "Magic Link" (tipo `email`); quem está entrando pela primeira
+        // vez recebe pelo "Confirm signup" (tipo `signup`). O tipo errado é
+        // recusado com a mesma mensagem de código expirado, o que faz parecer
+        // problema de prazo quando é de classificação.
+        //
+        // Não dá para saber de fora qual dos dois é — a existência da conta é
+        // justamente o que o Supabase não revela antes do login. Então tenta um
+        // e, se for recusado, tenta o outro.
+        const email = valor.trim();
+        const token = codigo.trim();
+
+        const primeira = await supabase.auth.verifyOtp({ email, token, type: 'email' });
+        if (primeira.error) {
+          const segunda = await supabase.auth.verifyOtp({ email, token, type: 'signup' });
+          if (segunda.error) throw primeira.error;
+        }
+      }
       // O redirecionamento acontece sozinho: a sessão muda e app/index reavalia.
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Código inválido ou expirado.');
