@@ -41,8 +41,11 @@ const CONHECIDOS: Record<string, string> = {
 
 const POR_STATUS: Record<number, string> = {
   429: 'Muitas tentativas em pouco tempo. Espere alguns minutos.',
-  500: 'O Supabase falhou ao processar o pedido — normalmente é o envio de ' +
-    'e-mail. Confira as configurações de SMTP no painel.',
+  // Não afirmar que é e-mail: um 500 na entrada por senha não tem nada a ver
+  // com envio, e a mensagem antiga mandava procurar no lugar errado.
+  500: 'O Supabase teve um erro interno ao processar o pedido. Se aconteceu ao ' +
+    'pedir o código, costuma ser falha no envio do e-mail; veja o registro em ' +
+    'Logs → Auth no painel.',
   503: 'O serviço do Supabase está indisponível no momento.',
 };
 

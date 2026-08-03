@@ -43,6 +43,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [carregando, setCarregando] = useState(true);
   const [sessao, setSessao] = useState<Session | null>(null);
   const [perfil, setPerfil] = useState<Perfil | null>(null);
+  // Enquanto o perfil não foi buscado, "sem perfil" e "ainda não sei" são
+  // estados diferentes. Confundir os dois joga quem já tem cadastro de volta
+  // para a tela de cadastro.
+  const [buscandoPerfil, setBuscandoPerfil] = useState(false);
 
   async function carregarPerfil(userId: string): Promise<Perfil | null> {
     const { data, error } = await supabase
@@ -87,10 +91,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setCarregando(false);
     })();
 
-    const { data: inscricao } = supabase.auth.onAuthStateChange(async (_evento, nova) => {
+    // ATENÇÃO: este retorno de chamada precisa ser síncrono.
+    //
+    // O supabase-js segura um bloqueio enquanto entrega o evento. Chamar outra
+    // função dele aqui dentro — como a busca do perfil, que também precisa da
+    // sessão — pode travar uma esperando a outra. O sintoma é cruel: a entrada
+    // dá certo, o servidor devolve a sessão, e a tela simplesmente não muda.
+    //
+    // Então aqui só guardamos a sessão. O perfil é buscado no efeito abaixo,
+    // já fora do bloqueio.
+    const { data: inscricao } = supabase.auth.onAuthStateChange((_evento, nova) => {
       if (!ativo) return;
       setSessao(nova);
-      setPerfil(nova ? await carregarPerfil(nova.user.id) : null);
     });
 
     return () => {
@@ -99,19 +111,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // Depende do identificador, não do objeto: o Supabase entrega uma sessão nova
+  // a cada renovação de token, e refazer a busca a cada renovação seria só
+  // trabalho perdido.
+  const userId = sessao?.user.id ?? null;
+
+  useEffect(() => {
+    let ativo = true;
+    if (!userId) {
+      setPerfil(null);
+      setBuscandoPerfil(false);
+      return;
+    }
+    setBuscandoPerfil(true);
+    carregarPerfil(userId)
+      .then((p) => {
+        if (ativo) setPerfil(p);
+      })
+      .catch(() => {
+        // Sem perfil o aplicativo manda para o cadastro, que é o destino certo
+        // também quando a busca falha — melhor que uma tela em branco.
+        if (ativo) setPerfil(null);
+      })
+      .finally(() => {
+        if (ativo) setBuscandoPerfil(false);
+      });
+    return () => {
+      ativo = false;
+    };
+  }, [userId]);
+
   const valor = useMemo<EstadoAuth>(
     () => ({
-      carregando,
+      carregando: carregando || buscandoPerfil,
       sessao,
       perfil,
       recarregarPerfil: async () => {
-        if (sessao) setPerfil(await carregarPerfil(sessao.user.id));
+        if (userId) setPerfil(await carregarPerfil(userId));
       },
       sair: async () => {
         await supabase.auth.signOut();
       },
     }),
-    [carregando, sessao, perfil],
+    [carregando, buscandoPerfil, sessao, perfil, userId],
   );
 
   return <Contexto.Provider value={valor}>{children}</Contexto.Provider>;

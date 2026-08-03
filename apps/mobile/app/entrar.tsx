@@ -9,6 +9,7 @@
 
 import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { mensagemDeErro } from '@/lib/erros';
@@ -31,6 +32,7 @@ function paraE164(bruto: string): string | null {
 
 export default function Entrar() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [meio, setMeio] = useState<Meio>('email');
   const [etapa, setEtapa] = useState<Etapa>('identificacao');
   const [valor, setValor] = useState('');
@@ -53,7 +55,10 @@ export default function Entrar() {
         password: senha,
       });
       if (error) throw error;
-      // A sessão muda e app/index reavalia sozinho.
+      // Voltar para a raiz de propósito: é lá que mora o porteiro que decide
+      // entre cadastro e início. Esta tela não é desmontada sozinha quando a
+      // sessão aparece — sem esta linha, a entrada dá certo e nada acontece.
+      router.replace('/');
     } catch (e) {
       setErro(mensagemDeErro(e, 'E-mail ou senha incorretos.'));
     } finally {
@@ -118,7 +123,8 @@ export default function Entrar() {
           if (segunda.error) throw primeira.error;
         }
       }
-      // O redirecionamento acontece sozinho: a sessão muda e app/index reavalia.
+      // Mesmo motivo do login por senha: quem decide o destino é a raiz.
+      router.replace('/');
     } catch (e) {
       setErro(mensagemDeErro(e, 'Código inválido ou expirado.'));
     } finally {
