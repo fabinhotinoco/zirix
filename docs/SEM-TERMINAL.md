@@ -267,6 +267,7 @@ Os erros mais comuns:
 | `Network is unreachable` | Você copiou a conexão direta (IPv6). Troque pela aba **Session pooler** |
 | `password authentication failed for user "postgres"` | No pooler o usuário precisa ser `postgres.SEUPROJETO`. Copie a linha inteira da aba Session pooler, sem editar o usuário |
 | `A porta 6543 é o pooler em modo transação` | Troque apenas o `6543` por `5432` no segredo. O resto do endereço é igual |
+| `Token has expired or is invalid` sempre, mesmo com o código recém-chegado | Peça um código novo e use **o mais recente**: cada pedido invalida o anterior. Se o modelo de e-mail ainda tiver o link junto, qualquer varredura de segurança que abra o link consome o código antes de você |
 | Chega um **link** em vez do código de 6 dígitos | Os modelos de e-mail ainda usam `{{ .ConfirmationURL }}`. Troque por `{{ .Token }}` nos modelos *Magic Link* e *Confirm signup* (preparação 3) |
 | O link do e-mail não abre / página em branco | Ele aponta para o *Site URL*, que num projeto novo é `localhost:3000`. Corrija em Authentication → URL Configuration (preparação 3) |
 | `email rate limit exceeded` | O serviço de e-mail embutido do Supabase só manda 2 por hora. Espere uma hora, ou faça a preparação 4 |
