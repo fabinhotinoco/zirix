@@ -7,7 +7,7 @@
  * de número.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -33,6 +33,10 @@ export default function Entrar() {
   const [codigo, setCodigo] = useState('');
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  // Sem um caminho de volta, quem não recebe o código fica olhando para a tela
+  // sem nada para fazer. A espera evita que reenviar vire o próprio problema:
+  // cada pedido novo invalida o código anterior e consome a cota de e-mails.
+  const [esperaReenvio, setEsperaReenvio] = useState(0);
 
   async function enviarCodigo() {
     setErro(null);
@@ -52,6 +56,7 @@ export default function Entrar() {
         if (error) throw error;
       }
       setEtapa('codigo');
+      setEsperaReenvio(60);
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Não foi possível enviar o código.');
     } finally {
@@ -97,6 +102,12 @@ export default function Entrar() {
       setEnviando(false);
     }
   }
+
+  useEffect(() => {
+    if (esperaReenvio <= 0) return;
+    const id = setTimeout(() => setEsperaReenvio((s) => s - 1), 1000);
+    return () => clearTimeout(id);
+  }, [esperaReenvio]);
 
   return (
     <KeyboardAvoidingView
@@ -182,6 +193,23 @@ export default function Entrar() {
               desabilitado={codigo.trim().length < 6}
             />
 
+            <Text style={estilos.ajuda}>
+              Não chegou? Confira a caixa de spam. O código vale por uma hora, e
+              pedir outro invalida o anterior.
+            </Text>
+
+            <Pressable
+              onPress={() => void enviarCodigo()}
+              disabled={esperaReenvio > 0 || enviando}
+              style={estilos.voltar}
+            >
+              <Text style={[estilos.voltarTexto, esperaReenvio > 0 && estilos.voltarTextoInativo]}>
+                {esperaReenvio > 0
+                  ? `Enviar outro código em ${esperaReenvio}s`
+                  : 'Enviar outro código'}
+              </Text>
+            </Pressable>
+
             <Pressable
               onPress={() => {
                 setEtapa('identificacao');
@@ -215,6 +243,8 @@ const estilos = StyleSheet.create({
   abaAtiva: { backgroundColor: cores.aguaClara, borderColor: cores.agua },
   abaTexto: { color: cores.suave, fontWeight: '600' },
   abaTextoAtivo: { color: cores.agua },
+  ajuda: { fontSize: 13, color: cores.suave, lineHeight: 19, marginTop: 16, textAlign: 'center' },
   voltar: { marginTop: 18, alignItems: 'center' },
   voltarTexto: { color: cores.agua, fontWeight: '600' },
+  voltarTextoInativo: { color: cores.suave },
 });

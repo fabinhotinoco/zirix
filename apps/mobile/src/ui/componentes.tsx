@@ -71,7 +71,9 @@ export function Botao({
       {carregando ? (
         <ActivityIndicator color="#fff" />
       ) : (
-        <Text style={estilos.botaoTexto}>{titulo}</Text>
+        <Text style={[estilos.botaoTexto, inativo && estilos.botaoTextoInativo]}>
+          {titulo}
+        </Text>
       )}
     </Pressable>
   );
@@ -133,7 +135,11 @@ const estilos = StyleSheet.create({
     marginTop: 8,
   },
   botaoInativo: { backgroundColor: cores.borda },
+  // Branco sobre a borda cinza dá contraste de ~1,4:1 — o texto some e o botão
+  // vira um retângulo vazio. Foi assim que a tela do código virou "dois
+  // colchetes" para quem estava usando.
   botaoTexto: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  botaoTextoInativo: { color: cores.texto },
   aceite: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 14, gap: 10 },
   caixa: {
     width: 24,
