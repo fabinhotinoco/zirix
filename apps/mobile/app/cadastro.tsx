@@ -51,28 +51,41 @@ export default function Cadastro() {
   const [pendentes, setPendentes] = useState<DocumentoVigente[]>([]);
   const [marcados, setMarcados] = useState<DocumentoSlug[]>([]);
   const [carregando, setCarregando] = useState(true);
+  const [carregou, setCarregou] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
+  // Depender de `sessao` inteiro era um erro sutil: o Supabase entrega um objeto
+  // novo a cada renovação de token, e isso refazia a busca e limpava as caixas
+  // que a pessoa já tinha marcado — do lado de cá parece que clicar não faz
+  // nada. O identificador é o que realmente importa aqui, e ele não muda.
+  const userId = sessao?.user.id ?? null;
+
   const carregarPendencias = useCallback(async () => {
-    if (!sessao) return;
+    if (!userId) return;
     setCarregando(true);
     setErro(null);
     try {
-      const docs = await pendenciasDoCadastro(sessao.user.id, papel);
+      const docs = await pendenciasDoCadastro(userId, papel);
       setPendentes(docs);
-      // Trocar de papel muda os documentos: as marcações anteriores caem.
-      setMarcados([]);
+      setCarregou(true);
     } catch (e) {
+      setCarregou(false);
       setErro(e instanceof Error ? e.message : 'Não foi possível carregar os documentos.');
     } finally {
       setCarregando(false);
     }
-  }, [sessao, papel]);
+  }, [userId, papel]);
 
   useEffect(() => {
     void carregarPendencias();
   }, [carregarPendencias]);
+
+  // Trocar de papel muda quais documentos valem, então as marcações anteriores
+  // não se aplicam mais. Só aqui — nunca por causa de uma recarga qualquer.
+  useEffect(() => {
+    setMarcados([]);
+  }, [papel]);
 
   function alternar(slug: DocumentoSlug) {
     setMarcados((atual) =>
@@ -83,7 +96,22 @@ export default function Cadastro() {
   const tudoMarcado = pendentes.every((d) => marcados.includes(d.slug));
   const nomeValido = nome.trim().length >= 3;
   const operacaoValida = papel !== 'guia' || nomeOperacao.trim().length >= 3;
-  const podeConcluir = nomeValido && operacaoValida && tudoMarcado && !carregando;
+  // `every` numa lista vazia devolve true. Sem exigir `carregou`, uma falha ao
+  // buscar os documentos habilitaria o botão e o cadastro seria concluído sem
+  // aceite nenhum — silenciosamente, que é o pior jeito de esse defeito
+  // aparecer.
+  const podeConcluir =
+    nomeValido && operacaoValida && tudoMarcado && carregou && !carregando;
+
+  // Botão desabilitado sem explicação é um beco sem saída: a pessoa clica, nada
+  // acontece, e não há como descobrir o que falta. A dica antiga só falava dos
+  // aceites — quem marcasse as duas caixas e deixasse o nome em branco ficava
+  // sem mensagem nenhuma.
+  const faltando: string[] = [];
+  if (!nomeValido) faltando.push('escrever seu nome completo');
+  if (!operacaoValida) faltando.push('informar o nome da sua operação');
+  if (!tudoMarcado) faltando.push('aceitar todos os documentos');
+  if (!carregou && !carregando) faltando.push('carregar os documentos — toque para tentar de novo');
 
   async function concluir() {
     if (!sessao) return;
@@ -211,10 +239,10 @@ export default function Cadastro() {
           desabilitado={!podeConcluir}
         />
 
-        {!carregando && !tudoMarcado && pendentes.length > 0 && (
-          <Text style={estilos.dica}>
-            É preciso aceitar todos os documentos para continuar.
-          </Text>
+        {!carregando && faltando.length > 0 && (
+          <Pressable onPress={() => void carregarPendencias()}>
+            <Text style={estilos.dica}>Falta {faltando.join(', ')}.</Text>
+          </Pressable>
         )}
 
         <Erro mensagem={erro} />
