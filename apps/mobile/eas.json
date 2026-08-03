@@ -31,6 +31,17 @@
         "EXPO_PUBLIC_SUPABASE_URL": "https://ykdbdpdepkdtyxtcwwex.supabase.co",
         "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_npV2ODt7TI8PfDGS8RTN9Q_Q9tl6aNm"
       }
+    },
+    "simulador": {
+      "distribution": "internal",
+      "ios": {
+        "simulator": true
+      },
+      "env": {
+        "APP_ENV": "simulador",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://ykdbdpdepkdtyxtcwwex.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_npV2ODt7TI8PfDGS8RTN9Q_Q9tl6aNm"
+      }
     }
   },
   "submit": {

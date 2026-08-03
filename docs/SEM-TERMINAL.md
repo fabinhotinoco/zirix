@@ -131,18 +131,25 @@ tabelas | regras_de_seguranca | configuracoes | faixas_cancelamento | documentos
 1. Aba **Actions** → **2. Gerar o aplicativo para testar**
 2. **Run workflow**
 3. Escolha a mesma branch
-4. Em **Para qual celular**, escolha `android` (mais simples e rápido)
+4. Em **Para qual celular**, escolha uma das opções abaixo
 5. **Run workflow**
 
+| Opção | O que gera | Precisa de |
+|---|---|---|
+| `android` | arquivo `.apk` para instalar num Android | nada |
+| `ios-simulador` | iPhone simulado dentro do seu Mac | Xcode instalado (grátis) |
+| `ios` | iPhone de verdade, via TestFlight | conta paga da Apple (US$ 99/ano) |
+| `all` | Android e iPhone de verdade | conta paga da Apple |
+
 Demora entre 10 e 20 minutos — é normal, ele está montando o aplicativo de
-verdade. Quando terminar, o link para instalar aparece em
+verdade. Quando terminar, o link para baixar aparece em
 <https://expo.dev/accounts> → seu projeto → **Builds**.
 
 No Android, abra o link pelo celular e instale o arquivo. Pode aparecer um aviso
 de "origem desconhecida" — é esperado, o aplicativo ainda não está na loja.
 
-> **iPhone é mais burocrático:** exige a conta paga de desenvolvedor da Apple
-> (US$ 99/ano) e o aplicativo chega pelo TestFlight. Comece pelo Android.
+> **Quer ver no iPhone sem pagar a Apple?** Escolha `ios-simulador` e siga o
+> passo a passo em [docs/IPHONE-SIMULADOR.md](IPHONE-SIMULADOR.md).
 
 ## Robô 3 — Testes (roda sozinho)
 

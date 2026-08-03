@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "PescaVerticalAPP",
-    "slug": "pescaverticalapp",
+    "slug": "aplicativo-de-agendamento-pesca-vertical",
     "scheme": "pescaverticalapp",
     "version": "1.0.0",
     "orientation": "portrait",

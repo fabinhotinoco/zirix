@@ -13,7 +13,11 @@ on:
         required: true
         default: android
         type: choice
-        options: [android, ios, all]
+        options:
+          - android
+          - ios-simulador
+          - ios
+          - all
 
 jobs:
   gerar:
@@ -48,17 +52,48 @@ jobs:
       - run: npm ci
 
       - name: Montar o aplicativo
+        env:
+          ESCOLHA: ${{ inputs.plataforma }}
         run: |
+          # "ios-simulador" não é uma plataforma do EAS: é a plataforma ios com
+          # um perfil diferente, que gera um app para o simulador do Xcode em
+          # vez de um app assinado para iPhone de verdade. Só esse caminho
+          # dispensa a conta paga da Apple.
+          if [ "$ESCOLHA" = "ios-simulador" ]; then
+            PLATAFORMA=ios
+            PERFIL=simulador
+          else
+            PLATAFORMA="$ESCOLHA"
+            PERFIL=preview
+          fi
+
+          echo "Plataforma: $PLATAFORMA   Perfil: $PERFIL"
+
           eas build \
-            --platform ${{ inputs.plataforma }} \
-            --profile preview \
+            --platform "$PLATAFORMA" \
+            --profile "$PERFIL" \
             --non-interactive \
             --wait
 
       - name: Onde baixar
+        env:
+          ESCOLHA: ${{ inputs.plataforma }}
         run: |
-          echo "Pronto. O link para instalar está em:"
+          echo "Pronto. O link para baixar está em:"
           echo "  https://expo.dev/accounts  ->  seu projeto  ->  Builds"
           echo ""
-          echo "No Android, abra o link no celular e instale o arquivo .apk."
-          echo "No iPhone, o aplicativo aparece no TestFlight."
+          case "$ESCOLHA" in
+            ios-simulador)
+              echo "Você escolheu o simulador de iPhone. Baixe o arquivo .tar.gz,"
+              echo "descompacte com dois cliques e arraste o PescaVerticalAPP.app"
+              echo "para dentro da janela do simulador aberto no seu Mac."
+              echo "Veja o passo a passo em docs/IPHONE-SIMULADOR.md."
+              ;;
+            ios)
+              echo "No iPhone de verdade, o aplicativo chega pelo TestFlight."
+              echo "Isso exige a conta paga de desenvolvedor da Apple (US\$ 99/ano)."
+              ;;
+            *)
+              echo "No Android, abra o link pelo celular e instale o arquivo .apk."
+              ;;
+          esac
