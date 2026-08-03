@@ -167,3 +167,4 @@ Os erros mais comuns:
 | `Network is unreachable` | Você copiou a conexão direta (IPv6). Troque pela aba **Session pooler** |
 | `password authentication failed for user "postgres"` | No pooler o usuário precisa ser `postgres.SEUPROJETO`. Copie a linha inteira da aba Session pooler, sem editar o usuário |
 | `A porta 6543 é o pooler em modo transação` | Troque apenas o `6543` por `5432` no segredo. O resto do endereço é igual |
+| `relation "profiles" already exists` | Uma tentativa anterior parou no meio e deixou o banco incompleto. Rode `supabase/recomecar-do-zero.sql` no SQL Editor: ele limpa e reaplica tudo |

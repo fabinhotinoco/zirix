@@ -69,8 +69,42 @@ const partes = [
   rodape,
 ];
 
-const destino = join(RAIZ, 'supabase/setup-completo.sql');
-writeFileSync(destino, partes.join(''));
+const conteudo = partes.join('');
+writeFileSync(join(RAIZ, 'supabase/setup-completo.sql'), conteudo);
+console.log(`✓ supabase/setup-completo.sql gerado (${conteudo.split('\n').length} linhas)`);
 
-const linhas = partes.join('').split('\n').length;
-console.log(`✓ supabase/setup-completo.sql gerado (${linhas} linhas)`);
+// =============================================================================
+// Segunda saída: a mesma coisa, precedida de uma limpeza.
+//
+// Serve quando uma tentativa anterior parou no meio e deixou parte das tabelas
+// criadas — aí "create table" falha com "already exists" e não há como
+// continuar de onde parou. Apagar e refazer é mais simples e mais seguro do que
+// adivinhar o que ficou pela metade.
+// =============================================================================
+
+const limpeza = `-- =============================================================================
+-- RECOMEÇAR DO ZERO — apaga tudo o que este projeto criou e aplica de novo.
+--
+-- ATENÇÃO: isto APAGA todas as tabelas e todos os dados do schema public.
+-- Use apenas enquanto o banco ainda não tem dados de verdade — por exemplo
+-- quando uma tentativa anterior parou no meio e deixou o banco incompleto.
+--
+-- Não mexe no login (schema auth), no armazenamento de arquivos (storage) nem
+-- em nada que o Supabase mantém por conta própria.
+--
+-- GERADO AUTOMATICAMENTE por tools/build-setup-sql.mjs — não edite.
+-- =============================================================================
+
+drop schema if exists public cascade;
+create schema public;
+
+-- Devolve ao schema as permissões que o Supabase espera encontrar.
+grant usage on schema public to anon, authenticated, service_role;
+grant all on schema public to postgres;
+
+`;
+
+writeFileSync(join(RAIZ, 'supabase/recomecar-do-zero.sql'), limpeza + conteudo);
+console.log(
+  `✓ supabase/recomecar-do-zero.sql gerado (${(limpeza + conteudo).split('\n').length} linhas)`,
+);
