@@ -92,13 +92,47 @@ O robô precisa de permissão para montar o aplicativo na sua conta Expo.
 
 ---
 
-## Preparação 3 — Ligar o login por e-mail no Supabase
+## Preparação 3 — Fazer o Supabase mandar código, e não link
 
 1. No painel do Supabase: **Authentication** → **Providers** → **Email**
 2. Deixe **Enable Email provider** ligado
-3. Procure a opção de **confirmação por código** (*Email OTP*) e prefira-a ao
-   link mágico — o aplicativo espera um código de 6 dígitos
-4. Salve
+3. Salve
+
+### Trocar o link pelo código de 6 dígitos
+
+Por padrão o Supabase manda um **link** de confirmação. O aplicativo não espera
+link nenhum: ele espera um **código de 6 dígitos** digitado na tela. Quem decide
+entre um e outro é o texto do e-mail — se o modelo contém `{{ .ConfirmationURL }}`,
+vai link; se contém `{{ .Token }}`, vai código.
+
+E o link, além de não servir, **nem abre**: ele termina no endereço configurado
+em *Site URL*, que num projeto novo é `http://localhost:3000` — um endereço que
+só existiria num computador rodando um servidor. Por isso a página fica em
+branco ou dá erro.
+
+1. **Authentication** → **Emails** (ou *Email Templates*)
+2. Abra o modelo **Magic Link** e substitua o corpo inteiro por:
+
+   ```html
+   <h2>Seu código de acesso</h2>
+   <p>Use este código no aplicativo PescaVerticalAPP:</p>
+   <p style="font-size:28px;letter-spacing:6px;font-weight:bold">{{ .Token }}</p>
+   <p>Ele vale por uma hora. Se não foi você que pediu, ignore este e-mail.</p>
+   ```
+
+3. Salve
+4. **Repita exatamente o mesmo** no modelo **Confirm signup** — ele é o usado
+   na primeira vez que um endereço entra no aplicativo. Trocar só o Magic Link
+   resolve para quem já tem conta e deixa quem está entrando pela primeira vez
+   recebendo link
+
+### Ajustar o endereço de retorno
+
+Mesmo mandando código, vale corrigir: **Authentication** → **URL Configuration**
+
+- **Site URL**: `https://aplicativo-de-agendamento-pesca-vertical.expo.app`
+- Em **Redirect URLs**, acrescente também `pescaverticalapp://` — é o endereço
+  do aplicativo instalado no celular
 
 ---
 
@@ -233,5 +267,7 @@ Os erros mais comuns:
 | `Network is unreachable` | Você copiou a conexão direta (IPv6). Troque pela aba **Session pooler** |
 | `password authentication failed for user "postgres"` | No pooler o usuário precisa ser `postgres.SEUPROJETO`. Copie a linha inteira da aba Session pooler, sem editar o usuário |
 | `A porta 6543 é o pooler em modo transação` | Troque apenas o `6543` por `5432` no segredo. O resto do endereço é igual |
+| Chega um **link** em vez do código de 6 dígitos | Os modelos de e-mail ainda usam `{{ .ConfirmationURL }}`. Troque por `{{ .Token }}` nos modelos *Magic Link* e *Confirm signup* (preparação 3) |
+| O link do e-mail não abre / página em branco | Ele aponta para o *Site URL*, que num projeto novo é `localhost:3000`. Corrija em Authentication → URL Configuration (preparação 3) |
 | `email rate limit exceeded` | O serviço de e-mail embutido do Supabase só manda 2 por hora. Espere uma hora, ou faça a preparação 4 |
 | `relation "profiles" already exists` | Uma tentativa anterior parou no meio e deixou o banco incompleto. Rode `supabase/recomecar-do-zero.sql` no SQL Editor: ele limpa e reaplica tudo |
