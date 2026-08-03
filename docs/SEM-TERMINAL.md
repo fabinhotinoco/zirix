@@ -1,7 +1,7 @@
 # Tudo pelo navegador — sem instalar nada
 
 Este guia é para quem não quer (ou não pode) usar o Terminal. Você faz tudo em
-páginas de site, clicando. Dois robôs no GitHub fazem o trabalho pesado.
+páginas de site, clicando. Os robôs no GitHub fazem o trabalho pesado.
 
 São **três preparações que você faz uma única vez** e depois só aperta botão.
 
@@ -137,7 +137,7 @@ tabelas | regras_de_seguranca | configuracoes | faixas_cancelamento | documentos
 | Opção | O que gera | Precisa de |
 |---|---|---|
 | `android` | arquivo `.apk` para instalar num Android | nada |
-| `ios-simulador` | iPhone simulado dentro do seu Mac | Xcode instalado (grátis) |
+| `ios-simulador` | iPhone simulado dentro do seu Mac | Xcode + Mac com chip Apple |
 | `ios` | iPhone de verdade, via TestFlight | conta paga da Apple (US$ 99/ano) |
 | `all` | Android e iPhone de verdade | conta paga da Apple |
 
@@ -148,10 +148,23 @@ verdade. Quando terminar, o link para baixar aparece em
 No Android, abra o link pelo celular e instale o arquivo. Pode aparecer um aviso
 de "origem desconhecida" — é esperado, o aplicativo ainda não está na loja.
 
-> **Quer ver no iPhone sem pagar a Apple?** Escolha `ios-simulador` e siga o
-> passo a passo em [docs/IPHONE-SIMULADOR.md](IPHONE-SIMULADOR.md).
+> **Quer ver no iPhone?** Os três caminhos possíveis, com o que cada um exige
+> de verdade, estão em [docs/IPHONE.md](IPHONE.md). O mais simples não passa por
+> aqui: é o robô 3, abaixo.
 
-## Robô 3 — Testes (roda sozinho)
+## Robô 3 — Publicar a versão web (link para o iPhone)
+
+1. Aba **Actions** → **3. Publicar a versão web (link para abrir no iPhone)**
+2. **Run workflow** → mesma branch → **Run workflow**
+3. No fim do registro, copie a linha **Production URL**
+
+Esse endereço abre em qualquer navegador — Mac, iPhone, Android, Windows. É a
+forma mais rápida de percorrer as telas, e não exige instalar nada.
+
+Não substitui o aplicativo de verdade: câmera, GPS e notificações se comportam
+diferente no navegador.
+
+## Robô 4 — Testes (roda sozinho)
 
 Não precisa apertar nada. A cada alteração no código, ele confere as regras de
 segurança do banco e as contas de comissão e cancelamento. Se algo quebrar,

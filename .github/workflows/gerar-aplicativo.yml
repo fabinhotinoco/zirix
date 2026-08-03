@@ -87,7 +87,8 @@ jobs:
               echo "Você escolheu o simulador de iPhone. Baixe o arquivo .tar.gz,"
               echo "descompacte com dois cliques e arraste o PescaVerticalAPP.app"
               echo "para dentro da janela do simulador aberto no seu Mac."
-              echo "Veja o passo a passo em docs/IPHONE-SIMULADOR.md."
+              echo "Isso exige um Mac com chip Apple; em Mac Intel o arquivo não instala."
+              echo "Veja o passo a passo em docs/IPHONE.md."
               ;;
             ios)
               echo "No iPhone de verdade, o aplicativo chega pelo TestFlight."
