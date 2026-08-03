@@ -22,6 +22,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth, type Papel } from '@/lib/auth';
+import { mensagemDeErro } from '@/lib/erros';
 import { supabase } from '@/lib/supabase';
 import {
   pendenciasDoCadastro,
@@ -71,7 +72,7 @@ export default function Cadastro() {
       setCarregou(true);
     } catch (e) {
       setCarregou(false);
-      setErro(e instanceof Error ? e.message : 'Não foi possível carregar os documentos.');
+      setErro(mensagemDeErro(e, 'Não foi possível carregar os documentos.'));
     } finally {
       setCarregando(false);
     }
@@ -140,7 +141,7 @@ export default function Cadastro() {
       await recarregarPerfil();
       router.replace('/inicio');
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Não foi possível concluir o cadastro.');
+      setErro(mensagemDeErro(e, 'Não foi possível concluir o cadastro.'));
     } finally {
       setSalvando(false);
     }

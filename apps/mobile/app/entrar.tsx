@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { mensagemDeErro } from '@/lib/erros';
 import { supabase } from '@/lib/supabase';
 import { Botao, Campo, Erro, Subtitulo, Titulo, cores } from '@/ui/componentes';
 
@@ -58,7 +59,7 @@ export default function Entrar() {
       setEtapa('codigo');
       setEsperaReenvio(60);
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Não foi possível enviar o código.');
+      setErro(mensagemDeErro(e, 'Não foi possível enviar o código.'));
     } finally {
       setEnviando(false);
     }
@@ -97,7 +98,7 @@ export default function Entrar() {
       }
       // O redirecionamento acontece sozinho: a sessão muda e app/index reavalia.
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Código inválido ou expirado.');
+      setErro(mensagemDeErro(e, 'Código inválido ou expirado.'));
     } finally {
       setEnviando(false);
     }
