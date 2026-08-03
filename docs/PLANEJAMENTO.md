@@ -463,6 +463,27 @@ alerta de nota baixa.
 **Fase 10 — Publicação:** build EAS, TestFlight + Play Internal Testing, política de privacidade,
 ícones/splash, submissão às lojas.
 
+### Como cada versão chega às mãos de quem vai testar
+
+Decidido na prática, depois de esbarrar nas restrições reais (registrado em `docs/IPHONE.md`):
+
+| Alvo | Caminho | Custo | Limite |
+|---|---|---|---|
+| Android | `.apk` do perfil `preview`, instalado direto | grátis | nenhum relevante |
+| Qualquer navegador | `expo export --platform web` + hospedagem da Expo, no workflow `publicar-web.yml` | grátis | sem push, câmera e GPS se comportam diferente |
+| Simulador de iPhone | perfil `simulador` (`ios.simulator = true`) | grátis | exige Xcode **e Mac com chip Apple** |
+| iPhone físico | TestFlight | US$ 99/ano | conta Apple Developer |
+
+Duas conclusões que custaram tempo e ficam registradas para não serem redescobertas:
+
+1. **Expo Go não é alternativa no iPhone.** A versão da App Store parou num SDK antigo; o caminho
+   atual (`eas go`) constrói uma cópia própria distribuída por TestFlight, o que exige a mesma conta
+   paga. Não há atalho gratuito para iPhone físico.
+2. **A versão web só funciona com `web.output = "single"`.** O modo `static` pré-renderiza as rotas
+   em Node, e o cliente do Supabase toca em `window` ao ser construído — o export morre em
+   `window is not defined`. Se algum dia a pré-renderização for desejável (SEO de páginas públicas),
+   o cliente precisa ser criado preguiçosamente, e não no topo do módulo.
+
 ---
 
 ## Funcionalidades complementares (confirmadas)
