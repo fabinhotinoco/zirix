@@ -504,4 +504,39 @@ begin
 end $$;
 rollback;
 
+-- =============================================================================
+do $$ begin raise notice '--- 14. Funções privilegiadas não são chamáveis de fora ---'; end $$;
+-- =============================================================================
+-- O Supabase publica o schema public como API REST, então toda função com
+-- EXECUTE aberto vira /rest/v1/rpc/<nome>. is_diamond aceita o id de outra
+-- pessoa: aberta, respondia "fulano é assinante?" a quem perguntasse.
+begin;
+select auth.entrar_como('00000000-0000-0000-0000-0000000000c1');
+
+do $$
+declare n integer;
+begin
+  if current_user <> 'authenticated' then
+    raise exception 'FALHA: teste rodando como %, não como authenticated', current_user;
+  end if;
+
+  -- c2 É Diamond. Perguntar por ele tem de devolver falso mesmo assim.
+  if public.is_diamond('00000000-0000-0000-0000-0000000000c2') then
+    raise exception 'FALHA: cliente descobriu que outra pessoa é Diamond';
+  end if;
+  raise notice 'ok  is_diamond não responde sobre a assinatura de terceiros';
+
+  -- O feed continua funcionando: a view é dona e chama is_diamond por dentro.
+  select count(*) into n from public.v_catches_feed;
+  if n < 1 then
+    raise exception 'FALHA: o feed parou de funcionar ao fechar is_diamond';
+  end if;
+  raise notice 'ok  o feed continua funcionando mesmo assim';
+
+  -- E as políticas, que dependem de is_master/is_guide_owner, também.
+  select count(*) into n from public.guides;
+  raise notice 'ok  políticas seguem avaliando (guides respondeu com % linha(s))', n;
+end $$;
+rollback;
+
 do $$ begin raise notice ''; raise notice 'TODOS OS TESTES DE RLS PASSARAM'; end $$;
