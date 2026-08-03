@@ -16,7 +16,8 @@ O robô precisa de permissão para criar as tabelas no seu Supabase.
 1. Entre no <https://supabase.com/dashboard> e abra seu projeto
 2. Na engrenagem **Project Settings** (canto inferior esquerdo) → **Database**
 3. Procure a caixa **Connection string**
-4. **Escolha a aba `Session pooler`** — não a `Direct connection`
+4. **Escolha a aba `Session pooler`** — não a `Direct connection` nem a
+   `Transaction pooler`. A diferença visível é a **porta: 5432**, não 6543
 5. Marque a opção de exibir a senha, se houver, e **copie o texto inteiro**
 
 Vai ser parecido com isto:
@@ -165,3 +166,4 @@ Os erros mais comuns:
 | `password authentication failed` | A senha dentro do endereço de conexão está errada |
 | `Network is unreachable` | Você copiou a conexão direta (IPv6). Troque pela aba **Session pooler** |
 | `password authentication failed for user "postgres"` | No pooler o usuário precisa ser `postgres.SEUPROJETO`. Copie a linha inteira da aba Session pooler, sem editar o usuário |
+| `A porta 6543 é o pooler em modo transação` | Troque apenas o `6543` por `5432` no segredo. O resto do endereço é igual |

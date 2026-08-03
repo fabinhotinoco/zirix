@@ -97,6 +97,22 @@ jobs:
             *) echo "::warning::Este não parece o endereço do pooler. Se falhar, use a aba Session pooler." ;;
           esac
 
+          # 6543 é o pooler em modo transação, pensado para muitas conexões
+          # curtas de aplicativo. Criar tabelas e funções pede modo sessão,
+          # na 5432 — mesmo endereço, só muda o número da porta.
+          case "$URL" in
+            *:6543/*)
+              echo "::error::A porta 6543 é o pooler em modo transação."
+              echo ""
+              echo "Para criar as tabelas é preciso o modo sessão, na porta 5432."
+              echo "O endereço é o mesmo: troque apenas 6543 por 5432 no segredo."
+              echo ""
+              echo "  ...pooler.supabase.com:5432/postgres"
+              echo "                         ^^^^"
+              exit 1
+              ;;
+          esac
+
       - name: Testar a conexão
         env:
           URL: ${{ secrets.SUPABASE_DB_URL }}
