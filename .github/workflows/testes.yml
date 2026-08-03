@@ -49,7 +49,7 @@ jobs:
       - name: Aplicar migração e valores padrão
         run: |
           $PSQL -f supabase/tests/00_shim_auth.sql
-          $PSQL -f supabase/migrations/0001_init.sql
+          for m in supabase/migrations/*.sql; do $PSQL -f "$m"; done
           $PSQL -f supabase/seed.sql
 
       - name: Publicar documentos legais

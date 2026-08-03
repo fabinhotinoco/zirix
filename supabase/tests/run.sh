@@ -54,7 +54,7 @@ aplicar() {
 }
 
 aplicar "$RAIZ/supabase/tests/00_shim_auth.sql"
-aplicar "$RAIZ/supabase/migrations/0001_init.sql"
+for m in "$RAIZ"/supabase/migrations/*.sql; do aplicar "$m"; done
 aplicar "$RAIZ/supabase/seed.sql"
 
 echo

@@ -99,9 +99,7 @@ export default function Cadastro() {
       });
       if (erroPerfil) throw new Error(erroPerfil.message);
 
-      await registrarAceites(sessao.user.id, pendentes, marcados, {
-        userAgent: `PescaVerticalAPP/${Platform.OS}`,
-      });
+      await registrarAceites(sessao.user.id, pendentes, marcados);
 
       if (papel === 'guia') {
         const { error: erroGuia } = await supabase.from('guides').insert({

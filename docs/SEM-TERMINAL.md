@@ -258,7 +258,18 @@ Se aparecer `ATENCAO: hash diferente do documento vigente`, ou o texto foi
 editado sem publicar nova versão, ou o aceite se refere a uma versão anterior.
 Nos dois casos vale investigar antes de o documento ser usado como prova.
 
-## Robô 5 — Testes (roda sozinho)
+## Robô 5 — Atualizar o banco (sem apagar nada)
+
+1. Aba **Actions** → **5. Atualizar o banco (sem apagar nada)**
+2. **Run workflow** → mesma branch → **Run workflow**
+
+Aplica no banco o que foi acrescentado depois da criação inicial. **Não apaga
+nada** e pode rodar quantas vezes quiser.
+
+Rode sempre que eu avisar que houve mudança no banco. Diferente do robô 1, que
+só serve para um projeto vazio, este funciona com o banco em uso.
+
+## Robô 6 — Testes (roda sozinho)
 
 Não precisa apertar nada. A cada alteração no código, ele confere as regras de
 segurança do banco e as contas de comissão e cancelamento. Se algo quebrar,

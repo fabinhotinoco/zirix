@@ -7,7 +7,7 @@
  * É gerado, e não mantido à mão, para não sair de sincronia com a migração.
  */
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -58,11 +58,21 @@ select
   (select count(*) from public.legal_documents)                   as documentos_legais;
 `;
 
+// Ordem alfabética é a ordem cronológica, porque os arquivos são numerados.
+// Listar a pasta em vez de nomear os arquivos evita o esquecimento silencioso
+// de uma migração nova no setup completo.
+const migracoes = readdirSync(join(RAIZ, 'supabase/migrations'))
+  .filter((f) => f.endsWith('.sql'))
+  .sort();
+
 const partes = [
   cabecalho,
-  '-- ===== supabase/migrations/0001_init.sql =====\n',
-  ler('supabase/migrations/0001_init.sql'),
-  '\n\n-- ===== supabase/seed.sql =====\n',
+  ...migracoes.flatMap((f) => [
+    `-- ===== supabase/migrations/${f} =====\n`,
+    ler(`supabase/migrations/${f}`),
+    '\n\n',
+  ]),
+  '-- ===== supabase/seed.sql =====\n',
   ler('supabase/seed.sql'),
   '\n\n-- ===== documentos legais (docs/legal/) =====\n',
   legal,
@@ -107,4 +117,35 @@ grant all on schema public to postgres;
 writeFileSync(join(RAIZ, 'supabase/recomecar-do-zero.sql'), limpeza + conteudo);
 console.log(
   `✓ supabase/recomecar-do-zero.sql gerado (${(limpeza + conteudo).split('\n').length} linhas)`,
+);
+
+// =============================================================================
+// Terceira saída: só as migrações posteriores à inicial.
+//
+// Serve para o banco que já está de pé e não pode ser recriado — o caso normal
+// depois que existe gente cadastrada. Todas as migrações a partir da 0002 são
+// escritas para poder rodar de novo sem estragar nada, então aplicar este
+// arquivo mais de uma vez é seguro.
+// =============================================================================
+
+const posteriores = migracoes.filter((f) => !f.startsWith('0001_'));
+
+const atualizacoes =
+  `-- =============================================================================
+-- ATUALIZAÇÕES — para um banco que já existe e já tem dados.
+--
+-- Aplica o que veio depois da criação inicial. Pode rodar quantas vezes quiser:
+-- tudo aqui é escrito para ser repetível.
+--
+-- GERADO AUTOMATICAMENTE por tools/build-setup-sql.mjs — não edite.
+-- =============================================================================
+
+` +
+  posteriores
+    .map((f) => `-- ===== supabase/migrations/${f} =====\n${ler(`supabase/migrations/${f}`)}\n\n`)
+    .join('');
+
+writeFileSync(join(RAIZ, 'supabase/atualizacoes.sql'), atualizacoes);
+console.log(
+  `✓ supabase/atualizacoes.sql gerado (${posteriores.length} migração(ões) posterior(es))`,
 );

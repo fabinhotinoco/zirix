@@ -1,0 +1,52 @@
+name: 5. Atualizar o banco (sem apagar nada)
+
+# Aplica no banco existente o que foi acrescentado depois da criação inicial.
+#
+# Diferente do robô 1, este NÃO cria o banco do zero e NÃO apaga nada: só
+# adiciona ou substitui funções, gatilhos e colunas. Pode rodar quantas vezes
+# quiser — tudo em supabase/atualizacoes.sql é escrito para ser repetível.
+#
+# Usa o mesmo segredo SUPABASE_DB_URL.
+on:
+  workflow_dispatch:
+
+jobs:
+  atualizar:
+    name: Aplicar atualizações
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Conferir o endereço de conexão
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: tools/checar-conexao.sh
+
+      - name: Conferir que o banco já foi criado
+        env:
+          URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          EXISTE=$(psql "$URL" -tAc "select count(*) from information_schema.tables
+                                     where table_schema='public' and table_name='terms_acceptances';")
+          if [ "$EXISTE" = "0" ]; then
+            echo "::error::Este banco ainda não foi criado. Rode antes o robô 1."
+            exit 1
+          fi
+          echo "Banco encontrado."
+
+      - name: Aplicar
+        env:
+          URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: psql "$URL" -v ON_ERROR_STOP=1 -f supabase/atualizacoes.sql
+
+      - name: Conferir
+        env:
+          URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          psql "$URL" -c "
+            select tgname as gatilho, tgenabled as ativo
+            from pg_trigger
+            where tgrelid = 'public.terms_acceptances'::regclass
+              and not tgisinternal;"
+          echo "Pronto. Aceites gravados a partir de agora terão IP e user-agent."
+          echo "Os anteriores não mudam — o robô 4 continua mostrando 0 em com_ip para eles."

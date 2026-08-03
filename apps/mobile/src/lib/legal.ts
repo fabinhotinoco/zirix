@@ -100,15 +100,16 @@ export async function pendenciasDaReserva(userId: string): Promise<DocumentoVige
 /**
  * Grava os aceites. Recusa marcação parcial — a regra está no core.
  *
- * O `user_agent` identifica o aparelho; o IP é preenchido pelo servidor nas
- * Edge Functions, porque o valor informado pelo próprio aplicativo não teria
- * valor probatório nenhum.
+ * O IP e o user-agent não são enviados daqui: um gatilho no banco os lê dos
+ * cabeçalhos da requisição (0002_ip_do_aceite.sql). Valor declarado por quem
+ * assina não prova nada — tem que vir do servidor. O que o aplicativo mandar
+ * nesses campos é sobrescrito.
  */
 export async function registrarAceites(
   userId: string,
   pendentes: DocumentoVigente[],
   marcados: DocumentoSlug[],
-  opcoes: { bookingId?: string; userAgent: string },
+  opcoes: { bookingId?: string } = {},
 ): Promise<void> {
   const rascunhos = montarAceites(pendentes, marcados, opcoes.bookingId);
   if (rascunhos.length === 0) return;
@@ -120,7 +121,6 @@ export async function registrarAceites(
       documento_slug: r.documentoSlug,
       versao: r.versao,
       hash_sha256: r.hashSha256,
-      user_agent: opcoes.userAgent,
     })),
   );
 

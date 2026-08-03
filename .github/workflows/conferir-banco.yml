@@ -41,8 +41,9 @@ jobs:
               documento_slug as documento,
               versao,
               count(*)                                   as aceites,
-              count(*) filter (where hash_sha256 <> '')  as com_hash,
-              count(*) filter (where ip is not null)     as com_ip
+              count(*) filter (where hash_sha256 <> '')     as com_hash,
+              count(*) filter (where ip is not null)        as com_ip,
+              count(*) filter (where user_agent is not null) as com_aparelho
             from public.terms_acceptances
             group by documento_slug, versao
             order by documento_slug;"
