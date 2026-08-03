@@ -3,7 +3,8 @@
 Este guia é para quem não quer (ou não pode) usar o Terminal. Você faz tudo em
 páginas de site, clicando. Os robôs no GitHub fazem o trabalho pesado.
 
-São **três preparações que você faz uma única vez** e depois só aperta botão.
+São **quatro preparações que você faz uma única vez** e depois só aperta botão.
+(A quarta só é necessária quando o envio de e-mails começar a esbarrar no limite.)
 
 ---
 
@@ -101,6 +102,51 @@ O robô precisa de permissão para montar o aplicativo na sua conta Expo.
 
 ---
 
+## Preparação 4 — Serviço de e-mail próprio (quando aparecer "email rate limit exceeded")
+
+O Supabase manda os códigos de login por um serviço de e-mail embutido, que é só
+para desenvolvimento: **duas mensagens por hora no projeto inteiro**. Na terceira
+tentativa aparece `email rate limit exceeded`. Não é defeito do aplicativo, e o
+limite é do projeto, não do seu endereço — trocar de e-mail não adianta.
+
+Enquanto não trocar o serviço, a saída é esperar uma hora. Para resolver de vez:
+
+### a) Criar a conta no Resend
+
+1. Entre em <https://resend.com> e crie uma conta (grátis: 3.000 e-mails/mês)
+2. Menu **API Keys** → **Create API Key** → copie a chave (só aparece uma vez)
+
+> **Sem um domínio próprio, o Resend só entrega para o e-mail dono da conta.**
+> Para testar sozinho, basta. Para os pescadores receberem de verdade, é preciso
+> registrar um domínio (ex.: `pescavertical.com.br`) e verificá-lo no Resend —
+> ele mostra os registros de DNS a cadastrar. Vale fazer antes do primeiro
+> cliente real.
+
+### b) Ligar no Supabase
+
+1. Painel do Supabase → **Project Settings** → **Authentication** → role até
+   **SMTP Settings**
+2. Ligue **Enable Custom SMTP** e preencha:
+
+   | Campo | Valor |
+   |---|---|
+   | Host | `smtp.resend.com` |
+   | Port | `465` |
+   | Username | `resend` |
+   | Password | a chave que você copiou |
+   | Sender email | `onboarding@resend.dev` (ou `nao-responda@seudominio` depois de verificar o domínio) |
+   | Sender name | `Pesca Vertical` |
+
+3. Salve
+4. Ainda em **Authentication**, procure **Rate Limits** e aumente o número de
+   e-mails por hora. **Isso não muda sozinho ao ligar o SMTP:** sem esse passo o
+   limite antigo continua valendo e o erro volta
+
+⚠️ A chave do Resend é secreta: ela vai só nesse campo do painel do Supabase.
+Não precisa ir para o GitHub nem para o código.
+
+---
+
 # Usando: aperte o botão
 
 Todos os robôs ficam em <https://github.com/fabinhotinoco/zirix/actions>.
@@ -187,4 +233,5 @@ Os erros mais comuns:
 | `Network is unreachable` | Você copiou a conexão direta (IPv6). Troque pela aba **Session pooler** |
 | `password authentication failed for user "postgres"` | No pooler o usuário precisa ser `postgres.SEUPROJETO`. Copie a linha inteira da aba Session pooler, sem editar o usuário |
 | `A porta 6543 é o pooler em modo transação` | Troque apenas o `6543` por `5432` no segredo. O resto do endereço é igual |
+| `email rate limit exceeded` | O serviço de e-mail embutido do Supabase só manda 2 por hora. Espere uma hora, ou faça a preparação 4 |
 | `relation "profiles" already exists` | Uma tentativa anterior parou no meio e deixou o banco incompleto. Rode `supabase/recomecar-do-zero.sql` no SQL Editor: ele limpa e reaplica tudo |
