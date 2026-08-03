@@ -324,6 +324,30 @@ $$;
 
 A tabela `catches` não é lida diretamente pelo cliente. O feed lê uma view que anula os campos sensíveis.
 
+### Os três alertas do Security Advisor do Supabase
+
+O painel do Supabase marca como **erro** toda view `SECURITY DEFINER`, e o
+projeto tem exatamente três: `v_catches_feed`, `v_minhas_capturas` e
+`v_ranking_mensal`. **Os três são deliberados e não devem ser "corrigidos".**
+
+O alerta existe por um motivo legítimo: uma view desse tipo lê as tabelas como
+dona e ignora o RLS delas. Aqui é justamente isso que se quer. O acesso direto a
+`catches` é revogado por completo; sem as views definer, seria preciso devolver
+esse acesso a todo mundo — e aí a coordenada exata, que é o produto do plano
+Diamond, ficaria a um `select` de distância de qualquer pessoa com a chave
+publicável. Trocar por `security_invoker = true` não endurece nada: afrouxa.
+
+O que protege não é o alerta, é a forma de cada view, e isso está coberto por
+teste (bloco 13 de `supabase/tests/01_rls_test.sql`):
+
+| View | Por que é definer | O que o teste garante |
+|---|---|---|
+| `v_catches_feed` | mostra capturas de terceiros com a coordenada mascarada | cliente comum recebe `lat`/`lng` nulos; Diamond recebe preenchidos; assinatura vencida volta a mascarar |
+| `v_minhas_capturas` | lê `catches`, cujo acesso direto é revogado | filtra por `auth.uid()`; um pescador não vê captura de outro |
+| `v_ranking_mensal` | idem, e é público por natureza | nenhuma coluna de coordenada existe na view |
+
+No painel, a ação correta é marcar os três como reconhecidos, não alterá-los.
+
 > **Correção apurada na implementação:** a view precisa ser **`security_invoker = false`** (o padrão do
 > Postgres), e não `true`, como este documento afirmava. Com `security_invoker = true` a leitura
 > aconteceria com a permissão de quem chama — e seria preciso liberar `catches` para todos os usuários,

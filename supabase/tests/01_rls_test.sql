@@ -448,4 +448,60 @@ begin
 end $$;
 rollback;
 
+-- =============================================================================
+do $$ begin raise notice '--- 13. As três views definer não vazam (Security Advisor) ---'; end $$;
+-- =============================================================================
+-- O Security Advisor do Supabase marca toda view SECURITY DEFINER como erro,
+-- porque ela lê as tabelas como dona e ignora o RLS delas. Aqui isso é
+-- deliberado: é o que permite revogar o acesso direto a `catches` e ainda
+-- servir feed, ranking e "minhas capturas". Como o alerta fica ligado para
+-- sempre, o que protege de verdade são estas assertivas.
+begin;
+select auth.entrar_como('00000000-0000-0000-0000-0000000000c2');
+
+do $$
+declare n integer; tem_coordenada boolean;
+begin
+  if current_user <> 'authenticated' then
+    raise exception 'FALHA: teste rodando como %, não como authenticated', current_user;
+  end if;
+
+  -- "Minhas capturas" com a permissão de dona poderia devolver as de todo
+  -- mundo. O filtro por auth.uid() dentro da view é a única coisa que impede.
+  select count(*) into n from public.v_minhas_capturas;
+  if n <> 0 then
+    raise exception 'FALHA: v_minhas_capturas devolveu % captura(s) de outra pessoa', n;
+  end if;
+  raise notice 'ok  v_minhas_capturas não mostra captura de outro pescador';
+
+  -- O ranking é público de propósito, então a proteção tem de estar na forma:
+  -- coordenada nenhuma pode existir entre as colunas.
+  select exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'v_ranking_mensal'
+      and column_name in ('lat', 'lng', 'isca', 'profundidade_m', 'hora_fisgada')
+  ) into tem_coordenada;
+  if tem_coordenada then
+    raise exception 'FALHA: v_ranking_mensal expõe coluna sensível';
+  end if;
+
+  select count(*) into n from public.v_ranking_mensal;
+  if n < 1 then raise exception 'FALHA: ranking vazio, o teste não provaria nada'; end if;
+  raise notice 'ok  v_ranking_mensal mostra o ranking sem nenhuma coordenada';
+end $$;
+rollback;
+
+begin;
+select auth.entrar_como('00000000-0000-0000-0000-0000000000c1');
+do $$
+declare n integer;
+begin
+  select count(*) into n from public.v_minhas_capturas;
+  if n <> 1 then
+    raise exception 'FALHA: dono viu % das próprias capturas, esperado 1', n;
+  end if;
+  raise notice 'ok  o dono continua vendo as próprias capturas';
+end $$;
+rollback;
+
 do $$ begin raise notice ''; raise notice 'TODOS OS TESTES DE RLS PASSARAM'; end $$;
