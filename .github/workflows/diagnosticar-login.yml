@@ -1,0 +1,69 @@
+name: 6. Diagnosticar o login por e-mail
+
+# Só lê. Mostra o que o Supabase registrou sobre as tentativas de entrada:
+# quais contas existem, se o e-mail foi confirmado, quando o último código foi
+# enviado e o que o registro de auditoria guardou.
+#
+# Serve para separar três causas que, da tela, parecem idênticas: o e-mail não
+# foi enviado, foi enviado e não chegou, ou chegou e o código foi recusado.
+#
+# Usa o mesmo segredo SUPABASE_DB_URL.
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnosticar:
+    name: Ler o estado do login
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Conferir o endereço de conexão
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: tools/checar-conexao.sh
+
+      - name: Contas que existem hoje
+        env:
+          URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          psql "$URL" -c "
+            select
+              email,
+              to_char(created_at, 'DD/MM HH24:MI')          as criada_em,
+              to_char(confirmation_sent_at, 'DD/MM HH24:MI') as codigo_enviado,
+              to_char(email_confirmed_at, 'DD/MM HH24:MI')   as confirmada,
+              to_char(last_sign_in_at, 'DD/MM HH24:MI')      as ultimo_login
+            from auth.users
+            order by created_at desc
+            limit 10;"
+
+      - name: Últimos eventos registrados pelo Supabase
+        env:
+          URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          # O payload traz a ação (user_signedup, user_confirmation_requested,
+          # login...) e o erro, quando houve. É o registro mais próximo da
+          # verdade sobre o que o servidor fez — melhor que qualquer suposição
+          # a partir da tela.
+          psql "$URL" -c "
+            select
+              to_char(created_at, 'DD/MM HH24:MI:SS') as quando,
+              payload ->> 'action'                    as acao,
+              payload ->> 'actor_username'            as quem,
+              payload ->> 'error'                     as erro
+            from auth.audit_log_entries
+            order by created_at desc
+            limit 25;" || echo "::warning::Não consegui ler o registro de auditoria."
+
+      - name: Configuração que decide link ou código
+        env:
+          URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          echo "Modelos de e-mail e limites ficam no painel, não no banco."
+          echo "Confira em Authentication -> Emails que TANTO 'Magic Link'"
+          echo "QUANTO 'Confirm signup' contenham {{ .Token }}."
+          echo ""
+          echo "Se 'codigo_enviado' acima tem hora recente mas nada chegou,"
+          echo "o problema é entrega de e-mail (cota de 2/hora ou spam),"
+          echo "não o aplicativo."
