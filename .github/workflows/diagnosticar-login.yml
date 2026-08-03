@@ -56,6 +56,29 @@ jobs:
             order by created_at desc
             limit 25;" || echo "::warning::Não consegui ler o registro de auditoria."
 
+      - name: Algo pendurado no cadastro de contas?
+        env:
+          URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          # Um gatilho com defeito em auth.users faz a criação da conta falhar
+          # inteira, e do lado de fora isso aparece como "erro ao enviar o
+          # código" — sem pista de que a causa está aqui. Este projeto não cria
+          # gatilho nenhum ali, então a lista tem de vir vazia.
+          echo "Gatilhos em auth.users (esperado: nenhum):"
+          psql "$URL" -c "
+            select tgname as gatilho, tgrelid::regclass as tabela
+            from pg_trigger
+            where tgrelid = 'auth.users'::regclass and not tgisinternal;"
+
+          echo "Contagens:"
+          psql "$URL" -c "
+            select
+              (select count(*) from auth.users)               as contas,
+              (select count(*) from auth.identities)          as identidades,
+              (select count(*) from auth.audit_log_entries)   as eventos,
+              (select count(*) from public.profiles)          as perfis,
+              (select count(*) from public.terms_acceptances) as aceites;"
+
       - name: Configuração que decide link ou código
         env:
           URL: ${{ secrets.SUPABASE_DB_URL }}
