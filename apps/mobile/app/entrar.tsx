@@ -15,7 +15,10 @@ import { mensagemDeErro } from '@/lib/erros';
 import { supabase } from '@/lib/supabase';
 import { Botao, Campo, Erro, Subtitulo, Titulo, cores } from '@/ui/componentes';
 
-type Meio = 'telefone' | 'email';
+// `senha` existe porque o envio de e-mail do projeto pode falhar — e falhou.
+// Sem um caminho que não dependa de e-mail, uma configuração errada no painel
+// tranca todo mundo do lado de fora, inclusive para testar o resto.
+type Meio = 'telefone' | 'email' | 'senha';
 type Etapa = 'identificacao' | 'codigo';
 
 /** O Supabase espera E.164: +5511987654321. */
@@ -32,12 +35,31 @@ export default function Entrar() {
   const [etapa, setEtapa] = useState<Etapa>('identificacao');
   const [valor, setValor] = useState('');
   const [codigo, setCodigo] = useState('');
+  const [senha, setSenha] = useState('');
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   // Sem um caminho de volta, quem não recebe o código fica olhando para a tela
   // sem nada para fazer. A espera evita que reenviar vire o próprio problema:
   // cada pedido novo invalida o código anterior e consome a cota de e-mails.
   const [esperaReenvio, setEsperaReenvio] = useState(0);
+
+  async function entrarComSenha() {
+    setErro(null);
+    setEnviando(true);
+    try {
+      if (!valor.includes('@')) throw new Error('Informe um e-mail válido.');
+      const { error } = await supabase.auth.signInWithPassword({
+        email: valor.trim(),
+        password: senha,
+      });
+      if (error) throw error;
+      // A sessão muda e app/index reavalia sozinho.
+    } catch (e) {
+      setErro(mensagemDeErro(e, 'E-mail ou senha incorretos.'));
+    } finally {
+      setEnviando(false);
+    }
+  }
 
   async function enviarCodigo() {
     setErro(null);
@@ -124,37 +146,53 @@ export default function Entrar() {
         {etapa === 'identificacao' ? (
           <>
             <Subtitulo>
-              Enviamos um código de uso único para você entrar. Sem senha para esquecer.
+              {meio === 'senha'
+                ? 'Entre com o e-mail e a senha da sua conta.'
+                : 'Enviamos um código de uso único para você entrar. Sem senha para esquecer.'}
             </Subtitulo>
 
             <View style={estilos.abas}>
-              {(['email', 'telefone'] as const).map((m) => (
+              {(['email', 'senha', 'telefone'] as const).map((m) => (
                 <Pressable
                   key={m}
                   onPress={() => {
                     setMeio(m);
                     setValor('');
+                    setSenha('');
                     setErro(null);
                   }}
                   style={[estilos.aba, meio === m && estilos.abaAtiva]}
                 >
                   <Text style={[estilos.abaTexto, meio === m && estilos.abaTextoAtivo]}>
-                    {m === 'email' ? 'E-mail' : 'Telefone'}
+                    {m === 'email' ? 'Código' : m === 'senha' ? 'Senha' : 'Telefone'}
                   </Text>
                 </Pressable>
               ))}
             </View>
 
-            {meio === 'email' ? (
-              <Campo
-                rotulo="Seu e-mail"
-                value={valor}
-                onChangeText={setValor}
-                placeholder="voce@exemplo.com"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoComplete="email"
-              />
+            {meio === 'email' || meio === 'senha' ? (
+              <>
+                <Campo
+                  rotulo="Seu e-mail"
+                  value={valor}
+                  onChangeText={setValor}
+                  placeholder="voce@exemplo.com"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                />
+                {meio === 'senha' && (
+                  <Campo
+                    rotulo="Sua senha"
+                    value={senha}
+                    onChangeText={setSenha}
+                    placeholder="••••••••"
+                    secureTextEntry
+                    autoCapitalize="none"
+                    autoComplete="current-password"
+                  />
+                )}
+              </>
             ) : (
               <Campo
                 rotulo="Seu telefone"
@@ -166,12 +204,21 @@ export default function Entrar() {
               />
             )}
 
-            <Botao
-              titulo="Receber código"
-              onPress={enviarCodigo}
-              carregando={enviando}
-              desabilitado={valor.trim().length < 5}
-            />
+            {meio === 'senha' ? (
+              <Botao
+                titulo="Entrar"
+                onPress={entrarComSenha}
+                carregando={enviando}
+                desabilitado={valor.trim().length < 5 || senha.length < 8}
+              />
+            ) : (
+              <Botao
+                titulo="Receber código"
+                onPress={enviarCodigo}
+                carregando={enviando}
+                desabilitado={valor.trim().length < 5}
+              />
+            )}
           </>
         ) : (
           <>

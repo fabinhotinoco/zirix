@@ -34,6 +34,8 @@ const CONHECIDOS: Record<string, string> = {
     'hora ou configure um serviço de e-mail próprio.',
   email_address_invalid: 'Esse endereço de e-mail não foi aceito. Confira se está correto.',
   otp_expired: 'Esse código expirou ou já foi usado. Peça outro.',
+  invalid_credentials: 'E-mail ou senha incorretos.',
+  email_not_confirmed: 'Essa conta ainda não teve o e-mail confirmado.',
   validation_failed: 'Os dados enviados não foram aceitos. Confira o e-mail digitado.',
 };
 

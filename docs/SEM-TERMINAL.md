@@ -269,7 +269,38 @@ nada** e pode rodar quantas vezes quiser.
 Rode sempre que eu avisar que houve mudança no banco. Diferente do robô 1, que
 só serve para um projeto vazio, este funciona com o banco em uso.
 
-## Robô 6 — Testes (roda sozinho)
+## Robô 6 — Diagnosticar o login por e-mail
+
+Só lê. Mostra se o Supabase criou a conta, se enviou o código e qual erro
+registrou. Serve para separar "não enviou" de "enviou e não chegou".
+
+## Robô 7 — Criar a primeira conta (sem depender de e-mail)
+
+Cria uma conta com **senha**, já com o e-mail confirmado. Nenhum e-mail é
+enviado — é o caminho para entrar no aplicativo enquanto o envio de e-mail do
+projeto estiver com problema.
+
+Antes de rodar, crie dois segredos em
+<https://github.com/fabinhotinoco/zirix/settings/secrets/actions>:
+
+| Nome | Valor |
+|---|---|
+| `ADMIN_EMAIL` | o e-mail com que você vai entrar |
+| `ADMIN_SENHA` | uma senha sua, de 8 caracteres ou mais |
+
+> Vão como segredo, e não como campo do formulário, porque **este repositório é
+> público**: campos e registros de execução ficam visíveis para qualquer pessoa.
+> Segredos, não.
+
+Depois: **Actions** → **7. Criar a primeira conta** → **Run workflow**.
+
+Para entrar, use a aba **Senha** na tela de entrada do aplicativo. O cadastro
+(nome e aceite dos documentos) continua igual, na tela seguinte.
+
+Rodar de novo com uma senha diferente **troca a senha** da conta, em vez de
+criar outra.
+
+## Robô 8 — Testes (roda sozinho)
 
 Não precisa apertar nada. A cada alteração no código, ele confere as regras de
 segurança do banco e as contas de comissão e cancelamento. Se algo quebrar,

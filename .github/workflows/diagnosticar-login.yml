@@ -27,9 +27,12 @@ jobs:
         env:
           URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
+          # Este repositório é público, e o registro do robô também. Endereço de
+          # e-mail é dado pessoal: mostramos só o suficiente para reconhecer a
+          # conta (primeira letra e domínio).
           psql "$URL" -c "
             select
-              email,
+              left(email, 1) || '***@' || split_part(email, '@', 2) as conta,
               to_char(created_at, 'DD/MM HH24:MI')          as criada_em,
               to_char(confirmation_sent_at, 'DD/MM HH24:MI') as codigo_enviado,
               to_char(email_confirmed_at, 'DD/MM HH24:MI')   as confirmada,
@@ -50,7 +53,7 @@ jobs:
             select
               to_char(created_at, 'DD/MM HH24:MI:SS') as quando,
               payload ->> 'action'                    as acao,
-              payload ->> 'actor_username'            as quem,
+              left(payload ->> 'actor_username', 1) || '***' as quem,
               payload ->> 'error'                     as erro
             from auth.audit_log_entries
             order by created_at desc

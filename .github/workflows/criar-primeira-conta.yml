@@ -1,0 +1,93 @@
+name: 7. Criar a primeira conta (sem depender de e-mail)
+
+# Cria uma conta de acesso direto no banco, com senha e e-mail já confirmado.
+# Nenhum e-mail é enviado — é isso que permite entrar no aplicativo enquanto o
+# envio de e-mail do projeto estiver com problema.
+#
+# NÃO cria perfil nem grava aceites: isso continua sendo feito pelo aplicativo,
+# na tela de cadastro. É justamente esse fluxo que precisa ser testado.
+#
+# Precisa de dois segredos, além do SUPABASE_DB_URL:
+#   ADMIN_EMAIL  o e-mail de acesso
+#   ADMIN_SENHA  a senha, com 8 caracteres ou mais
+#
+# Vão como segredo, e não como campo de formulário, porque este repositório é
+# público: campos e registros de execução ficam visíveis para qualquer pessoa,
+# segredos não.
+on:
+  workflow_dispatch:
+
+jobs:
+  criar:
+    name: Criar a conta
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Conferir o endereço de conexão
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: tools/checar-conexao.sh
+
+      - name: Conferir os segredos da conta
+        env:
+          EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          SENHA: ${{ secrets.ADMIN_SENHA }}
+        run: |
+          faltou=0
+          if [ -z "$EMAIL" ]; then
+            echo "::error::Falta o segredo ADMIN_EMAIL."
+            faltou=1
+          fi
+          if [ -z "$SENHA" ]; then
+            echo "::error::Falta o segredo ADMIN_SENHA."
+            faltou=1
+          fi
+          if [ "$faltou" = "1" ]; then
+            echo ""
+            echo "Crie os dois em:"
+            echo "  https://github.com/fabinhotinoco/zirix/settings/secrets/actions"
+            echo ""
+            echo "ADMIN_EMAIL: o e-mail com que você vai entrar"
+            echo "ADMIN_SENHA: uma senha de 8 caracteres ou mais"
+            exit 1
+          fi
+          if [ "${#SENHA}" -lt 8 ]; then
+            echo "::error::ADMIN_SENHA tem menos de 8 caracteres."
+            exit 1
+          fi
+          echo "Segredos presentes."
+
+      - name: Criar (ou atualizar a senha da) conta
+        env:
+          URL: ${{ secrets.SUPABASE_DB_URL }}
+          EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          SENHA: ${{ secrets.ADMIN_SENHA }}
+        run: |
+          psql "$URL" -v ON_ERROR_STOP=1 \
+            -v email="$EMAIL" -v senha="$SENHA" \
+            -f supabase/criar-primeiro-usuario.sql \
+            > /tmp/saida 2>&1 || { echo "::error::Falhou ao criar a conta."; sed 's/^/  /' /tmp/saida; exit 1; }
+
+          # A saída do psql repete o e-mail. Este registro é público: filtra.
+          grep -v "@" /tmp/saida || true
+
+      - name: Conferir sem revelar dados
+        env:
+          URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          psql "$URL" -c "
+            select
+              count(*)                                              as contas,
+              count(*) filter (where email_confirmed_at is not null) as confirmadas,
+              count(*) filter (where encrypted_password is not null
+                               and encrypted_password <> '')         as com_senha,
+              (select count(*) from auth.identities)                 as identidades
+            from auth.users;"
+          echo ""
+          echo "Agora entre no aplicativo com o e-mail e a senha que você guardou"
+          echo "nos segredos, usando a aba 'Senha' da tela de entrada:"
+          echo "  https://aplicativo-de-agendamento-pesca-vertical.expo.app"
+          echo ""
+          echo "Você vai cair na tela de cadastro para preencher nome e aceitar"
+          echo "os documentos — esse fluxo continua igual."
