@@ -64,11 +64,14 @@ jobs:
         run: psql -h localhost -U postgres -d zirix -v ON_ERROR_STOP=1 -f supabase/tests/01_rls_test.sql
 
   aplicativo:
-    name: Aplicativo (tipos)
+    name: Aplicativo (tipos e empacotamento)
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: apps/mobile
+    env:
+      EXPO_PUBLIC_SUPABASE_URL: https://exemplo.supabase.co
+      EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: chave-de-mentira-so-para-empacotar
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -78,3 +81,14 @@ jobs:
           cache-dependency-path: apps/mobile/package-lock.json
       - run: npm ci
       - run: npx tsc --noEmit
+
+      # O typecheck não enxerga resolução de módulo em tempo de execução: o
+      # Metro tem regras próprias, e um import que o TypeScript aprova pode
+      # não existir para ele. Foi assim que um build de 20 minutos na Expo
+      # morreu em "Unable to resolve module expo-asset". Empacotar aqui custa
+      # dois minutos e pega isso antes.
+      - name: Empacotar o JavaScript (iOS)
+        run: npx expo export --platform ios --output-dir /tmp/bundle-ios
+
+      - name: Empacotar o JavaScript (Android)
+        run: npx expo export --platform android --output-dir /tmp/bundle-android

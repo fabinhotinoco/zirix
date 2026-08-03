@@ -1,12 +1,21 @@
 // Configuração do Metro para monorepo.
 //
 // O app vive em apps/mobile mas importa @pescavertical/core de packages/core.
-// Duas coisas precisam estar certas, e só a primeira é óbvia:
+// Sem `watchFolders`, o Metro nem enxerga arquivos fora desta pasta.
 //
-//   1. watchFolders — sem isso o Metro nem enxerga arquivos fora desta pasta.
-//   2. resolução dos atalhos de import. O tsconfig `paths` convence o
-//      TypeScript, mas o Metro não lê tsconfig sozinho: sem a configuração
-//      abaixo, o typecheck passa e o app quebra ao abrir.
+// Duas armadilhas que já custaram um build quebrado, registradas aqui para não
+// voltarem:
+//
+//   1. `resolver.disableHierarchicalLookup = true` aparece nos exemplos de
+//      monorepo do Expo, mas lá existe um node_modules único, içado para a
+//      raiz. Aqui cada app tem o seu, e o npm deixa dependências aninhadas em
+//      node_modules/expo/node_modules/. Com a busca hierárquica desligada o
+//      Metro não alcança essas pastas, e o bundle falha com "Unable to resolve
+//      module expo-asset".
+//
+//   2. `config.experiments = { tsconfigPaths: true }` não existe no Metro — o
+//      valor era ignorado, com aviso de validação. Os atalhos `@/*` do tsconfig
+//      já funcionam sozinhos: o expo/metro-config lê o tsconfig desde o SDK 50.
 const { getDefaultConfig } = require('expo/metro-config');
 const path = require('path');
 
@@ -16,17 +25,8 @@ const raiz = path.resolve(projeto, '../..');
 const config = getDefaultConfig(projeto);
 
 config.watchFolders = [raiz];
-config.resolver.nodeModulesPaths = [
-  path.resolve(projeto, 'node_modules'),
-  path.resolve(raiz, 'node_modules'),
-];
-config.resolver.disableHierarchicalLookup = true;
 
-// Faz o Metro honrar os `paths` do tsconfig (@/* e @pescavertical/core/*).
-config.experiments = { ...config.experiments, tsconfigPaths: true };
-
-// Rede de segurança, caso o experimento acima mude de nome numa versão futura
-// do Expo: o pacote continua resolvendo pelo caminho explícito.
+// O pacote local não vive em node_modules nenhum: precisa do caminho explícito.
 config.resolver.extraNodeModules = {
   ...config.resolver.extraNodeModules,
   '@pescavertical/core': path.resolve(raiz, 'packages/core/src'),
