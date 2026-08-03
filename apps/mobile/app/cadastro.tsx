@@ -42,7 +42,7 @@ import {
 export default function Cadastro() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { sessao, recarregarPerfil } = useAuth();
+  const { sessao, recarregarPerfil, sair } = useAuth();
 
   const [nome, setNome] = useState('');
   const [papel, setPapel] = useState<Extract<Papel, 'cliente' | 'guia'>>('cliente');
@@ -218,6 +218,12 @@ export default function Cadastro() {
         )}
 
         <Erro mensagem={erro} />
+
+        {/* Saída de emergência: sem isto, quem chega aqui com a conta errada
+            fica preso — esta tela não tem para onde voltar. */}
+        <Pressable onPress={sair} style={estilos.sair}>
+          <Text style={estilos.sairTexto}>Entrar com outra conta</Text>
+        </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -225,6 +231,8 @@ export default function Cadastro() {
 
 const estilos = StyleSheet.create({
   conteudo: { paddingHorizontal: 24, paddingBottom: 64 },
+  sair: { marginTop: 28, alignItems: 'center' },
+  sairTexto: { color: cores.agua, fontWeight: '600' },
   rotulo: { fontSize: 13, fontWeight: '600', color: cores.texto, marginBottom: 6 },
   abas: { flexDirection: 'row', gap: 8, marginBottom: 16 },
   aba: {

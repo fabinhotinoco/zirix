@@ -59,12 +59,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let ativo = true;
 
-    supabase.auth.getSession().then(async ({ data }) => {
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      let sessao = data.session;
+
+      // getSession só lê o armazenamento local: o token continua parecendo
+      // válido depois de a conta ser apagada ou revogada no servidor, e o
+      // aplicativo segue como se estivesse logado. O erro só aparece bem
+      // depois, na primeira escrita, como violação de chave estrangeira —
+      // mensagem que não diz nada a quem está usando.
+      //
+      // getUser pergunta ao servidor. Se ele não reconhece mais a conta,
+      // descartamos a sessão aqui e a pessoa volta para a tela de entrada.
+      if (sessao) {
+        const { error } = await supabase.auth.getUser();
+        if (error) {
+          // Encerramento local: pedir ao servidor para encerrar uma sessão que
+          // ele já não reconhece falharia de novo.
+          await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+          sessao = null;
+        }
+      }
+
       if (!ativo) return;
-      setSessao(data.session);
-      if (data.session) setPerfil(await carregarPerfil(data.session.user.id));
+      setSessao(sessao);
+      if (sessao) setPerfil(await carregarPerfil(sessao.user.id));
       setCarregando(false);
-    });
+    })();
 
     const { data: inscricao } = supabase.auth.onAuthStateChange(async (_evento, nova) => {
       if (!ativo) return;
