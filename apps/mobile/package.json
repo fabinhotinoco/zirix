@@ -14,7 +14,8 @@
     "react-native": "0.86.2",
     "react-native-safe-area-context": "^5.8.0",
     "react-native-screens": "^4.26.2",
-    "react-native-url-polyfill": "^4.0.0"
+    "react-native-url-polyfill": "^4.0.0",
+    "react-dom": "19.2.3"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
@@ -27,5 +28,8 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit"
   },
-  "private": true
+  "private": true,
+  "overrides": {
+    "react-dom": "19.2.3"
+  }
 }

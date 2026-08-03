@@ -24,7 +24,7 @@ jobs:
           echo "::error::Para evitar execução acidental, digite APLICAR no campo de confirmação."
           exit 1
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Conferir o segredo
         env:
