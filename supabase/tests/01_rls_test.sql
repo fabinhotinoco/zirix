@@ -368,4 +368,84 @@ begin
 end $$;
 rollback;
 
+-- =============================================================================
+do $$ begin raise notice '--- 10. Guia não se aprova nem mexe na própria comissão ---'; end $$;
+-- =============================================================================
+begin;
+select auth.entrar_como('00000000-0000-0000-0000-0000000000b1');
+
+do $$
+begin
+  if current_user <> 'authenticated' then
+    raise exception 'FALHA: teste rodando como %, não como authenticated', current_user;
+  end if;
+
+  -- O ataque não precisa do aplicativo: a chave publicável e um curl bastam.
+  begin
+    update public.guides set status = 'aprovado'
+     where id = '10000000-0000-0000-0000-00000000000a';
+    raise exception 'FALHA: guia conseguiu se aprovar';
+  exception when insufficient_privilege then
+    raise notice 'ok  guia não consegue mudar o próprio status';
+  end;
+
+  begin
+    update public.guides set comissao_percentual = 0
+     where id = '10000000-0000-0000-0000-00000000000a';
+    raise exception 'FALHA: guia conseguiu zerar a própria comissão';
+  exception when insufficient_privilege then
+    raise notice 'ok  guia não consegue mexer na própria comissão';
+  end;
+
+  -- O que ele PODE mudar tem de continuar funcionando.
+  update public.guides set cidade = 'Boa Esperança'
+   where id = '10000000-0000-0000-0000-00000000000a';
+  raise notice 'ok  guia continua editando os próprios dados de apresentação';
+end $$;
+rollback;
+
+-- =============================================================================
+do $$ begin raise notice '--- 11. Guia novo nasce pendente, mesmo pedindo aprovado ---'; end $$;
+-- =============================================================================
+begin;
+select auth.entrar_como('00000000-0000-0000-0000-0000000000c1');
+
+do $$
+declare v_status text; v_comissao numeric;
+begin
+  insert into public.guides (user_id, nome_operacao, status, comissao_percentual)
+  values ('00000000-0000-0000-0000-0000000000c1', 'Tentativa', 'aprovado', 0)
+  returning status, comissao_percentual into v_status, v_comissao;
+
+  if v_status <> 'pendente' then
+    raise exception 'FALHA: guia nasceu com status %', v_status;
+  end if;
+  if v_comissao is not null then
+    raise exception 'FALHA: guia nasceu com comissão % em vez de nula', v_comissao;
+  end if;
+  raise notice 'ok  inscrição nasce pendente e sem comissão própria';
+end $$;
+rollback;
+
+-- =============================================================================
+do $$ begin raise notice '--- 12. O master decide ---'; end $$;
+-- =============================================================================
+begin;
+select auth.entrar_como('00000000-0000-0000-0000-0000000000aa');
+
+do $$
+declare v_status text;
+begin
+  update public.guides
+     set status = 'aprovado', comissao_percentual = 12
+   where id = '10000000-0000-0000-0000-00000000000a'
+  returning status into v_status;
+
+  if v_status <> 'aprovado' then
+    raise exception 'FALHA: master não conseguiu aprovar (status %)', v_status;
+  end if;
+  raise notice 'ok  master aprova e define a comissão';
+end $$;
+rollback;
+
 do $$ begin raise notice ''; raise notice 'TODOS OS TESTES DE RLS PASSARAM'; end $$;
