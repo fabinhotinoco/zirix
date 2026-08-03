@@ -33,7 +33,11 @@ function paraE164(bruto: string): string | null {
 export default function Entrar() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const [meio, setMeio] = useState<Meio>('email');
+  // Senha primeiro, de propósito. O caminho do código depende do envio de
+  // e-mail do projeto, que hoje responde com erro do lado do Supabase. Deixar a
+  // aba quebrada em primeiro plano é empurrar quem chega para o único caminho
+  // que não funciona. Quando o e-mail voltar, isto volta para 'email'.
+  const [meio, setMeio] = useState<Meio>('senha');
   const [etapa, setEtapa] = useState<Etapa>('identificacao');
   const [valor, setValor] = useState('');
   const [codigo, setCodigo] = useState('');
@@ -158,7 +162,7 @@ export default function Entrar() {
             </Subtitulo>
 
             <View style={estilos.abas}>
-              {(['email', 'senha', 'telefone'] as const).map((m) => (
+              {(['senha', 'email', 'telefone'] as const).map((m) => (
                 <Pressable
                   key={m}
                   onPress={() => {
