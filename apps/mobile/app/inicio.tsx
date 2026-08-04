@@ -35,10 +35,16 @@ export default function Inicio() {
       )}
 
       {perfil?.role === 'guia' && (
-        <Pressable onPress={() => router.push('/guia')} style={estilos.acao}>
-          <Text style={estilos.acaoTexto}>Minha operação</Text>
-          <Text style={estilos.acaoNota}>Situação da inscrição e dados da operação</Text>
-        </Pressable>
+        <>
+          <Pressable onPress={() => router.push('/guia')} style={estilos.acao}>
+            <Text style={estilos.acaoTexto}>Minha operação</Text>
+            <Text style={estilos.acaoNota}>Situação da inscrição e dados da operação</Text>
+          </Pressable>
+          <Pressable onPress={() => router.push('/barcos')} style={estilos.acao}>
+            <Text style={estilos.acaoTexto}>Meus barcos</Text>
+            <Text style={estilos.acaoNota}>Frota, agenda e preços de cada dia</Text>
+          </Pressable>
+        </>
       )}
 
       <Pressable onPress={sair} style={estilos.sair}>
