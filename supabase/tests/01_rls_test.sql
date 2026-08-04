@@ -802,6 +802,32 @@ begin
 end $$;
 rollback;
 
+-- --- documento não publicado ------------------------------------------------
+-- Banco recém-criado, antes de publicar docs/legal/. Ninguém pode ser vinculado
+-- a um texto que não existe — e a recusa tem de dizer isso, não estourar.
+begin;
+set role postgres;
+insert into public.boat_availability (boat_id, data, preco_barco_centavos, preco_passageiro_centavos)
+values ('20000000-0000-0000-0000-00000000000a', current_date + 45, 60000, 15000);
+
+select auth.entrar_como('00000000-0000-0000-0000-0000000000c1');
+do $$
+declare v_msg text;
+begin
+  begin
+    perform public.criar_reserva('20000000-0000-0000-0000-00000000000a',
+                                 current_date + 45, 2, '[]'::jsonb, true, true);
+    raise exception 'FALHA: reservou sem documento legal publicado';
+  exception when raise_exception then
+    get stacked diagnostics v_msg = message_text;
+    if v_msg not like '%não publicados%' then
+      raise exception 'FALHA: recusou por outro motivo: %', v_msg;
+    end if;
+  end;
+  raise notice 'ok  sem documento publicado, a recusa explica em vez de estourar';
+end $$;
+rollback;
+
 -- --- a cascata da comissão ---------------------------------------------------
 begin;
 set role postgres;
