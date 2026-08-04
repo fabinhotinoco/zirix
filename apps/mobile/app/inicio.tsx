@@ -144,7 +144,7 @@ export default function Inicio() {
       <Acao
         para="/aparencia"
         titulo="Aparência"
-        nota="Modo dia, noite ou híbrido — e as cores da marca"
+        nota="Modo dia, noite ou híbrido"
       />
 
       <Pressable onPress={sair} style={estilos.sair}>

@@ -35,14 +35,14 @@ export function Simbolo({
       {/* A superfície da água, no terço de cima: assim a linha fica pendurada
           ABAIXO dela. Com a água no meio, o desenho lia como uma cruz. */}
       <Line
-        x1={5}
+        x1={8}
         y1={11}
-        x2={43}
+        x2={40}
         y2={11}
         stroke={secundario}
         strokeWidth={2}
         strokeLinecap="round"
-        opacity={0.55}
+        opacity={0.42}
       />
 
       {/* A linha, a prumo, atravessando a superfície. */}

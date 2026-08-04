@@ -1,10 +1,13 @@
 /**
- * Tema do aplicativo: modo (dia, noite, híbrido) e paleta.
+ * Tema do aplicativo: dia, noite ou híbrido.
  *
- * A escolha fica no aparelho, não no banco: é preferência de aparência, muda a
- * cada troca de celular e não vale a viagem de rede. Guardar no banco também
- * significaria a tela nascer com a cor errada e piscar quando a resposta
- * chegasse.
+ * A paleta é uma só — Abissal, a identidade da marca, fixa no núcleo. O que se
+ * escolhe aqui é o modo de exibição, que é preferência de quem usa. Deixar a
+ * cor da marca escolhível seria abrir mão da própria identidade.
+ *
+ * A escolha fica no aparelho, não no banco: muda a cada troca de celular e não
+ * vale a viagem de rede. Guardar no banco também significaria a tela nascer com
+ * a cor errada e piscar quando a resposta chegasse.
  *
  * O provedor entrega `cores` já resolvidas. Nenhuma tela precisa saber se está
  * de dia ou de noite — ela pede a cor do texto e recebe a certa.
@@ -15,30 +18,24 @@ import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
-  PALETAS,
+  MARCA,
   coresDe,
-  paletaPorNome,
   resolverAparencia,
   type Aparencia,
   type Cores,
   type ModoDeTema,
-  type NomeDePaleta,
-  type Paleta,
 } from '@pescavertical/core/tema';
 
-export { PALETAS, coresDe };
-export type { Cores, ModoDeTema, NomeDePaleta, Paleta };
+export { MARCA, coresDe };
+export type { Cores, ModoDeTema };
 
 const CHAVE_MODO = 'pv.tema.modo';
-const CHAVE_PALETA = 'pv.tema.paleta';
 
 interface Contexto {
   modo: ModoDeTema;
-  paleta: Paleta;
   aparencia: Aparencia;
   cores: Cores;
   definirModo: (m: ModoDeTema) => void;
-  definirPaleta: (p: NomeDePaleta) => void;
   /** Falso até a preferência guardada ser lida — evita piscar a cor errada. */
   pronto: boolean;
 }
@@ -49,24 +46,19 @@ export function TemaProvider({ children }: { children: React.ReactNode }) {
   const doSistema: Aparencia = useColorScheme() === 'dark' ? 'noite' : 'dia';
 
   const [modo, setModo] = useState<ModoDeTema>('hibrido');
-  const [nomeDaPaleta, setNomeDaPaleta] = useState<NomeDePaleta>('abissal');
   const [pronto, setPronto] = useState(false);
 
   useEffect(() => {
     let vivo = true;
     (async () => {
       try {
-        const [m, p] = await Promise.all([
-          AsyncStorage.getItem(CHAVE_MODO),
-          AsyncStorage.getItem(CHAVE_PALETA),
-        ]);
+        const m = await AsyncStorage.getItem(CHAVE_MODO);
         if (!vivo) return;
         // Valor guardado por uma versão antiga não pode deixar o aplicativo sem
-        // cor: a checagem aqui e o `paletaPorNome` abaixo cobrem os dois lados.
+        // cor: só os três conhecidos passam, o resto cai no padrão.
         if (m === 'dia' || m === 'noite' || m === 'hibrido') setModo(m);
-        if (p) setNomeDaPaleta(paletaPorNome(p).nome);
       } catch {
-        // Sem preferência guardada, valem os padrões. Não é motivo de erro.
+        // Sem preferência guardada, vale o padrão. Não é motivo de erro.
       } finally {
         if (vivo) setPronto(true);
       }
@@ -81,24 +73,10 @@ export function TemaProvider({ children }: { children: React.ReactNode }) {
     void AsyncStorage.setItem(CHAVE_MODO, m).catch(() => {});
   }, []);
 
-  const definirPaleta = useCallback((p: NomeDePaleta) => {
-    setNomeDaPaleta(p);
-    void AsyncStorage.setItem(CHAVE_PALETA, p).catch(() => {});
-  }, []);
-
   const valor = useMemo<Contexto>(() => {
-    const paleta = paletaPorNome(nomeDaPaleta);
     const aparencia = resolverAparencia(modo, doSistema);
-    return {
-      modo,
-      paleta,
-      aparencia,
-      cores: coresDe(paleta, aparencia),
-      definirModo,
-      definirPaleta,
-      pronto,
-    };
-  }, [modo, nomeDaPaleta, doSistema, definirModo, definirPaleta, pronto]);
+    return { modo, aparencia, cores: coresDe(aparencia), definirModo, pronto };
+  }, [modo, doSistema, definirModo, pronto]);
 
   return <TemaContexto.Provider value={valor}>{children}</TemaContexto.Provider>;
 }

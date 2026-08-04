@@ -356,8 +356,10 @@ const telaAparencia = await textoDaTela();
 for (const m of ['Dia', 'Noite', 'Híbrido']) {
   exigir(telaAparencia.includes(m), `a tela de aparência oferece o modo ${m}`);
 }
-for (const p of ['Abissal', 'Brasa', 'Linha']) {
-  exigir(telaAparencia.includes(p), `a tela de aparência oferece a paleta ${p}`);
+// A paleta é uma só, e de propósito: cor de marca não é preferência de quem
+// usa. Se as três voltarem a aparecer aqui, a decisão foi desfeita sem querer.
+for (const p of ['Brasa', 'Linha']) {
+  exigir(!telaAparencia.includes(p), `a paleta ${p} saiu do aplicativo`);
 }
 
 /**
@@ -401,17 +403,10 @@ await pagina.reload();
 await pagina.waitForTimeout(2200);
 exigir(await fundoDaTela() === fundoNoite, 'o modo escolhido sobrevive a recarregar a página');
 
-// Trocar de paleta muda o acento em toda parte, não só no cartão da escolha.
-await pagina.getByRole('radio', { name: /Linha/ }).click();
-await pagina.waitForTimeout(700);
+// O modo escolhido vale nas outras telas, não só onde foi escolhido.
 await pagina.goto(`http://localhost:${PORTA}/inicio`);
 await pagina.waitForTimeout(1600);
-const acentoLinha = await pagina.evaluate(() => {
-  const el = [...document.querySelectorAll('div')].find((d) =>
-    d.textContent?.trim().startsWith('Procurar pescaria'));
-  return el ? getComputedStyle(el).borderColor : '';
-});
-exigir(acentoLinha !== '', 'a paleta escolhida chega às outras telas');
+exigir(await fundoDaTela() === fundoNoite, 'o modo escolhido vale em todas as telas');
 
 await navegador.close();
 servidor.close();
