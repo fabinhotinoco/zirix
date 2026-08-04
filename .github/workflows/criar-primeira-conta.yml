@@ -7,12 +7,15 @@ name: 7. Criar uma conta de acesso (sem depender de e-mail)
 # NÃO cria perfil nem grava aceites: isso continua sendo feito pelo aplicativo,
 # na tela de cadastro. É justamente esse fluxo que precisa ser testado.
 #
-# Duas contas, dois pares de segredos, além do SUPABASE_DB_URL:
-#   ADMIN_EMAIL / ADMIN_SENHA   a sua conta de administrador
-#   GUIA_EMAIL  / GUIA_SENHA    uma conta para testar o lado do guia
+# Três contas, três pares de segredos, além do SUPABASE_DB_URL:
+#   ADMIN_EMAIL   / ADMIN_SENHA     a sua conta de administrador (master)
+#   GUIA_EMAIL    / GUIA_SENHA      uma conta para testar o lado do guia
+#   CLIENTE_EMAIL / CLIENTE_SENHA   uma conta para testar o lado do pescador
 #
-# Ter as duas ao mesmo tempo evita o vaivém de reescrever o mesmo segredo — e
-# o vaivém é onde se perde a senha da conta que já existia.
+# São três porque os três papéis enxergam coisas diferentes, e o master enxerga
+# tudo — testar como cliente usando a conta de master esconde justamente o que
+# se quer conferir. Ter os três pares guardados evita o vaivém de reescrever o
+# mesmo segredo, e o vaivém é onde se perde a senha da conta que já existia.
 #
 # Vão como segredo, e não como campo de formulário, porque este repositório é
 # público: campos e registros de execução ficam visíveis para qualquer pessoa,
@@ -25,7 +28,7 @@ on:
         required: true
         default: admin
         type: choice
-        options: [admin, guia]
+        options: [admin, guia, cliente]
 
 jobs:
   criar:
@@ -47,12 +50,14 @@ jobs:
           ADMIN_SENHA: ${{ secrets.ADMIN_SENHA }}
           GUIA_EMAIL: ${{ secrets.GUIA_EMAIL }}
           GUIA_SENHA: ${{ secrets.GUIA_SENHA }}
+          CLIENTE_EMAIL: ${{ secrets.CLIENTE_EMAIL }}
+          CLIENTE_SENHA: ${{ secrets.CLIENTE_SENHA }}
         run: |
-          if [ "$ESCOLHA" = "guia" ]; then
-            PREFIXO=GUIA; EMAIL="$GUIA_EMAIL"; SENHA="$GUIA_SENHA"
-          else
-            PREFIXO=ADMIN; EMAIL="$ADMIN_EMAIL"; SENHA="$ADMIN_SENHA"
-          fi
+          case "$ESCOLHA" in
+            guia)    PREFIXO=GUIA;    EMAIL="$GUIA_EMAIL";    SENHA="$GUIA_SENHA" ;;
+            cliente) PREFIXO=CLIENTE; EMAIL="$CLIENTE_EMAIL"; SENHA="$CLIENTE_SENHA" ;;
+            *)       PREFIXO=ADMIN;   EMAIL="$ADMIN_EMAIL";   SENHA="$ADMIN_SENHA" ;;
+          esac
 
           if [ -z "$EMAIL" ] || [ -z "$SENHA" ]; then
             echo "::error::Faltam os segredos ${PREFIXO}_EMAIL e/ou ${PREFIXO}_SENHA."

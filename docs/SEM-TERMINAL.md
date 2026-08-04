@@ -289,10 +289,19 @@ Antes de rodar, crie dois segredos em
 | `ADMIN_SENHA` | uma senha sua, de 8 caracteres ou mais |
 | `GUIA_EMAIL` | um **outro** e-mail, para testar o lado do guia |
 | `GUIA_SENHA` | outra senha, de 8 caracteres ou mais |
+| `CLIENTE_EMAIL` | um **terceiro** e-mail, para testar o lado do pescador |
+| `CLIENTE_SENHA` | outra senha, de 8 caracteres ou mais |
 
-Ao rodar, escolha em **Qual conta criar** entre `admin` e `guia`. Ter os dois
-pares guardados evita o vaivém de reescrever o mesmo segredo — e é no vaivém
-que se perde a senha da conta que já existia.
+Ao rodar, escolha em **Qual conta criar** entre `admin`, `guia` e `cliente`.
+
+São três porque os três papéis enxergam coisas diferentes — e o master enxerga
+tudo. Testar como cliente usando a conta de master esconde justamente o que se
+quer conferir. Ter os três pares guardados evita o vaivém de reescrever o mesmo
+segredo, e é no vaivém que se perde a senha da conta que já existia.
+
+> Não precisa ser um e-mail de verdade que você acesse: nenhuma mensagem é
+> enviada, a conta já nasce confirmada. Serve qualquer endereço que você
+> lembre, como `pescador@teste.com`.
 
 > Vão como segredo, e não como campo do formulário, porque **este repositório é
 > público**: campos e registros de execução ficam visíveis para qualquer pessoa.
