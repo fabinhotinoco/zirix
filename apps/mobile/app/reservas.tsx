@@ -18,6 +18,7 @@ import { formatarBRL } from '@pescavertical/core/dinheiro';
 import { rotuloDaHora } from '@pescavertical/core/hora';
 import { mensagemDeErro } from '@/lib/erros';
 import { cancelarReserva, minhasReservas, paraBR, type MinhaReserva } from '@/lib/reservas';
+import { Vitrine } from '@/ui/vitrine';
 import { Erro, Subtitulo, Titulo } from '@/ui/componentes';
 import { useTema, type Cores } from '@/ui/tema';
 
@@ -178,6 +179,9 @@ export default function Reservas() {
           )}
         </>
       )}
+
+      {/* Quem acabou de fechar uma pescaria é quem mais quer equipamento. */}
+      <Vitrine />
 
       <Pressable onPress={() => router.replace('/inicio')} style={estilos.voltar}>
         <Text style={estilos.voltarTexto}>Voltar</Text>

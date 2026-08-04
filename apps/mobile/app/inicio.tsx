@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/lib/auth';
 import { quantosNaoLidos } from '@/lib/avisos';
 import { Simbolo } from '@/ui/logo';
+import { Vitrine } from '@/ui/vitrine';
 import { Subtitulo, Titulo } from '@/ui/componentes';
 import { useTema, type Cores } from '@/ui/tema';
 
@@ -131,11 +132,18 @@ export default function Inicio() {
         <Acao para="/reservas" titulo="Minhas reservas" nota="Datas, acompanhantes e valores" />
       )}
       {master && (
-        <Acao
-          para="/guias"
-          titulo="Guias da plataforma"
-          nota="Aprovar inscrições e definir comissões"
-        />
+        <>
+          <Acao
+            para="/guias"
+            titulo="Guias da plataforma"
+            nota="Aprovar inscrições e definir comissões"
+          />
+          <Acao
+            para="/anuncios"
+            titulo="Anúncios de parceiros"
+            nota="Quatro espaços, links de afiliado e cliques"
+          />
+        </>
       )}
       {(guia || master) && (
         <Acao para="/buscar" titulo="Procurar pescaria" nota="Ver a plataforma como um cliente vê" />
@@ -157,6 +165,9 @@ export default function Inicio() {
       <Pressable onPress={sair} style={estilos.sair}>
         <Text style={estilos.sairTexto}>Sair</Text>
       </Pressable>
+
+      {/* No rodapé, depois de tudo o que a pessoa veio fazer. */}
+      <Vitrine />
     </ScrollView>
   );
 }

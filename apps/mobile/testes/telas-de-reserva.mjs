@@ -96,6 +96,24 @@ const brDe = (iso) => iso.split('-').reverse().join('/');
 const DIA_VENDIDO = emDias(0);
 const DIA_LIVRE = emDias(1);
 
+const ANUNCIOS = [
+  {
+    id: 'an-1', posicao: 1, titulo: 'Varas e molinetes', chamada: '10% para quem vem daqui',
+    parceiro: 'Loja do Pescador', url: 'https://loja.exemplo.com.br/varas?ref=pv',
+    codigo_desconto: 'PESCAVERTICAL10', ativo: true,
+  },
+  {
+    id: 'an-2', posicao: 2, titulo: 'Iscas artificiais', chamada: null,
+    parceiro: 'Loja do Pescador', url: 'https://loja.exemplo.com.br/iscas?ref=pv',
+    codigo_desconto: null, ativo: true,
+  },
+  {
+    id: 'an-3', posicao: 3, titulo: 'Rascunho não publicado', chamada: null,
+    parceiro: 'X', url: 'https://x.exemplo.com', codigo_desconto: null, ativo: false,
+  },
+];
+let cliqueRegistrado = null;
+
 const GUIAS_FILTRO = [
   { id: 'g-1', nome_operacao: 'Pesca Vertical', cidade: 'Boa Esperança' },
   { id: 'g-2', nome_operacao: 'Pescaria do Zé', cidade: 'Guapé' },
@@ -191,6 +209,11 @@ await ctx.route(/supabase\.co/, async (rota) => {
     return json(corpo.p_guia ? AGENDA.filter((l) => l.guide_id === corpo.p_guia) : AGENDA);
   }
   if (p === '/rest/v1/rpc/guias_com_agenda') return json(GUIAS_FILTRO);
+  if (p === '/rest/v1/anuncios') return json(ANUNCIOS);
+  if (p === '/rest/v1/rpc/registrar_clique') {
+    cliqueRegistrado = JSON.parse(rota.request().postData() ?? '{}');
+    return json(null);
+  }
   if (p === '/rest/v1/rpc/datas_disponiveis') return json(DIAS);
   if (p === '/rest/v1/rpc/minhas_reservas') return json(RESERVAS);
   if (p === '/rest/v1/rpc/criar_reserva') {
@@ -414,6 +437,30 @@ await pagina.getByRole('radio', { name: 'Pescaria do Zé' }).click();
 await pagina.waitForTimeout(1200);
 exigir(chamadaAgenda?.p_guia === 'g-2', 'filtrar manda o guia escolhido para o servidor');
 PERFIL.role = 'guia';
+
+// --- 7c. vitrine de parceiros -----------------------------------------------
+// Publicidade tem de ser identificável como tal (art. 36 do CDC). Um cartão que
+// parece recomendação da plataforma é o que cria responsabilidade sobre a venda
+// de terceiro.
+PERFIL.role = 'cliente';
+await pagina.goto(`http://localhost:${PORTA}/reservas`);
+await pagina.waitForTimeout(2000);
+const telaVitrine = await textoDaTela();
+exigir(/publicidade/i.test(telaVitrine), 'o bloco é rotulado como publicidade');
+exigir(telaVitrine.includes('A compra é feita no site do parceiro'),
+  'diz que a compra acontece fora do aplicativo');
+exigir(telaVitrine.includes('Varas e molinetes') && telaVitrine.includes('Iscas artificiais'),
+  'os anúncios no ar aparecem');
+exigir(!telaVitrine.includes('Rascunho não publicado'),
+  'anúncio fora do ar não aparece para o cliente');
+exigir(telaVitrine.includes('PESCAVERTICAL10'), 'o cupom aparece no cartão');
+exigir(telaVitrine.includes('loja.exemplo.com.br'),
+  'o domínio aparece: quem clica tem direito de saber para onde vai');
+
+// O clique conta, e conta o anúncio certo.
+await pagina.getByRole('link', { name: /Varas e molinetes/ }).click();
+await pagina.waitForTimeout(900);
+exigir(cliqueRegistrado?.p_anuncio === 'an-1', 'o clique é contado no anúncio certo');
 
 // --- 8. aparência: três modos, três paletas ---------------------------------
 await pagina.goto(`http://localhost:${PORTA}/aparencia`);

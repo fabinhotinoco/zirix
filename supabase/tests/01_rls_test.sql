@@ -1645,4 +1645,126 @@ begin
 end $$;
 rollback;
 
+-- =============================================================================
+do $$ begin raise notice '--- 22. Anúncios de parceiros ---'; end $$;
+-- =============================================================================
+begin;
+set role postgres;
+insert into public.anuncios (posicao, titulo, parceiro, url, codigo_desconto, ativo) values
+  (1, 'Varas e molinetes', 'Loja do Pescador', 'https://loja.exemplo.com.br/varas', 'PV10', true),
+  (2, 'Iscas artificiais',  'Loja do Pescador', 'https://loja.exemplo.com.br/iscas', 'PV10', false);
+
+select auth.entrar_como('00000000-0000-0000-0000-0000000000c1');
+do $$
+declare n integer; a public.anuncios;
+begin
+  -- Anúncio desligado é rascunho do master: ninguém mais precisa vê-lo.
+  select count(*) into n from public.anuncios;
+  if n <> 1 then raise exception 'FALHA: cliente viu % anúncio(s), esperava só o ativo', n; end if;
+  raise notice 'ok  anúncio desligado não aparece para quem não é master';
+
+  select * into a from public.anuncios;
+
+  -- A contagem decide qual parceiro fica. Se desse para escrever à mão,
+  -- qualquer pessoa inflaria o número do anúncio que quisesse.
+  begin
+    insert into public.anuncio_cliques (anuncio_id, dia, cliques) values (a.id, current_date, 9999);
+    raise exception 'FALHA: cliente escreveu direto na contagem de cliques';
+  exception when insufficient_privilege then
+    raise notice 'ok  a contagem de cliques não é escrita à mão';
+  end;
+
+  select count(*) into n from public.anuncio_cliques;
+  if n <> 0 then raise exception 'FALHA: cliente leu a contagem de cliques do master'; end if;
+  raise notice 'ok  a contagem é do master, não de quem clica';
+
+  -- Somar pela função funciona, e soma UM.
+  perform public.registrar_clique(a.id);
+  perform public.registrar_clique(a.id);
+  raise notice 'ok  o clique é contado pela função';
+
+  -- E o desempenho é só do master.
+  select count(*) into n from public.desempenho_dos_anuncios();
+  if n <> 0 then raise exception 'FALHA: cliente enxergou o desempenho dos anúncios'; end if;
+  raise notice 'ok  o desempenho dos anúncios é exclusivo do master';
+
+  -- Editar anúncio alheio não passa.
+  begin
+    update public.anuncios set url = 'https://meu-site.exemplo.com' where id = a.id;
+    if found then raise exception 'FALHA: cliente trocou o link do anúncio'; end if;
+    raise notice 'ok  cliente não troca o link do anúncio';
+  exception when insufficient_privilege then
+    raise notice 'ok  cliente não troca o link do anúncio';
+  end;
+end $$;
+
+select auth.entrar_como('00000000-0000-0000-0000-0000000000aa');
+do $$
+declare n bigint; l record;
+begin
+  select count(*) into n from public.anuncios;
+  if n <> 2 then raise exception 'FALHA: master viu % anúncio(s), esperava 2', n; end if;
+
+  select * into l from public.desempenho_dos_anuncios() where posicao = 1;
+  if l.cliques <> 2 then
+    raise exception 'FALHA: contagem deu % clique(s), esperava 2', l.cliques;
+  end if;
+  raise notice 'ok  o master vê os quatro espaços e quantos cliques cada um teve';
+
+  -- Clique em anúncio desligado não conta: ele não está sendo mostrado, então
+  -- um clique nele só pode ter vindo de alguém batendo na função na mão.
+  select * into l from public.anuncios where posicao = 2;
+  perform public.registrar_clique(l.id);
+  select cliques into n from public.desempenho_dos_anuncios() where posicao = 2;
+  if n <> 0 then
+    raise exception 'FALHA: anúncio desligado contou % clique(s)', n;
+  end if;
+  raise notice 'ok  clique em anúncio fora do ar não entra na conta';
+end $$;
+rollback;
+
+-- --- o que o banco recusa por conta própria ---------------------------------
+begin;
+set role postgres;
+do $$
+begin
+  -- `javascript:` na versão web é execução de código no aparelho de quem clica.
+  -- A checagem do aplicativo é conveniência; esta aqui é a garantia.
+  begin
+    insert into public.anuncios (posicao, titulo, parceiro, url)
+    values (1, 'Malicioso', 'X', 'javascript:alert(1)');
+    raise exception 'FALHA: o banco aceitou um link javascript:';
+  exception when check_violation then null;
+  end;
+
+  begin
+    insert into public.anuncios (posicao, titulo, parceiro, url)
+    values (1, 'Sem cadeado', 'X', 'http://loja.exemplo.com.br');
+    raise exception 'FALHA: o banco aceitou http sem cadeado';
+  exception when check_violation then null;
+  end;
+  raise notice 'ok  o banco só aceita link https de domínio público';
+
+  -- Quatro espaços, nem mais um: mural de anúncio empurra a pescaria da tela.
+  insert into public.anuncios (posicao, titulo, parceiro, url)
+  values (1, 'A', 'X', 'https://a.exemplo.com'),
+         (2, 'B', 'X', 'https://b.exemplo.com'),
+         (3, 'C', 'X', 'https://c.exemplo.com'),
+         (4, 'D', 'X', 'https://d.exemplo.com');
+  begin
+    insert into public.anuncios (posicao, titulo, parceiro, url)
+    values (5, 'E', 'X', 'https://e.exemplo.com');
+    raise exception 'FALHA: entrou um quinto anúncio';
+  exception when check_violation then null;
+  end;
+  begin
+    insert into public.anuncios (posicao, titulo, parceiro, url)
+    values (1, 'Repetido', 'X', 'https://f.exemplo.com');
+    raise exception 'FALHA: duas lojas ocuparam o mesmo espaço';
+  exception when unique_violation then null;
+  end;
+  raise notice 'ok  são quatro espaços, um parceiro em cada';
+end $$;
+rollback;
+
 do $$ begin raise notice ''; raise notice 'TODOS OS TESTES DE RLS PASSARAM'; end $$;
