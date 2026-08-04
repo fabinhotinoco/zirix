@@ -620,4 +620,390 @@ begin
 end $$;
 rollback;
 
+-- =============================================================================
+do $$ begin raise notice '--- 17. criar_reserva: quem cobra é quem calcula ---'; end $$;
+-- =============================================================================
+-- O cliente diz O QUE quer; o servidor decide QUANTO custa. Se este bloco
+-- falhar, existe um caminho para reservar um passeio de mil reais por um
+-- centavo — e nenhuma política de RLS enxergaria isso, porque para ela o preço
+-- é só mais uma coluna.
+begin;
+set role postgres;
+
+-- Os dois documentos que a reserva precisa aceitar. Não vêm do seed.sql: são
+-- publicados por tools/seed-legal.mjs a partir de docs/legal/.
+insert into public.legal_documents (slug, versao, titulo, corpo_markdown) values
+  ('politica_cancelamento',  'teste-1', 'Política',  'texto da política'),
+  ('termo_responsabilidade', 'teste-1', 'Termo',     'texto do termo');
+
+-- Uma data livre para reservar: a de +30 já está vendida na massa de teste.
+insert into public.boat_availability (boat_id, data, preco_barco_centavos, preco_passageiro_centavos)
+values ('20000000-0000-0000-0000-00000000000a', current_date + 45, 60000, 15000);
+
+select auth.entrar_como('00000000-0000-0000-0000-0000000000c1');
+
+do $$
+declare r public.bookings; n integer;
+begin
+  if current_user <> 'authenticated' then
+    raise exception 'FALHA: teste rodando como %, não como authenticated', current_user;
+  end if;
+
+  r := public.criar_reserva(
+         '20000000-0000-0000-0000-00000000000a', current_date + 45, 4,
+         '[{"nome":"João","telefone":"35999990000"},{"nome":"Maria"}]'::jsonb,
+         true, true);
+
+  -- 60.000 do dia + 15.000 × 4 pescadores = 120.000
+  if r.valor_total_centavos <> 120000 then
+    raise exception 'FALHA: total calculado deu % em vez de 120000', r.valor_total_centavos;
+  end if;
+  -- Guia A tem 10%; o barco não tem valor próprio.
+  if r.comissao_percentual <> 10 or r.comissao_centavos <> 12000 then
+    raise exception 'FALHA: comissão saiu % %% = % centavos',
+      r.comissao_percentual, r.comissao_centavos;
+  end if;
+  if r.repasse_guia_centavos <> 108000 then
+    raise exception 'FALHA: repasse ao guia deu %', r.repasse_guia_centavos;
+  end if;
+  -- Sinal padrão da plataforma: 30%.
+  if r.sinal_centavos <> 36000 or r.saldo_centavos <> 84000 then
+    raise exception 'FALHA: sinal % e saldo %', r.sinal_centavos, r.saldo_centavos;
+  end if;
+  if r.status <> 'pendente' or r.status_pagamento <> 'aguardando_sinal' then
+    raise exception 'FALHA: reserva nasceu % / %', r.status, r.status_pagamento;
+  end if;
+  if r.expira_em is null or r.expira_em > now() + interval '21 minutes' then
+    raise exception 'FALHA: expiração ficou em %', r.expira_em;
+  end if;
+  -- Prazo de quitação: 7 dias antes da pescaria.
+  if r.quitacao_vence_em <> current_date + 38 then
+    raise exception 'FALHA: quitação vence em %', r.quitacao_vence_em;
+  end if;
+  raise notice 'ok  preço, comissão, sinal, saldo e prazos calculados no servidor';
+
+  select count(*) into n from public.booking_participants where booking_id = r.id;
+  if n <> 2 then raise exception 'FALHA: gravou % participante(s), esperado 2', n; end if;
+  raise notice 'ok  participantes gravados junto com a reserva';
+
+  -- O aceite da pescaria, com hash do texto — é o que sustenta a retenção
+  -- quando alguém cancela e discorda dela meses depois.
+  select count(*) into n from public.terms_acceptances
+   where booking_id = r.id and length(hash_sha256) = 64;
+  if n <> 2 then
+    raise exception 'FALHA: gravou % aceite(s) com hash, esperado 2', n;
+  end if;
+  if r.politica_versao <> 'teste-1' or r.termo_versao <> 'teste-1' then
+    raise exception 'FALHA: versões não congeladas na reserva (% / %)',
+      r.politica_versao, r.termo_versao;
+  end if;
+  raise notice 'ok  aceites da reserva gravados com hash e versão congelada';
+end $$;
+
+-- A segunda tentativa no mesmo barco e no mesmo dia tem de bater na trava.
+do $$
+begin
+  begin
+    perform public.criar_reserva(
+      '20000000-0000-0000-0000-00000000000a', current_date + 45, 2,
+      '[]'::jsonb, true, true);
+    raise exception 'FALHA: o mesmo barco foi reservado duas vezes no mesmo dia';
+  exception when unique_violation then
+    raise notice 'ok  segunda reserva do mesmo barco/dia recusada com erro claro';
+  end;
+end $$;
+rollback;
+
+-- --- as recusas, uma a uma ---------------------------------------------------
+begin;
+set role postgres;
+insert into public.legal_documents (slug, versao, titulo, corpo_markdown) values
+  ('politica_cancelamento',  'teste-1', 'Política', 'texto da política'),
+  ('termo_responsabilidade', 'teste-1', 'Termo',    'texto do termo');
+insert into public.boat_availability (boat_id, data, preco_barco_centavos, preco_passageiro_centavos)
+values ('20000000-0000-0000-0000-00000000000a', current_date + 45, 60000, 15000),
+       ('20000000-0000-0000-0000-00000000000a', current_date + 46, 60000, 15000);
+update public.boat_availability set status = 'bloqueado'
+ where boat_id = '20000000-0000-0000-0000-00000000000a' and data = current_date + 46;
+-- Guia B está aprovado, mas nunca conectou o Mercado Pago.
+insert into public.boat_availability (boat_id, data, preco_barco_centavos, preco_passageiro_centavos)
+values ('20000000-0000-0000-0000-00000000000b', current_date + 45, 80000, 10000);
+
+select auth.entrar_como('00000000-0000-0000-0000-0000000000c1');
+
+do $$
+declare v_msg text;
+begin
+  -- 1. sem aceitar os documentos
+  begin
+    perform public.criar_reserva('20000000-0000-0000-0000-00000000000a',
+                                 current_date + 45, 2, '[]'::jsonb, false, true);
+    raise exception 'FALHA: reservou sem aceitar a política de cancelamento';
+  exception when check_violation then null;
+  end;
+  raise notice 'ok  reserva sem aceite dos documentos é recusada';
+
+  -- 2. mais pescadores do que o barco leva (barco A vai até 4)
+  begin
+    perform public.criar_reserva('20000000-0000-0000-0000-00000000000a',
+                                 current_date + 45, 9, '[]'::jsonb, true, true);
+    raise exception 'FALHA: reservou 9 pessoas num barco de 4';
+  exception when check_violation then null;
+  end;
+  raise notice 'ok  capacidade do barco é respeitada';
+
+  -- 3. data no passado
+  begin
+    perform public.criar_reserva('20000000-0000-0000-0000-00000000000a',
+                                 current_date - 1, 2, '[]'::jsonb, true, true);
+    raise exception 'FALHA: reservou uma pescaria que já passou';
+  exception when check_violation then null;
+  end;
+  raise notice 'ok  data no passado é recusada';
+
+  -- 4. data bloqueada pelo guia
+  begin
+    perform public.criar_reserva('20000000-0000-0000-0000-00000000000a',
+                                 current_date + 46, 2, '[]'::jsonb, true, true);
+    raise exception 'FALHA: reservou uma data bloqueada';
+  exception when check_violation then null;
+  end;
+  raise notice 'ok  data bloqueada não é reservável';
+
+  -- 5. data que o guia nunca abriu
+  begin
+    perform public.criar_reserva('20000000-0000-0000-0000-00000000000a',
+                                 current_date + 200, 2, '[]'::jsonb, true, true);
+    raise exception 'FALHA: reservou um dia que não está na agenda';
+  exception when check_violation then null;
+  end;
+  raise notice 'ok  dia fora da agenda não é reservável';
+
+  -- 6. guia sem Mercado Pago conectado
+  begin
+    perform public.criar_reserva('20000000-0000-0000-0000-00000000000b',
+                                 current_date + 45, 2, '[]'::jsonb, true, true);
+    raise exception 'FALHA: reservou com guia sem caminho para receber';
+  exception when check_violation then
+    get stacked diagnostics v_msg = message_text;
+    if v_msg not like '%pagamento%' then raise exception 'FALHA: recusa por outro motivo: %', v_msg; end if;
+  end;
+  raise notice 'ok  guia sem Mercado Pago conectado não recebe reserva';
+
+  -- 7. mais participantes do que lugares pagos
+  begin
+    perform public.criar_reserva(
+      '20000000-0000-0000-0000-00000000000a', current_date + 45, 2,
+      '[{"nome":"A"},{"nome":"B"},{"nome":"C"}]'::jsonb, true, true);
+    raise exception 'FALHA: listou 3 pessoas numa reserva de 2 lugares';
+  exception when check_violation then null;
+  end;
+  raise notice 'ok  lista de participantes não passa do número de lugares';
+end $$;
+rollback;
+
+-- --- a cascata da comissão ---------------------------------------------------
+begin;
+set role postgres;
+insert into public.legal_documents (slug, versao, titulo, corpo_markdown) values
+  ('politica_cancelamento',  'teste-1', 'Política', 'texto da política'),
+  ('termo_responsabilidade', 'teste-1', 'Termo',    'texto do termo');
+insert into public.boat_availability (boat_id, data, preco_barco_centavos, preco_passageiro_centavos)
+values ('20000000-0000-0000-0000-00000000000a', current_date + 45, 60000, 15000);
+-- O barco passa a ter comissão própria: 15% tem de vencer os 10% do guia.
+update public.boats set comissao_percentual = 15
+ where id = '20000000-0000-0000-0000-00000000000a';
+
+select auth.entrar_como('00000000-0000-0000-0000-0000000000c1');
+do $$
+declare r public.bookings;
+begin
+  r := public.criar_reserva('20000000-0000-0000-0000-00000000000a',
+                            current_date + 45, 4, '[]'::jsonb, true, true);
+  if r.comissao_percentual <> 15 or r.comissao_centavos <> 18000 then
+    raise exception 'FALHA: comissão do barco não venceu a do guia (% %%, %)',
+      r.comissao_percentual, r.comissao_centavos;
+  end if;
+  raise notice 'ok  comissão do barco vence a do guia';
+end $$;
+rollback;
+
+-- Guia sem comissão própria cai no padrão da plataforma (10% no seed).
+begin;
+set role postgres;
+insert into public.legal_documents (slug, versao, titulo, corpo_markdown) values
+  ('politica_cancelamento',  'teste-1', 'Política', 'texto da política'),
+  ('termo_responsabilidade', 'teste-1', 'Termo',    'texto do termo');
+insert into public.boat_availability (boat_id, data, preco_barco_centavos, preco_passageiro_centavos)
+values ('20000000-0000-0000-0000-00000000000a', current_date + 45, 60000, 15000);
+update public.guides set comissao_percentual = null
+ where id = '10000000-0000-0000-0000-00000000000a';
+update public.app_settings set valor = '8'::jsonb where chave = 'comissao_padrao_percentual';
+
+select auth.entrar_como('00000000-0000-0000-0000-0000000000c1');
+do $$
+declare r public.bookings;
+begin
+  r := public.criar_reserva('20000000-0000-0000-0000-00000000000a',
+                            current_date + 45, 4, '[]'::jsonb, true, true);
+  if r.comissao_percentual <> 8 then
+    raise exception 'FALHA: sem comissão no guia, deveria cair nos 8%% do padrão, veio %',
+      r.comissao_percentual;
+  end if;
+  raise notice 'ok  sem valor no barco nem no guia, vale o padrão da plataforma';
+end $$;
+rollback;
+
+-- Guia isento: comissão ZERO é um valor, não "sem valor".
+begin;
+set role postgres;
+insert into public.legal_documents (slug, versao, titulo, corpo_markdown) values
+  ('politica_cancelamento',  'teste-1', 'Política', 'texto da política'),
+  ('termo_responsabilidade', 'teste-1', 'Termo',    'texto do termo');
+insert into public.boat_availability (boat_id, data, preco_barco_centavos, preco_passageiro_centavos)
+values ('20000000-0000-0000-0000-00000000000a', current_date + 45, 60000, 15000);
+update public.guides set comissao_percentual = 0
+ where id = '10000000-0000-0000-0000-00000000000a';
+
+select auth.entrar_como('00000000-0000-0000-0000-0000000000c1');
+do $$
+declare r public.bookings;
+begin
+  r := public.criar_reserva('20000000-0000-0000-0000-00000000000a',
+                            current_date + 45, 4, '[]'::jsonb, true, true);
+  if r.comissao_percentual <> 0 or r.comissao_centavos <> 0 then
+    raise exception 'FALHA: guia isento acabou pagando comissão (% %%)', r.comissao_percentual;
+  end if;
+  if r.repasse_guia_centavos <> r.valor_total_centavos then
+    raise exception 'FALHA: guia isento não recebeu o valor cheio';
+  end if;
+  raise notice 'ok  comissão zero é respeitada, não confundida com ausência de valor';
+end $$;
+rollback;
+
+-- --- desconto Diamond --------------------------------------------------------
+begin;
+set role postgres;
+insert into public.legal_documents (slug, versao, titulo, corpo_markdown) values
+  ('politica_cancelamento',  'teste-1', 'Política', 'texto da política'),
+  ('termo_responsabilidade', 'teste-1', 'Termo',    'texto do termo');
+insert into public.boat_availability (boat_id, data, preco_barco_centavos, preco_passageiro_centavos)
+values ('20000000-0000-0000-0000-00000000000a', current_date + 45, 60000, 15000),
+       ('20000000-0000-0000-0000-00000000000a', current_date + 47, 60000, 15000);
+update public.guides
+   set oferece_desconto_diamond = true, desconto_diamond_percentual = 10
+ where id = '10000000-0000-0000-0000-00000000000a';
+
+-- Cliente comum: nada muda.
+select auth.entrar_como('00000000-0000-0000-0000-0000000000c1');
+do $$
+declare r public.bookings;
+begin
+  r := public.criar_reserva('20000000-0000-0000-0000-00000000000a',
+                            current_date + 45, 4, '[]'::jsonb, true, true);
+  if r.desconto_centavos <> 0 then
+    raise exception 'FALHA: cliente comum ganhou desconto de Diamond (%)', r.desconto_centavos;
+  end if;
+  raise notice 'ok  cliente comum não recebe o desconto Diamond';
+end $$;
+
+-- Assinante ativo: 10% saem do valor, e a comissão incide sobre o líquido.
+select auth.entrar_como('00000000-0000-0000-0000-0000000000c2');
+do $$
+declare r public.bookings;
+begin
+  r := public.criar_reserva('20000000-0000-0000-0000-00000000000a',
+                            current_date + 47, 4, '[]'::jsonb, true, true);
+  if r.desconto_centavos <> 12000 then
+    raise exception 'FALHA: desconto Diamond deu % em vez de 12000', r.desconto_centavos;
+  end if;
+  -- 120.000 − 12.000 = 108.000 líquidos; 10% = 10.800 de comissão.
+  if r.comissao_centavos <> 10800 or r.repasse_guia_centavos <> 97200 then
+    raise exception 'FALHA: comissão % e repasse % sobre o líquido',
+      r.comissao_centavos, r.repasse_guia_centavos;
+  end if;
+  raise notice 'ok  Diamond ganha desconto e a comissão incide sobre o líquido';
+end $$;
+rollback;
+
+-- --- arredondamento ----------------------------------------------------------
+-- Valor que não divide redondo: a soma das partes tem de continuar fechando ao
+-- centavo, senão o banco recusa a própria reserva pelas restrições de 0001.
+begin;
+set role postgres;
+insert into public.legal_documents (slug, versao, titulo, corpo_markdown) values
+  ('politica_cancelamento',  'teste-1', 'Política', 'texto da política'),
+  ('termo_responsabilidade', 'teste-1', 'Termo',    'texto do termo');
+insert into public.boat_availability (boat_id, data, preco_barco_centavos, preco_passageiro_centavos)
+values ('20000000-0000-0000-0000-00000000000a', current_date + 45, 99999, 3333);
+update public.guides set comissao_percentual = 7.33
+ where id = '10000000-0000-0000-0000-00000000000a';
+
+select auth.entrar_como('00000000-0000-0000-0000-0000000000c1');
+do $$
+declare r public.bookings;
+begin
+  r := public.criar_reserva('20000000-0000-0000-0000-00000000000a',
+                            current_date + 45, 3, '[]'::jsonb, true, true);
+  if r.comissao_centavos + r.repasse_guia_centavos
+     <> r.valor_total_centavos - r.desconto_centavos then
+    raise exception 'FALHA: comissão + repasse não fecha o total';
+  end if;
+  if r.sinal_centavos + r.saldo_centavos
+     <> r.valor_total_centavos - r.desconto_centavos then
+    raise exception 'FALHA: sinal + saldo não fecha o total';
+  end if;
+  raise notice 'ok  com valor quebrado, as partes ainda fecham ao centavo';
+end $$;
+rollback;
+
+-- --- a reserva criada é de quem chamou, e só ele a vê -------------------------
+begin;
+set role postgres;
+insert into public.legal_documents (slug, versao, titulo, corpo_markdown) values
+  ('politica_cancelamento',  'teste-1', 'Política', 'texto da política'),
+  ('termo_responsabilidade', 'teste-1', 'Termo',    'texto do termo');
+insert into public.boat_availability (boat_id, data, preco_barco_centavos, preco_passageiro_centavos)
+values ('20000000-0000-0000-0000-00000000000a', current_date + 45, 60000, 15000);
+
+-- O outro cliente reserva primeiro.
+select auth.entrar_como('00000000-0000-0000-0000-0000000000c2');
+do $$
+declare r public.bookings;
+begin
+  r := public.criar_reserva('20000000-0000-0000-0000-00000000000a',
+                            current_date + 45, 2,
+                            '[{"nome":"Convidado do c2"}]'::jsonb, true, true);
+  if r.user_id <> '00000000-0000-0000-0000-0000000000c2' then
+    raise exception 'FALHA: reserva saiu no nome de %, não de quem chamou', r.user_id;
+  end if;
+  raise notice 'ok  a reserva sai no nome de quem chamou a função';
+end $$;
+
+select auth.entrar_como('00000000-0000-0000-0000-0000000000c1');
+do $$
+declare n integer;
+begin
+  select count(*) into n from public.bookings
+   where boat_id = '20000000-0000-0000-0000-00000000000a'
+     and data = current_date + 45;
+  if n <> 0 then
+    raise exception 'FALHA: cliente enxergou a reserva de outra pessoa';
+  end if;
+
+  select count(*) into n from public.booking_participants
+   where nome = 'Convidado do c2';
+  if n <> 0 then
+    raise exception 'FALHA: cliente enxergou os acompanhantes de outra pessoa';
+  end if;
+
+  select count(*) into n from public.terms_acceptances
+   where user_id = '00000000-0000-0000-0000-0000000000c2';
+  if n <> 0 then
+    raise exception 'FALHA: cliente enxergou os aceites de outra pessoa';
+  end if;
+  raise notice 'ok  reserva, acompanhantes e aceites alheios continuam invisíveis';
+end $$;
+rollback;
+
 do $$ begin raise notice ''; raise notice 'TODOS OS TESTES DE RLS PASSARAM'; end $$;

@@ -605,9 +605,10 @@ create policy agenda_escrita_dono on public.boat_availability
       and (public.is_guide_owner(b.guide_id) or public.is_master())));
 
 -- --- bookings ---------------------------------------------------------------
--- Criação e mudança de status são feitas só pelas Edge Functions
--- (service_role), que recalculam preço e comissão no servidor. O aplicativo
--- não insere reserva direto — se pudesse, poderia escolher o próprio preço.
+-- Só há política de leitura, de propósito: o aplicativo não insere reserva
+-- direto — se pudesse, escolheria o próprio preço. A criação passa pela função
+-- `criar_reserva` (migração 0006), que recalcula tudo no servidor; a mudança de
+-- status, pelo webhook de pagamento, com service_role.
 create policy reservas_leitura on public.bookings
   for select to authenticated
   using (user_id = auth.uid() or public.is_guide_owner(guide_id) or public.is_master());
