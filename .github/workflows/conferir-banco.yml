@@ -32,6 +32,64 @@ jobs:
             group by role
             order by role;"
 
+      - name: Operação e frota
+        env:
+          URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          psql "$URL" -c "
+            select
+              g.status,
+              count(distinct g.id)                                  as operacoes,
+              count(distinct g.id) filter (where g.mp_conectado_em is not null)
+                                                                    as com_recebimento,
+              count(b.id)                                           as barcos,
+              count(b.id) filter (where b.status = 'ativo')          as barcos_ativos
+            from public.guides g
+            left join public.boats b on b.guide_id = g.id
+            group by g.status
+            order by g.status;"
+
+      - name: Agenda aberta
+        env:
+          URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          # Sem nome de cliente e sem telefone: este registro é público. Data e
+          # horário de saída são informação de catálogo, não de pessoa.
+          psql "$URL" -c "
+            select
+              a.data,
+              to_char(a.hora_saida, 'HH24:MI') as saida,
+              a.status,
+              count(*) as barcos
+            from public.boat_availability a
+            where a.data >= current_date
+            group by a.data, a.hora_saida, a.status
+            order by a.data, a.hora_saida nulls last
+            limit 20;"
+
+      - name: Reservas
+        env:
+          URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          psql "$URL" -c "
+            select status, status_pagamento, count(*) as reservas,
+                   min(data) as primeira, max(data) as ultima
+            from public.bookings
+            group by status, status_pagamento
+            order by status, status_pagamento;"
+
+      - name: Avisos gerados
+        env:
+          URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          # Só o tipo e a contagem. O corpo do aviso traz nome e valores.
+          psql "$URL" -c "
+            select tipo, count(*) as avisos,
+                   count(*) filter (where lida_em is null) as nao_lidos
+            from public.notifications
+            group by tipo
+            order by tipo;"
+
       - name: Aceites registrados
         env:
           URL: ${{ secrets.SUPABASE_DB_URL }}
