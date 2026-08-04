@@ -274,7 +274,7 @@ só serve para um projeto vazio, este funciona com o banco em uso.
 Só lê. Mostra se o Supabase criou a conta, se enviou o código e qual erro
 registrou. Serve para separar "não enviou" de "enviou e não chegou".
 
-## Robô 7 — Criar a primeira conta (sem depender de e-mail)
+## Robô 7 — Criar uma conta de acesso (sem depender de e-mail)
 
 Cria uma conta com **senha**, já com o e-mail confirmado. Nenhum e-mail é
 enviado — é o caminho para entrar no aplicativo enquanto o envio de e-mail do
@@ -285,14 +285,24 @@ Antes de rodar, crie dois segredos em
 
 | Nome | Valor |
 |---|---|
-| `ADMIN_EMAIL` | o e-mail com que você vai entrar |
+| `ADMIN_EMAIL` | o e-mail da sua conta de administrador |
 | `ADMIN_SENHA` | uma senha sua, de 8 caracteres ou mais |
+| `GUIA_EMAIL` | um **outro** e-mail, para testar o lado do guia |
+| `GUIA_SENHA` | outra senha, de 8 caracteres ou mais |
+
+Ao rodar, escolha em **Qual conta criar** entre `admin` e `guia`. Ter os dois
+pares guardados evita o vaivém de reescrever o mesmo segredo — e é no vaivém
+que se perde a senha da conta que já existia.
 
 > Vão como segredo, e não como campo do formulário, porque **este repositório é
 > público**: campos e registros de execução ficam visíveis para qualquer pessoa.
 > Segredos, não.
 
-Depois: **Actions** → **7. Criar a primeira conta** → **Run workflow**.
+Depois: **Actions** → **7. Criar uma conta de acesso** → **Run workflow**.
+
+> Para as duas contas conviverem no mesmo computador, abra uma delas numa
+> **janela anônima**. Assim você aprova o guia como master numa janela e
+> continua como guia na outra, sem ficar entrando e saindo.
 
 Para entrar, use a aba **Senha** na tela de entrada do aplicativo. O cadastro
 (nome e aceite dos documentos) continua igual, na tela seguinte.

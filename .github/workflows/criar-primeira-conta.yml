@@ -1,4 +1,4 @@
-name: 7. Criar a primeira conta (sem depender de e-mail)
+name: 7. Criar uma conta de acesso (sem depender de e-mail)
 
 # Cria uma conta de acesso direto no banco, com senha e e-mail já confirmado.
 # Nenhum e-mail é enviado — é isso que permite entrar no aplicativo enquanto o
@@ -7,15 +7,25 @@ name: 7. Criar a primeira conta (sem depender de e-mail)
 # NÃO cria perfil nem grava aceites: isso continua sendo feito pelo aplicativo,
 # na tela de cadastro. É justamente esse fluxo que precisa ser testado.
 #
-# Precisa de dois segredos, além do SUPABASE_DB_URL:
-#   ADMIN_EMAIL  o e-mail de acesso
-#   ADMIN_SENHA  a senha, com 8 caracteres ou mais
+# Duas contas, dois pares de segredos, além do SUPABASE_DB_URL:
+#   ADMIN_EMAIL / ADMIN_SENHA   a sua conta de administrador
+#   GUIA_EMAIL  / GUIA_SENHA    uma conta para testar o lado do guia
+#
+# Ter as duas ao mesmo tempo evita o vaivém de reescrever o mesmo segredo — e
+# o vaivém é onde se perde a senha da conta que já existia.
 #
 # Vão como segredo, e não como campo de formulário, porque este repositório é
 # público: campos e registros de execução ficam visíveis para qualquer pessoa,
 # segredos não.
 on:
   workflow_dispatch:
+    inputs:
+      conta:
+        description: 'Qual conta criar'
+        required: true
+        default: admin
+        type: choice
+        options: [admin, guia]
 
 jobs:
   criar:
@@ -29,40 +39,51 @@ jobs:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: tools/checar-conexao.sh
 
-      - name: Conferir os segredos da conta
+      - name: Escolher o par de segredos
+        id: conta
         env:
-          EMAIL: ${{ secrets.ADMIN_EMAIL }}
-          SENHA: ${{ secrets.ADMIN_SENHA }}
+          ESCOLHA: ${{ inputs.conta }}
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          ADMIN_SENHA: ${{ secrets.ADMIN_SENHA }}
+          GUIA_EMAIL: ${{ secrets.GUIA_EMAIL }}
+          GUIA_SENHA: ${{ secrets.GUIA_SENHA }}
         run: |
-          faltou=0
-          if [ -z "$EMAIL" ]; then
-            echo "::error::Falta o segredo ADMIN_EMAIL."
-            faltou=1
+          if [ "$ESCOLHA" = "guia" ]; then
+            PREFIXO=GUIA; EMAIL="$GUIA_EMAIL"; SENHA="$GUIA_SENHA"
+          else
+            PREFIXO=ADMIN; EMAIL="$ADMIN_EMAIL"; SENHA="$ADMIN_SENHA"
           fi
-          if [ -z "$SENHA" ]; then
-            echo "::error::Falta o segredo ADMIN_SENHA."
-            faltou=1
-          fi
-          if [ "$faltou" = "1" ]; then
+
+          if [ -z "$EMAIL" ] || [ -z "$SENHA" ]; then
+            echo "::error::Faltam os segredos ${PREFIXO}_EMAIL e/ou ${PREFIXO}_SENHA."
             echo ""
-            echo "Crie os dois em:"
+            echo "Crie-os em:"
             echo "  https://github.com/fabinhotinoco/zirix/settings/secrets/actions"
             echo ""
-            echo "ADMIN_EMAIL: o e-mail com que você vai entrar"
-            echo "ADMIN_SENHA: uma senha de 8 caracteres ou mais"
+            echo "${PREFIXO}_EMAIL: o e-mail com que essa conta vai entrar"
+            echo "${PREFIXO}_SENHA: uma senha de 8 caracteres ou mais"
             exit 1
           fi
           if [ "${#SENHA}" -lt 8 ]; then
-            echo "::error::ADMIN_SENHA tem menos de 8 caracteres."
+            echo "::error::${PREFIXO}_SENHA tem menos de 8 caracteres."
             exit 1
           fi
-          echo "Segredos presentes."
+
+          # Marcar como segredo antes de qualquer uso: sem isto, um passo
+          # seguinte pode ecoar o valor no registro, que é público.
+          echo "::add-mask::$EMAIL"
+          echo "::add-mask::$SENHA"
+          {
+            echo "email=$EMAIL"
+            echo "senha=$SENHA"
+          } >> "$GITHUB_OUTPUT"
+          echo "Usando o par ${PREFIXO}_*."
 
       - name: Criar (ou atualizar a senha da) conta
         env:
           URL: ${{ secrets.SUPABASE_DB_URL }}
-          EMAIL: ${{ secrets.ADMIN_EMAIL }}
-          SENHA: ${{ secrets.ADMIN_SENHA }}
+          EMAIL: ${{ steps.conta.outputs.email }}
+          SENHA: ${{ steps.conta.outputs.senha }}
         run: |
           psql "$URL" -v ON_ERROR_STOP=1 \
             -v email="$EMAIL" -v senha="$SENHA" \
