@@ -1,15 +1,32 @@
+import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/lib/auth';
+import { quantosNaoLidos } from '@/lib/avisos';
 import { Subtitulo, Titulo, cores } from '@/ui/componentes';
 
-/** Placeholder do início. A agenda entra na próxima fase. */
 export default function Inicio() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { perfil, sair } = useAuth();
+  const [naoLidos, setNaoLidos] = useState(0);
+
+  // Ao voltar da caixa de avisos o selo tem de estar em dia. Um useEffect só na
+  // montagem deixaria "3 novos" na tela depois de a pessoa ter lido os três.
+  useFocusEffect(
+    useCallback(() => {
+      let vivo = true;
+      // Selo é enfeite: se a contagem falhar, a tela continua funcionando.
+      quantosNaoLidos()
+        .then((n) => vivo && setNaoLidos(n))
+        .catch(() => {});
+      return () => {
+        vivo = false;
+      };
+    }, []),
+  );
 
   return (
     <ScrollView contentContainerStyle={[estilos.conteudo, { paddingTop: insets.top + 32 }]}>
@@ -18,6 +35,18 @@ export default function Inicio() {
         Escolha um guia, veja as datas livres e feche a pescaria. O pagamento pelo
         aplicativo entra na próxima etapa.
       </Subtitulo>
+
+      <Pressable onPress={() => router.push('/avisos')} style={estilos.acao}>
+        <View style={estilos.linhaAcao}>
+          <Text style={estilos.acaoTexto}>Avisos</Text>
+          {naoLidos > 0 && (
+            <Text style={estilos.selo} accessibilityLabel={`${naoLidos} avisos não lidos`}>
+              {naoLidos}
+            </Text>
+          )}
+        </View>
+        <Text style={estilos.acaoNota}>Reservas, pagamentos e valores em aberto</Text>
+      </Pressable>
 
       <Pressable onPress={() => router.push('/buscar')} style={estilos.acao}>
         <Text style={estilos.acaoTexto}>Procurar pescaria</Text>
@@ -49,6 +78,10 @@ export default function Inicio() {
           <Pressable onPress={() => router.push('/guia')} style={estilos.acao}>
             <Text style={estilos.acaoTexto}>Minha operação</Text>
             <Text style={estilos.acaoNota}>Situação da inscrição e dados da operação</Text>
+          </Pressable>
+          <Pressable onPress={() => router.push('/minha-agenda')} style={estilos.acao}>
+            <Text style={estilos.acaoTexto}>Minha agenda</Text>
+            <Text style={estilos.acaoNota}>Semana, mês ou um dia — com quitado e em aberto</Text>
           </Pressable>
           <Pressable onPress={() => router.push('/barcos')} style={estilos.acao}>
             <Text style={estilos.acaoTexto}>Meus barcos</Text>
@@ -85,6 +118,19 @@ const estilos = StyleSheet.create({
   },
   acaoTexto: { fontSize: 16, fontWeight: '700', color: cores.agua },
   acaoNota: { fontSize: 13, color: cores.suave, marginTop: 2 },
+  linhaAcao: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  selo: {
+    backgroundColor: cores.agua,
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+    minWidth: 24,
+    textAlign: 'center',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
   sair: { marginTop: 28, alignItems: 'center' },
   sairTexto: { color: cores.agua, fontWeight: '600' },
 });

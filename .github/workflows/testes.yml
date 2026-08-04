@@ -119,7 +119,7 @@ jobs:
       # desabilitado sem explicar o motivo. Isto abre a tela num navegador e
       # percorre o caminho da pessoa. Nenhuma requisição sai daqui: todo host
       # supabase.co é interceptado e respondido com massa de teste.
-      - name: Percorrer as telas de reserva
+      - name: Percorrer as telas de reserva, avisos e agenda
         env:
           DIST: /tmp/dist-teste
         run: node testes/telas-de-reserva.mjs

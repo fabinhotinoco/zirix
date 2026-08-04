@@ -12,7 +12,13 @@
  * funções devolvem o mínimo: que o dia está tomado, nunca por quem.
  */
 
+import { paraBR } from '@pescavertical/core/periodo';
+
 import { supabase } from './supabase';
+
+// Reexportado para as telas de reserva não precisarem saber de onde vem: a
+// conversão de data é a mesma do lado do guia, e duas cópias divergem.
+export { paraBR };
 
 export interface GuiaPublico {
   id: string;
@@ -139,12 +145,6 @@ export async function minhasReservas(): Promise<MinhaReserva[]> {
 export async function cancelarReserva(id: string): Promise<void> {
   const { error } = await supabase.rpc('cancelar_reserva', { p_id: id });
   if (error) throw new Error(error.message);
-}
-
-/** aaaa-mm-dd para dd/mm/aaaa. */
-export function paraBR(iso: string): string {
-  const [a, m, d] = iso.split('-');
-  return `${d}/${m}/${a}`;
 }
 
 /** Quanto sairia a pescaria neste dia, para N pessoas. Só para mostrar. */

@@ -1195,4 +1195,271 @@ begin
 end $$;
 rollback;
 
+-- =============================================================================
+do $$ begin raise notice '--- 19. Avisos: os dois lados, com valores congelados ---'; end $$;
+-- =============================================================================
+-- Quem avisa não pode ser quem está com o aplicativo aberto: a reserva nasce de
+-- madrugada, o pagamento vem de webhook, a data expira sozinha. Se o aviso
+-- dependesse de uma tela ligada, o guia descobriria a reserva no dia.
+begin;
+set role postgres;
+insert into public.legal_documents (slug, versao, titulo, corpo_markdown) values
+  ('politica_cancelamento',  'teste-1', 'Política', 'texto da política'),
+  ('termo_responsabilidade', 'teste-1', 'Termo',    'texto do termo');
+insert into public.boat_availability (boat_id, data, preco_barco_centavos, preco_passageiro_centavos)
+values ('20000000-0000-0000-0000-00000000000a', current_date + 45, 60000, 15000);
+
+select auth.entrar_como('00000000-0000-0000-0000-0000000000c1');
+do $$
+declare r public.bookings; n integer; a public.notifications;
+begin
+  r := public.criar_reserva('20000000-0000-0000-0000-00000000000a',
+                            current_date + 45, 4, '[]'::jsonb, true, true);
+
+  -- Daqui para baixo, lendo fora do RLS: como cliente eu enxergaria só o meu
+  -- aviso, e a contagem daria 1 mesmo com tudo funcionando. Que o cliente NÃO
+  -- veja o aviso do guia é assunto do bloco seguinte.
+  set local role postgres;
+
+  select count(*) into n from public.notifications where booking_id = r.id;
+  if n <> 2 then
+    raise exception 'FALHA: a reserva gerou % aviso(s), esperado 2 (cliente e guia)', n;
+  end if;
+
+  -- O cliente é avisado do que ele precisa fazer.
+  select * into a from public.notifications
+   where booking_id = r.id and user_id = '00000000-0000-0000-0000-0000000000c1';
+  if a.tipo <> 'reserva_criada' then raise exception 'FALHA: tipo do aviso %', a.tipo; end if;
+  if a.valor_pago_centavos <> 0 or a.valor_aberto_centavos <> 120000 then
+    raise exception 'FALHA: aviso diz pago % e aberto %',
+      a.valor_pago_centavos, a.valor_aberto_centavos;
+  end if;
+  if a.corpo not like '%R$ 1.200,00%' then
+    raise exception 'FALHA: valor mal formatado no aviso: %', a.corpo;
+  end if;
+  if a.lida_em is not null then raise exception 'FALHA: aviso já nasceu lido'; end if;
+
+  -- E o guia, do que entra para ele.
+  select * into a from public.notifications
+   where booking_id = r.id and user_id = '00000000-0000-0000-0000-0000000000b1';
+  if a.corpo not like '%R$ 1.080,00%' then
+    raise exception 'FALHA: guia não foi avisado do próprio repasse: %', a.corpo;
+  end if;
+  raise notice 'ok  reserva avisa cliente e guia, cada um com o valor que lhe importa';
+
+  -- Pagamento: o webhook mexe no status e o aviso sai sozinho.
+  update public.bookings set status_pagamento = 'sinal_pago', status = 'confirmada'
+   where id = r.id;
+
+  select count(*) into n from public.notifications
+   where booking_id = r.id and tipo = 'reserva_confirmada';
+  if n <> 2 then raise exception 'FALHA: confirmação gerou % aviso(s)', n; end if;
+
+  select * into a from public.notifications
+   where booking_id = r.id and tipo = 'reserva_confirmada'
+     and user_id = '00000000-0000-0000-0000-0000000000c1';
+  if a.valor_pago_centavos <> 36000 or a.valor_aberto_centavos <> 84000 then
+    raise exception 'FALHA: confirmada com pago % e aberto %',
+      a.valor_pago_centavos, a.valor_aberto_centavos;
+  end if;
+  raise notice 'ok  confirmação avisa os dois com o pago e o que falta';
+
+  update public.bookings set status_pagamento = 'quitada' where id = r.id;
+  select count(*) into n from public.notifications
+   where booking_id = r.id and tipo = 'saldo_quitado';
+  if n <> 2 then raise exception 'FALHA: quitação gerou % aviso(s)', n; end if;
+
+  -- Congelado: o aviso da reserva continua dizendo o que dizia, mesmo depois de
+  -- tudo pago. Um aviso é registro do passado, não espelho do presente.
+  select * into a from public.notifications
+   where booking_id = r.id and tipo = 'reserva_criada'
+     and user_id = '00000000-0000-0000-0000-0000000000c1';
+  if a.valor_pago_centavos <> 0 then
+    raise exception 'FALHA: aviso antigo foi reescrito (pago virou %)', a.valor_pago_centavos;
+  end if;
+  raise notice 'ok  quitação avisa, e o aviso antigo não é reescrito';
+
+  -- Mudança que não interessa a ninguém não vira aviso.
+  select count(*) into n from public.notifications where booking_id = r.id;
+  update public.bookings set no_show = true where id = r.id;
+  if (select count(*) from public.notifications where booking_id = r.id) <> n then
+    raise exception 'FALHA: mudança irrelevante gerou aviso';
+  end if;
+  raise notice 'ok  mudança sem interesse não vira aviso';
+end $$;
+rollback;
+
+-- --- ninguém lê nem reescreve o aviso alheio ---------------------------------
+begin;
+set role postgres;
+insert into public.legal_documents (slug, versao, titulo, corpo_markdown) values
+  ('politica_cancelamento',  'teste-1', 'Política', 'texto da política'),
+  ('termo_responsabilidade', 'teste-1', 'Termo',    'texto do termo');
+insert into public.boat_availability (boat_id, data, preco_barco_centavos, preco_passageiro_centavos)
+values ('20000000-0000-0000-0000-00000000000a', current_date + 45, 60000, 15000);
+
+select auth.entrar_como('00000000-0000-0000-0000-0000000000c1');
+do $$ declare r public.bookings;
+begin
+  r := public.criar_reserva('20000000-0000-0000-0000-00000000000a',
+                            current_date + 45, 4, '[]'::jsonb, true, true);
+end $$;
+
+select auth.entrar_como('00000000-0000-0000-0000-0000000000c2');
+do $$
+declare n integer;
+begin
+  select count(*) into n from public.notifications;
+  if n <> 0 then raise exception 'FALHA: terceiro leu % aviso(s) alheio(s)', n; end if;
+  raise notice 'ok  aviso de outra pessoa é invisível';
+end $$;
+
+select auth.entrar_como('00000000-0000-0000-0000-0000000000c1');
+do $$
+declare a public.notifications;
+begin
+  update public.notifications set lida_em = now() where lida_em is null;
+  select * into a from public.notifications limit 1;
+  if a.lida_em is null then raise exception 'FALHA: dono não conseguiu marcar como lido'; end if;
+  raise notice 'ok  o dono marca o próprio aviso como lido';
+
+  -- RLS decide por linha, nunca por coluna: sem o gatilho, marcar como lido
+  -- daria também o poder de reescrever o valor avisado.
+  update public.notifications set valor_aberto_centavos = 1, corpo = 'inventado';
+  select * into a from public.notifications limit 1;
+  if a.valor_aberto_centavos = 1 or a.corpo = 'inventado' then
+    raise exception 'FALHA: o dono reescreveu o próprio aviso';
+  end if;
+  raise notice 'ok  marcar como lido não dá licença para reescrever o aviso';
+end $$;
+rollback;
+
+-- =============================================================================
+do $$ begin raise notice '--- 20. Agenda do guia: semana, mês e dia ---'; end $$;
+-- =============================================================================
+begin;
+set role postgres;
+insert into public.legal_documents (slug, versao, titulo, corpo_markdown) values
+  ('politica_cancelamento',  'teste-1', 'Política', 'texto da política'),
+  ('termo_responsabilidade', 'teste-1', 'Termo',    'texto do termo');
+insert into public.boat_availability (boat_id, data, preco_barco_centavos, preco_passageiro_centavos)
+values ('20000000-0000-0000-0000-00000000000a', current_date + 3,  60000, 15000),
+       ('20000000-0000-0000-0000-00000000000a', current_date + 10, 60000, 15000),
+       ('20000000-0000-0000-0000-00000000000a', current_date + 40, 60000, 15000);
+
+select auth.entrar_como('00000000-0000-0000-0000-0000000000c1');
+do $$ declare r public.bookings;
+begin
+  r := public.criar_reserva('20000000-0000-0000-0000-00000000000a',
+                            current_date + 3, 4, '[]'::jsonb, true, true);
+  set local role postgres;
+  update public.bookings set status_pagamento = 'sinal_pago', status = 'confirmada'
+   where id = r.id;
+end $$;
+
+select auth.entrar_como('00000000-0000-0000-0000-0000000000b1');
+do $$
+declare n integer; l record;
+begin
+  if current_user <> 'authenticated' then
+    raise exception 'FALHA: teste rodando como %, não como authenticated', current_user;
+  end if;
+
+  -- Semana
+  select count(*) into n from public.agenda_do_guia(current_date, current_date + 7);
+  if n <> 1 then raise exception 'FALHA: a semana devolveu % dia(s), esperado 1', n; end if;
+
+  -- Mês. Contar às cegas esconde erro: a massa de teste já tem a data +30
+  -- vendida, e ela precisa aparecer junto. Então confere-se o conjunto.
+  select count(*) into n from public.agenda_do_guia(current_date, current_date + 30)
+   where data in (current_date + 3, current_date + 10, current_date + 30);
+  if n <> 3 then raise exception 'FALHA: faltou dia no mês (achei % dos 3)', n; end if;
+
+  select count(*) into n from public.agenda_do_guia(current_date, current_date + 30)
+   where data = current_date + 40;
+  if n <> 0 then raise exception 'FALHA: o mês trouxe uma data de fora do período'; end if;
+
+  -- Dia específico
+  select count(*) into n from public.agenda_do_guia(current_date + 10, current_date + 10);
+  if n <> 1 then raise exception 'FALHA: o dia devolveu % linha(s)', n; end if;
+  raise notice 'ok  a mesma função responde semana, mês e dia específico';
+
+  -- O dia reservado traz cliente e dinheiro; o dia livre não inventa zero.
+  select * into l from public.agenda_do_guia(current_date + 3, current_date + 3);
+  if l.cliente_nome is null or l.booking_id is null then
+    raise exception 'FALHA: dia reservado veio sem cliente';
+  end if;
+  if l.valor_pago_centavos <> 36000 or l.valor_aberto_centavos <> 84000 then
+    raise exception 'FALHA: dia reservado com pago % e aberto %',
+      l.valor_pago_centavos, l.valor_aberto_centavos;
+  end if;
+  raise notice 'ok  dia reservado mostra o cliente, o quitado e o que está em aberto';
+
+  select * into l from public.agenda_do_guia(current_date + 10, current_date + 10);
+  if l.valor_pago_centavos is not null then
+    raise exception 'FALHA: dia livre veio com "pago %" em vez de vazio', l.valor_pago_centavos;
+  end if;
+  raise notice 'ok  dia livre não finge que existe pescaria sem pagamento';
+end $$;
+
+-- E o outro guia não vê nada disso.
+select auth.entrar_como('00000000-0000-0000-0000-0000000000b2');
+do $$
+declare n integer;
+begin
+  -- Zero linhas provaria pouco: o guia B tem barco próprio e data própria no
+  -- período. O que não pode aparecer é o barco do guia A.
+  select count(*) into n from public.agenda_do_guia(current_date, current_date + 60)
+   where boat_id = '20000000-0000-0000-0000-00000000000a';
+  if n <> 0 then raise exception 'FALHA: guia B viu % dia(s) do barco do guia A', n; end if;
+
+  select count(*) into n from public.agenda_do_guia(current_date, current_date + 60)
+   where boat_id = '20000000-0000-0000-0000-00000000000b';
+  if n < 1 then raise exception 'FALHA: guia B deixou de ver o próprio barco'; end if;
+  raise notice 'ok  cada guia vê a própria agenda, e só a própria';
+end $$;
+rollback;
+
+-- --- fechar dia com reserva não pode ser silencioso --------------------------
+begin;
+set role postgres;
+insert into public.legal_documents (slug, versao, titulo, corpo_markdown) values
+  ('politica_cancelamento',  'teste-1', 'Política', 'texto da política'),
+  ('termo_responsabilidade', 'teste-1', 'Termo',    'texto do termo');
+insert into public.boat_availability (boat_id, data, preco_barco_centavos, preco_passageiro_centavos)
+values ('20000000-0000-0000-0000-00000000000a', current_date + 45, 60000, 15000),
+       ('20000000-0000-0000-0000-00000000000a', current_date + 46, 60000, 15000);
+
+select auth.entrar_como('00000000-0000-0000-0000-0000000000c1');
+do $$ begin
+  perform public.criar_reserva('20000000-0000-0000-0000-00000000000a',
+                               current_date + 45, 4, '[]'::jsonb, true, true);
+end $$;
+
+select auth.entrar_como('00000000-0000-0000-0000-0000000000b1');
+do $$
+begin
+  begin
+    delete from public.boat_availability
+     where boat_id = '20000000-0000-0000-0000-00000000000a' and data = current_date + 45;
+    raise exception 'FALHA: o guia apagou um dia que já tinha reserva';
+  exception when check_violation then
+    raise notice 'ok  dia com reserva não é apagado sem cancelar antes';
+  end;
+
+  begin
+    update public.boat_availability set status = 'bloqueado'
+     where boat_id = '20000000-0000-0000-0000-00000000000a' and data = current_date + 45;
+    raise exception 'FALHA: o guia bloqueou um dia que já tinha reserva';
+  exception when check_violation then
+    raise notice 'ok  dia com reserva não é bloqueado sem cancelar antes';
+  end;
+
+  -- E o dia sem reserva continua fechando normalmente.
+  delete from public.boat_availability
+   where boat_id = '20000000-0000-0000-0000-00000000000a' and data = current_date + 46;
+  raise notice 'ok  dia livre continua sendo fechado sem cerimônia';
+end $$;
+rollback;
+
 do $$ begin raise notice ''; raise notice 'TODOS OS TESTES DE RLS PASSARAM'; end $$;

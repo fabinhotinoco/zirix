@@ -60,6 +60,47 @@ const DOCS = [
 let chamadaCriarReserva = null;
 const RESERVAS = [];
 
+const AVISOS = [
+  {
+    id: 'n-1', booking_id: 'r-9', tipo: 'sinal_pago',
+    titulo: 'Sinal recebido — 20/12/2026',
+    corpo: 'Recebemos R$ 315,00. Falta R$ 735,00, a quitar até 13/12/2026.',
+    valor_total_centavos: 105000, valor_pago_centavos: 31500,
+    valor_aberto_centavos: 73500, lida_em: null,
+    criado_em: new Date().toISOString(),
+  },
+  {
+    id: 'n-2', booking_id: 'r-9', tipo: 'reserva_criada',
+    titulo: 'Reserva feita para 20/12/2026',
+    corpo: 'Sua reserva com Pesca Vertical está guardada.',
+    valor_total_centavos: 105000, valor_pago_centavos: 0,
+    valor_aberto_centavos: 105000, lida_em: '2026-08-01T10:00:00Z',
+    criado_em: '2026-08-01T09:00:00Z',
+  },
+];
+
+// Um dia vendido e um livre, para conferir que a tela não inventa "pago zero"
+// num dia em que não existe pescaria.
+const AGENDA = [
+  {
+    data: '2026-12-20', boat_id: 'b-1', barco_nome: 'Tucunaré I',
+    dia_status: 'aberto', preco_barco_centavos: 60000, preco_passageiro_centavos: 15000,
+    observacao: 'Saída 5h', booking_id: 'r-9', reserva_status: 'confirmada',
+    status_pagamento: 'sinal_pago', cliente_nome: 'Fabio Tinoco',
+    cliente_telefone: '35999990000', qtd_pescadores: 3,
+    valor_liquido_centavos: 105000, valor_pago_centavos: 31500,
+    valor_aberto_centavos: 73500, repasse_guia_centavos: 94500,
+  },
+  {
+    data: '2026-12-22', boat_id: 'b-1', barco_nome: 'Tucunaré I',
+    dia_status: 'aberto', preco_barco_centavos: 60000, preco_passageiro_centavos: 15000,
+    observacao: null, booking_id: null, reserva_status: null,
+    status_pagamento: null, cliente_nome: null, cliente_telefone: null,
+    qtd_pescadores: null, valor_liquido_centavos: null, valor_pago_centavos: null,
+    valor_aberto_centavos: null, repasse_guia_centavos: null,
+  },
+];
+
 const navegador = await chromium.launch(
   CHROMIUM ? { executablePath: CHROMIUM } : {},
 );
@@ -71,6 +112,22 @@ await ctx.route(/supabase\.co/, async (rota) => {
   const p = url.pathname;
   const json = (corpo, status = 200) =>
     rota.fulfill({ status, contentType: 'application/json', body: JSON.stringify(corpo) });
+
+  // A contagem de não lidos manda `Prefer: count=exact`. Cabeçalho fora da
+  // lista simples faz o navegador perguntar antes, com um OPTIONS — e um
+  // OPTIONS sem resposta de CORS derruba a requisição seguinte com
+  // ERR_ABORTED, que parece defeito do aplicativo e não é.
+  if (rota.request().method() === 'OPTIONS') {
+    return rota.fulfill({
+      status: 204,
+      headers: {
+        'access-control-allow-origin': '*',
+        'access-control-allow-methods': 'GET, POST, PATCH, DELETE, HEAD, OPTIONS',
+        'access-control-allow-headers': '*',
+        'access-control-expose-headers': 'content-range',
+      },
+    });
+  }
 
   if (p.startsWith('/auth/v1/user')) return json(USER);
   if (p.startsWith('/auth/v1/token')) return json(SESSAO);
@@ -85,6 +142,24 @@ await ctx.route(/supabase\.co/, async (rota) => {
   if (p === '/rest/v1/legal_documents') return json(DOCS);
   if (p === '/rest/v1/terms_acceptances') return json([]);
 
+  if (p === '/rest/v1/notifications') {
+    // head=true com count: a contagem vem no cabeçalho, não no corpo.
+    if (rota.request().method() === 'HEAD') {
+      // Sem `body`: o Chromium aborta uma resposta de HEAD que traga corpo, e o
+      // aborto chega como falha de rede — parecendo defeito do aplicativo.
+      return rota.fulfill({
+        status: 200,
+        headers: {
+          'content-range': `0-0/${AVISOS.filter((a) => !a.lida_em).length}`,
+          'access-control-allow-origin': '*',
+          'access-control-expose-headers': 'content-range',
+        },
+      });
+    }
+    if (rota.request().method() === 'PATCH') return json([]);
+    return json(AVISOS);
+  }
+  if (p === '/rest/v1/rpc/agenda_do_guia') return json(AGENDA);
   if (p === '/rest/v1/rpc/datas_disponiveis') return json(DIAS);
   if (p === '/rest/v1/rpc/minhas_reservas') return json(RESERVAS);
   if (p === '/rest/v1/rpc/criar_reserva') {
@@ -110,9 +185,15 @@ const exigir = (cond, m) => (cond ? ok(m) : (falhas.push(m), console.log('FALHA 
 const pagina = await ctx.newPage();
 // Requisição que escapa da simulação é falha de teste, não ruído: significa
 // que o roteiro deixou de cobrir um caminho.
-pagina.on('requestfailed', (r) =>
-  falhas.push(`requisição não simulada: ${r.url().slice(0, 120)}`),
-);
+// Requisição que escapa da simulação é falha de teste, não ruído: significa
+// que o roteiro deixou de cobrir um caminho. ERR_ABORTED fica de fora porque é
+// o navegador cancelando o que estava em voo quando a tela mudou — acontece o
+// tempo todo numa navegação normal e não é defeito de ninguém.
+pagina.on('requestfailed', (r) => {
+  const motivo = r.failure()?.errorText ?? '';
+  if (motivo === 'net::ERR_ABORTED') return;
+  falhas.push(`requisição não simulada: ${r.method()} ${r.url().slice(0, 120)} — ${motivo}`);
+});
 pagina.on('pageerror', (e) => falhas.push('erro de página: ' + e.message));
 
 // --- 0. entrar pela própria tela de login -----------------------------------
@@ -128,6 +209,12 @@ await pagina.waitForTimeout(2500);
 // --- 1. início --------------------------------------------------------------
 exigir(await pagina.getByText('Procurar pescaria').isVisible(), 'o início oferece "Procurar pescaria"');
 exigir(await pagina.getByText('Minhas reservas', { exact: true }).first().isVisible(), 'o início oferece "Minhas reservas"');
+
+// O selo de avisos não lidos. Vale a espera: ele vem de uma contagem separada,
+// e é justamente por ser enfeite que ninguém repara quando para de funcionar.
+await pagina.waitForTimeout(1200);
+exigir(await pagina.getByLabel('1 avisos não lidos').isVisible(),
+  'o início mostra quantos avisos estão por ler');
 
 // --- 2. busca ---------------------------------------------------------------
 await pagina.getByText('Procurar pescaria').click();
@@ -208,6 +295,59 @@ exigir(await pagina.getByText('Aguardando pagamento').isVisible(), 'a reserva ap
 exigir(await pagina.getByText(/Sinal R\$\s*315,00/).isVisible(), 'mostra o sinal calculado pelo servidor');
 exigir(await pagina.getByText(/Com você: João, Maria/).isVisible(), 'mostra os acompanhantes');
 exigir(await pagina.getByText('Desistir desta reserva').isVisible(), 'oferece desistir enquanto nada foi pago');
+
+// --- 6. avisos ---------------------------------------------------------------
+// O aviso é registro do passado: os valores são os de quando ele saiu, não o
+// saldo de hoje. Se a tela lesse o extrato, reescreveria o que a pessoa leu.
+await pagina.goto(`http://localhost:${PORTA}/avisos`);
+await pagina.waitForTimeout(1800);
+const telaAvisos = await textoDaTela();
+exigir(telaAvisos.includes('Sinal recebido'), 'a caixa de avisos lista o aviso de pagamento');
+exigir(/Quitado\s*R\$\s*315,00/.test(telaAvisos), 'o aviso mostra quanto já foi quitado');
+exigir(/Em aberto\s*R\$\s*735,00/.test(telaAvisos), 'e quanto continua em aberto');
+exigir(telaAvisos.includes('Marcar os 1 como lidos'), 'oferece marcar os não lidos');
+// O aviso antigo, já lido, continua com os valores dele — não com os de hoje.
+exigir(/Em aberto\s*R\$\s*1\.050,00/.test(telaAvisos),
+  'o aviso antigo mantém o valor congelado, sem ser reescrito pelo saldo atual');
+
+// --- 7. agenda do guia -------------------------------------------------------
+await pagina.goto(`http://localhost:${PORTA}/minha-agenda`);
+await pagina.waitForTimeout(1800);
+let telaAgenda = await textoDaTela();
+exigir(telaAgenda.includes('Minha agenda'), 'a agenda do guia abre');
+exigir(telaAgenda.includes('Semana') && telaAgenda.includes('Mês') && telaAgenda.includes('Dia'),
+  'oferece as três vistas: semana, mês e dia');
+exigir(telaAgenda.includes('Fabio Tinoco'), 'o dia vendido mostra o cliente');
+exigir(/Quitado\s*R\$\s*315,00/.test(telaAgenda), 'mostra o quitado do dia vendido');
+exigir(/em aberto\s*R\$\s*735,00/.test(telaAgenda), 'mostra o que está em aberto');
+exigir(telaAgenda.includes('Livre'), 'o dia sem reserva aparece como livre');
+// Total do período: uma reserva de R$ 945,00 de repasse, e nada a mais.
+exigir(/Sua parte no período\s*R\$\s*945,00/.test(telaAgenda),
+  'o resumo soma a parte do guia no período');
+
+// Navegar de mês em mês não pode pular fevereiro nem travar.
+await pagina.getByRole('tab', { name: 'Mês' }).click();
+await pagina.waitForTimeout(900);
+telaAgenda = await textoDaTela();
+const temMes = /janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro/
+  .test(telaAgenda);
+exigir(temMes, 'a vista de mês mostra o nome do mês por extenso');
+
+await pagina.getByRole('button', { name: 'Próximo período' }).click();
+await pagina.waitForTimeout(700);
+exigir((await textoDaTela()).includes('Voltar para hoje'),
+  'sair do período atual oferece o caminho de volta');
+
+await pagina.getByRole('tab', { name: 'Dia' }).click();
+await pagina.waitForTimeout(700);
+// Texto de placeholder não entra no innerText da página — tem de ser procurado
+// como campo, senão a asserção falha com a tela certa na frente.
+exigir(await pagina.getByPlaceholder('Ir para dd/mm/aaaa').isVisible(),
+  'a vista de dia permite pular para uma data específica');
+await pagina.getByPlaceholder('Ir para dd/mm/aaaa').fill('31/02/2026');
+await pagina.waitForTimeout(500);
+exigir((await textoDaTela()).includes('Data inválida'),
+  'data que não existe é recusada em vez de virar 03/03');
 
 await navegador.close();
 servidor.close();

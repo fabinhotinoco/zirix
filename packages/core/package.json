@@ -6,7 +6,10 @@
   "description": "Nucleo de calculo: preco, comissao e cancelamento. Sem dependencias.",
   "exports": {
     "./pricing": "./src/pricing.ts",
-    "./cancellation": "./src/cancellation.ts"
+    "./cancellation": "./src/cancellation.ts",
+    "./dinheiro": "./src/dinheiro.ts",
+    "./legal": "./src/legal.ts",
+    "./periodo": "./src/periodo.ts"
   },
   "scripts": {
     "test": "node --test --experimental-strip-types test/*.test.ts"
