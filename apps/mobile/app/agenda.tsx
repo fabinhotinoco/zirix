@@ -20,6 +20,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { formatarBRL, paraCentavos } from '@pescavertical/core/dinheiro';
+import { paraHora, rotuloDaHora } from '@pescavertical/core/hora';
 import { abrirDia, agendaDoBarco, fecharDia, type DiaDaAgenda } from '@/lib/barcos';
 import { mensagemDeErro } from '@/lib/erros';
 import { Botao, Campo, Erro, Subtitulo, Titulo } from '@/ui/componentes';
@@ -55,6 +56,7 @@ export default function Agenda() {
   const [salvando, setSalvando] = useState(false);
 
   const [data, setData] = useState('');
+  const [hora, setHora] = useState('');
   const [precoBarco, setPrecoBarco] = useState('');
   const [precoPassageiro, setPrecoPassageiro] = useState('');
   const [observacao, setObservacao] = useState('');
@@ -77,6 +79,10 @@ export default function Agenda() {
   }, [carregar]);
 
   const iso = paraISO(data);
+  // Campo vazio é "a combinar", que é um estado legítimo — muita pescaria é
+  // fechada assim. Só texto que não é hora nenhuma trava o botão.
+  const horaLida = hora.trim() === '' ? null : paraHora(hora);
+  const horaValida = hora.trim() === '' || horaLida !== null;
   const centavosBarco = precoBarco.trim() === '' ? 0 : paraCentavos(precoBarco);
   const centavosPassageiro = precoPassageiro.trim() === '' ? 0 : paraCentavos(precoPassageiro);
 
@@ -84,7 +90,7 @@ export default function Agenda() {
   // O banco recusa dia sem preço nenhum; melhor dizer isso aqui do que deixar
   // a pessoa levar um erro de restrição na cara.
   const temAlgumPreco = precosLidos && centavosBarco + centavosPassageiro > 0;
-  const podeAbrir = iso !== null && temAlgumPreco && !salvando;
+  const podeAbrir = iso !== null && temAlgumPreco && horaValida && !salvando;
 
   async function abrir() {
     if (!barco || !iso || !precosLidos) return;
@@ -94,12 +100,14 @@ export default function Agenda() {
       await abrirDia({
         boat_id: barco,
         data: iso,
+        hora_saida: horaLida,
         preco_barco_centavos: centavosBarco,
         preco_passageiro_centavos: centavosPassageiro,
         observacao: observacao.trim() || null,
       });
       setData('');
       setObservacao('');
+      // A hora fica: quem abre a temporada abre dez dias com a mesma saída.
       await carregar();
     } catch (e) {
       setErro(mensagemDeErro(e, 'Não foi possível abrir a data.'));
@@ -129,8 +137,9 @@ export default function Agenda() {
       >
         <Titulo>Agenda</Titulo>
         <Subtitulo>
-          Abra as datas em que este barco sai e diga quanto custa cada dia. Preço por dia,
-          por pescador, ou os dois somados.
+          Abra as datas em que este barco sai, a que horas e quanto custa cada dia. Preço por
+          dia, por pescador, ou os dois somados. Mudar a hora de um dia já reservado avisa o
+          cliente automaticamente.
         </Subtitulo>
 
         <View style={estilos.formulario}>
@@ -139,6 +148,13 @@ export default function Agenda() {
             value={data}
             onChangeText={setData}
             placeholder="dd/mm/aaaa"
+            keyboardType="number-pad"
+          />
+          <Campo
+            rotulo="Hora de saída"
+            value={hora}
+            onChangeText={setHora}
+            placeholder="Ex.: 5h — deixe vazio para combinar depois"
             keyboardType="number-pad"
           />
           <Campo
@@ -174,6 +190,9 @@ export default function Agenda() {
           {data !== '' && iso === null && (
             <Text style={estilos.dica}>Data inválida. Use dd/mm/aaaa.</Text>
           )}
+          {!horaValida && (
+            <Text style={estilos.dica}>Não entendi a hora. Use 5, 5h ou 05:30.</Text>
+          )}
           {!precosLidos && (
             <Text style={estilos.dica}>Não entendi o valor. Use algo como 600,00.</Text>
           )}
@@ -196,6 +215,7 @@ export default function Agenda() {
             <View key={d.data} style={estilos.dia}>
               <View style={{ flex: 1 }}>
                 <Text style={estilos.diaData}>{paraBR(d.data)}</Text>
+                <Text style={estilos.diaHora}>{rotuloDaHora(d.hora_saida)}</Text>
                 <Text style={estilos.diaPreco}>
                   {d.preco_barco_centavos > 0 && `${formatarBRL(d.preco_barco_centavos)} o dia`}
                   {d.preco_barco_centavos > 0 && d.preco_passageiro_centavos > 0 && ' + '}
@@ -245,6 +265,7 @@ const criarEstilos = (cores: Cores) =>
       marginBottom: 10,
     },
     diaData: { fontSize: 16, fontWeight: '700', color: cores.texto },
+    diaHora: { fontSize: 13, color: cores.acento, fontWeight: '600', marginTop: 2 },
     diaPreco: { fontSize: 13, color: cores.textoSuave, marginTop: 2 },
     diaObs: { fontSize: 12, color: cores.textoSuave, marginTop: 4, fontStyle: 'italic' },
     fechar: { color: cores.erro, fontWeight: '600' },

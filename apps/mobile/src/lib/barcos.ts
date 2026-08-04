@@ -23,6 +23,8 @@ export interface Barco {
 export interface DiaDaAgenda {
   boat_id: string;
   data: string;
+  /** 'HH:MM:SS' do Postgres, ou nula quando a saída é a combinar. */
+  hora_saida: string | null;
   status: 'aberto' | 'bloqueado';
   preco_barco_centavos: number;
   preco_passageiro_centavos: number;
@@ -63,7 +65,10 @@ export async function agendaDoBarco(boatId: string): Promise<DiaDaAgenda[]> {
   const hoje = new Date().toISOString().slice(0, 10);
   const { data, error } = await supabase
     .from('boat_availability')
-    .select('boat_id, data, status, preco_barco_centavos, preco_passageiro_centavos, observacao')
+    .select(
+      'boat_id, data, hora_saida, status, preco_barco_centavos, ' +
+        'preco_passageiro_centavos, observacao',
+    )
     .eq('boat_id', boatId)
     .gte('data', hoje)
     .order('data', { ascending: true });
@@ -79,6 +84,7 @@ export async function agendaDoBarco(boatId: string): Promise<DiaDaAgenda[]> {
 export async function abrirDia(dia: {
   boat_id: string;
   data: string;
+  hora_saida: string | null;
   preco_barco_centavos: number;
   preco_passageiro_centavos: number;
   observacao: string | null;

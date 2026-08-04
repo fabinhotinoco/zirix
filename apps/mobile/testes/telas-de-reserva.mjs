@@ -51,7 +51,7 @@ const SESSAO = {
 
 const GUIAS = [{ id: 'g-1', nome_operacao: 'Pesca Vertical', cidade: 'Boa Esperança', bio: 'Tucunaré em Furnas.', foto_url: null }];
 const BARCOS = [{ id: 'b-1', nome: 'Tucunaré I', modelo: 'Fibrafort 190', capacidade_min: 1, capacidade_max: 4, equipamentos: 'Sonar, coletes' }];
-const DIAS = [{ data: '2026-12-20', preco_barco_centavos: 60000, preco_passageiro_centavos: 15000, observacao: 'Saída 5h' }];
+const DIAS = [{ data: '2026-12-20', hora_saida: '05:00:00', preco_barco_centavos: 60000, preco_passageiro_centavos: 15000, observacao: 'Ponto: rampa do clube' }];
 const DOCS = [
   { slug: 'politica_cancelamento', versao: 'v1', titulo: 'Política de Cancelamento', hash_sha256: 'a'.repeat(64), vigente_desde: '2026-01-01T00:00:00Z' },
   { slug: 'termo_responsabilidade', versao: 'v1', titulo: 'Termo de Responsabilidade', hash_sha256: 'b'.repeat(64), vigente_desde: '2026-01-01T00:00:00Z' },
@@ -105,7 +105,7 @@ const GUIAS_FILTRO = [
 // num dia em que não existe pescaria.
 const AGENDA = [
   {
-    data: DIA_VENDIDO, guide_id: 'g-1', guia_nome: 'Pesca Vertical', comissao_centavos: 10500,
+    data: DIA_VENDIDO, hora_saida: '05:00:00', guide_id: 'g-1', guia_nome: 'Pesca Vertical', comissao_centavos: 10500,
     boat_id: 'b-1', barco_nome: 'Tucunaré I',
     dia_status: 'aberto', preco_barco_centavos: 60000, preco_passageiro_centavos: 15000,
     observacao: 'Saída 5h', booking_id: 'r-9', reserva_status: 'confirmada',
@@ -115,7 +115,7 @@ const AGENDA = [
     valor_aberto_centavos: 73500, repasse_guia_centavos: 94500,
   },
   {
-    data: DIA_LIVRE, guide_id: 'g-1', guia_nome: 'Pesca Vertical', comissao_centavos: null,
+    data: DIA_LIVRE, hora_saida: null, guide_id: 'g-1', guia_nome: 'Pesca Vertical', comissao_centavos: null,
     boat_id: 'b-1', barco_nome: 'Tucunaré I',
     dia_status: 'aberto', preco_barco_centavos: 60000, preco_passageiro_centavos: 15000,
     observacao: null, booking_id: null, reserva_status: null,
@@ -200,7 +200,8 @@ await ctx.route(/supabase\.co/, async (rota) => {
       valor_total_centavos: 105000, desconto_centavos: 0,
       sinal_centavos: 31500, saldo_centavos: 73500,
       status: 'pendente', status_pagamento: 'aguardando_sinal',
-      quitacao_vence_em: '2026-12-13', expira_em: null,
+      quitacao_vence_em: '2026-12-13', expira_em: null, hora_saida: '05:00:00',
+      observacao: 'Ponto: rampa do clube',
       guia_nome: 'Pesca Vertical', guia_cidade: 'Boa Esperança', barco_nome: 'Tucunaré I',
       participantes: [{ nome: 'João', telefone: null }, { nome: 'Maria', telefone: null }],
     });
@@ -211,6 +212,8 @@ await ctx.route(/supabase\.co/, async (rota) => {
 
 const falhas = [];
 const ok = (m) => console.log('ok  ' + m);
+/** Tudo o que está escrito na tela, já com o text-transform aplicado. */
+const textoDaTela = async () => await pagina.locator('body').innerText();
 const exigir = (cond, m) => (cond ? ok(m) : (falhas.push(m), console.log('FALHA  ' + m)));
 
 const pagina = await ctx.newPage();
@@ -264,13 +267,15 @@ await pagina.waitForTimeout(1200);
 exigir(await pagina.getByText('Tucunaré I').first().isVisible(), 'a operação lista o barco');
 exigir(await pagina.getByText('20/12/2026').first().isVisible(), 'a data livre aparece em dd/mm/aaaa');
 exigir(await pagina.getByText(/R\$\s*600,00 o dia/).first().isVisible(), 'o preço do dia aparece em reais');
+exigir((await textoDaTela()).includes('Saída 05:00'),
+  'a hora de saída aparece antes de escolher o dia');
 
 // --- 4. reserva -------------------------------------------------------------
 await pagina.getByText('Reservar', { exact: true }).first().click();
 await pagina.waitForTimeout(1500);
 exigir(await pagina.getByText('Quantos pescadores').isVisible(), 'a tela de reserva abre');
+exigir((await textoDaTela()).includes('Saída 05:00'), 'a tela de reserva repete a hora');
 
-const textoDaTela = async () => await pagina.locator('body').innerText();
 exigir((await textoDaTela()).includes('750,00'), 'prévia de 1 pescador = R$ 750,00');
 
 await pagina.getByLabel('Mais um pescador').click();
@@ -326,6 +331,8 @@ exigir(await pagina.getByText('Aguardando pagamento').isVisible(), 'a reserva ap
 exigir(await pagina.getByText(/Sinal R\$\s*315,00/).isVisible(), 'mostra o sinal calculado pelo servidor');
 exigir(await pagina.getByText(/Com você: João, Maria/).isVisible(), 'mostra os acompanhantes');
 exigir(await pagina.getByText('Desistir desta reserva').isVisible(), 'oferece desistir enquanto nada foi pago');
+exigir((await textoDaTela()).includes('Saída 05:00'),
+  '"minhas reservas" mostra a hora em que o barco sai');
 
 // --- 6. avisos ---------------------------------------------------------------
 // O aviso é registro do passado: os valores são os de quando ele saiu, não o
@@ -369,6 +376,10 @@ await pagina.getByRole('button', { name: new RegExp('^' + brDe(DIA_VENDIDO)) }).
 await pagina.waitForTimeout(900);
 telaAgenda = await textoDaTela();
 exigir(telaAgenda.includes('Fabio Tinoco'), 'tocar no dia abre o detalhe com o cliente');
+exigir(telaAgenda.includes('05:00'), 'a saída aparece no cartão do dia');
+// Dia sem hora não pode virar "00:00": a saída ainda vai ser combinada.
+exigir(telaAgenda.includes('Saída 05:00') && !telaAgenda.includes('00:00'),
+  'o rótulo da hora é o de verdade, não um horário inventado');
 exigir(/Quitado\s*R\$\s*315,00/.test(telaAgenda), 'o detalhe mostra o quitado');
 exigir(/em aberto\s*R\$\s*735,00/.test(telaAgenda), 'e o que está em aberto');
 exigir(/Sua parte\s*R\$\s*945,00/.test(telaAgenda), 'o resumo mostra a parte do guia');

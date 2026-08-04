@@ -14,6 +14,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { formatarBRL } from '@pescavertical/core/dinheiro';
+import { rotuloDaHora } from '@pescavertical/core/hora';
 import { mensagemDeErro } from '@/lib/erros';
 import {
   barcosDoGuiaPublico,
@@ -132,9 +133,10 @@ export default function Operacao() {
                           {d.preco_passageiro_centavos > 0 &&
                             `${formatarBRL(d.preco_passageiro_centavos)} por pescador`}
                         </Text>
-                        {d.observacao ? (
-                          <Text style={estilos.diaObs}>{d.observacao}</Text>
-                        ) : null}
+                        <Text style={estilos.diaObs}>
+                          {rotuloDaHora(d.hora_saida)}
+                          {d.observacao ? ` · ${d.observacao}` : ''}
+                        </Text>
                       </View>
                       <Text style={estilos.escolher}>Reservar</Text>
                     </Pressable>

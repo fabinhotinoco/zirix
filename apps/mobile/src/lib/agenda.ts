@@ -14,6 +14,7 @@ import { supabase } from './supabase';
 
 export interface LinhaDaAgenda {
   data: string;
+  hora_saida: string | null;
   guide_id: string;
   guia_nome: string;
   boat_id: string;

@@ -9,7 +9,8 @@
     "./cancellation": "./src/cancellation.ts",
     "./dinheiro": "./src/dinheiro.ts",
     "./legal": "./src/legal.ts",
-    "./periodo": "./src/periodo.ts"
+    "./periodo": "./src/periodo.ts",
+    "./hora": "./src/hora.ts"
   },
   "scripts": {
     "test": "node --test --experimental-strip-types test/*.test.ts"

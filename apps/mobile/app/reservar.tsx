@@ -26,6 +26,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { formatarBRL } from '@pescavertical/core/dinheiro';
+import { rotuloDaHora } from '@pescavertical/core/hora';
 import { DOCUMENTOS_DA_RESERVA, buscarDocumentosVigentes, type DocumentoVigente } from '@/lib/legal';
 import { mensagemDeErro } from '@/lib/erros';
 import {
@@ -175,7 +176,7 @@ export default function Reservar() {
       >
         <Titulo>{paraBR(dia.data)}</Titulo>
         <Subtitulo>
-          {barco.nome}
+          {barco.nome} · {rotuloDaHora(dia.hora_saida)}
           {dia.observacao ? ` · ${dia.observacao}` : ''}
         </Subtitulo>
 

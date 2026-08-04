@@ -1506,4 +1506,143 @@ begin
 end $$;
 rollback;
 
+-- =============================================================================
+do $$ begin raise notice '--- 21. Hora de saída: uma fonte só, e avisa ao mudar ---'; end $$;
+-- =============================================================================
+-- A hora vive na agenda do dia, não na reserva. Se a reserva guardasse uma
+-- cópia, o dia em que o guia adiantasse a saída existiriam duas horas no banco
+-- e a errada seria a que o cliente lê.
+begin;
+set role postgres;
+insert into public.legal_documents (slug, versao, titulo, corpo_markdown) values
+  ('politica_cancelamento',  'teste-1', 'Política', 'texto da política'),
+  ('termo_responsabilidade', 'teste-1', 'Termo',    'texto do termo');
+insert into public.boat_availability
+  (boat_id, data, hora_saida, preco_barco_centavos, preco_passageiro_centavos)
+values ('20000000-0000-0000-0000-00000000000a', current_date + 45, '05:00', 60000, 15000),
+       ('20000000-0000-0000-0000-00000000000a', current_date + 46, null,    60000, 15000);
+
+select auth.entrar_como('00000000-0000-0000-0000-0000000000c1');
+do $$
+declare n integer; l record; r public.bookings;
+begin
+  -- O cliente vê a hora antes de reservar.
+  select * into l from public.datas_disponiveis('20000000-0000-0000-0000-00000000000a')
+   where data = current_date + 45;
+  if l.hora_saida <> '05:00'::time then
+    raise exception 'FALHA: a agenda do cliente não trouxe a hora (%)', l.hora_saida;
+  end if;
+
+  raise notice 'ok  o cliente vê a hora de saída antes de reservar';
+
+  r := public.criar_reserva('20000000-0000-0000-0000-00000000000a',
+                            current_date + 45, 4, '[]'::jsonb, true, true);
+
+  select * into l from public.minhas_reservas() where id = r.id;
+  if l.hora_saida <> '05:00'::time then
+    raise exception 'FALHA: a reserva do cliente não mostra a hora (%)', l.hora_saida;
+  end if;
+  raise notice 'ok  a reserva mostra a hora de saída do dia';
+
+  -- O guia adianta a saída. Os dois lados têm de saber.
+  set local role postgres;
+  update public.boat_availability set hora_saida = '04:30'
+   where boat_id = '20000000-0000-0000-0000-00000000000a' and data = current_date + 45;
+
+  select count(*) into n from public.notifications
+   where tipo = 'horario_alterado' and booking_id = r.id;
+  if n <> 2 then
+    raise exception 'FALHA: mudar a hora gerou % aviso(s), esperado 2', n;
+  end if;
+
+  select count(*) into n from public.notifications
+   where tipo = 'horario_alterado' and booking_id = r.id
+     and corpo like '%05:00%' and corpo like '%04:30%';
+  if n <> 2 then
+    raise exception 'FALHA: o aviso não diz de que hora para que hora';
+  end if;
+  raise notice 'ok  mudar a hora avisa cliente e guia, dizendo de quando para quando';
+
+  -- E a reserva passa a mostrar a hora nova, porque não há segunda cópia.
+  select * into l from public.minhas_reservas() where id = r.id;
+  if l.hora_saida <> '04:30'::time then
+    raise exception 'FALHA: a reserva ficou na hora antiga (%)', l.hora_saida;
+  end if;
+  raise notice 'ok  a reserva acompanha a hora nova, sem segunda cópia no banco';
+
+  -- Mexer em outra coisa do dia não vira aviso de horário.
+  set local role postgres;
+  update public.boat_availability set observacao = 'levar boné'
+   where boat_id = '20000000-0000-0000-0000-00000000000a' and data = current_date + 45;
+  select count(*) into n from public.notifications
+   where tipo = 'horario_alterado' and booking_id = r.id;
+  if n <> 2 then raise exception 'FALHA: mudar a observação virou aviso de horário'; end if;
+  raise notice 'ok  mexer em outra coisa do dia não vira aviso de horário';
+end $$;
+rollback;
+
+-- Mudar a hora de um dia SEM reserva não incomoda ninguém.
+begin;
+set role postgres;
+insert into public.boat_availability
+  (boat_id, data, hora_saida, preco_barco_centavos, preco_passageiro_centavos)
+values ('20000000-0000-0000-0000-00000000000a', current_date + 47, '06:00', 60000, 0);
+do $$
+declare n integer;
+begin
+  select count(*) into n from public.notifications where tipo = 'horario_alterado';
+  update public.boat_availability set hora_saida = '07:00'
+   where boat_id = '20000000-0000-0000-0000-00000000000a' and data = current_date + 47;
+  if (select count(*) from public.notifications where tipo = 'horario_alterado') <> n then
+    raise exception 'FALHA: mudar a hora de dia vazio avisou alguém';
+  end if;
+  raise notice 'ok  mudar a hora de um dia sem reserva não avisa ninguém';
+end $$;
+rollback;
+
+-- A agenda do guia e a do master vêm ordenadas por horário.
+begin;
+set role postgres;
+insert into public.boats (id, guide_id, nome, capacidade_max)
+  values ('20000000-0000-0000-0000-0000000000aa',
+          '10000000-0000-0000-0000-00000000000a', 'Barco da tarde', 4);
+insert into public.boat_availability
+  (boat_id, data, hora_saida, preco_barco_centavos, preco_passageiro_centavos)
+values ('20000000-0000-0000-0000-0000000000aa', current_date + 50, '13:00', 50000, 0),
+       ('20000000-0000-0000-0000-00000000000a', current_date + 50, '05:00', 60000, 0);
+-- O barco do guia B, sem hora marcada: é ele que prova a ordenação do nulo.
+insert into public.boat_availability
+  (boat_id, data, preco_barco_centavos, preco_passageiro_centavos)
+values ('20000000-0000-0000-0000-00000000000b', current_date + 50, 40000, 0);
+
+select auth.entrar_como('00000000-0000-0000-0000-0000000000b1');
+do $$
+declare horas time[];
+begin
+  select array_agg(hora_saida) into horas
+    from public.agenda(current_date + 50, current_date + 50);
+  if horas[1] <> '05:00'::time or horas[2] <> '13:00'::time then
+    raise exception 'FALHA: a agenda não veio ordenada por horário (%)', horas;
+  end if;
+  raise notice 'ok  a agenda do guia vem ordenada por hora de saída';
+end $$;
+
+select auth.entrar_como('00000000-0000-0000-0000-0000000000aa');
+do $$
+declare horas time[];
+begin
+  -- O guia B não marcou hora: tem de vir por último, não primeiro. Nulo
+  -- ordenado como zero encabeçaria o dia com a saída menos definida.
+  select array_agg(hora_saida) into horas
+    from public.agenda(current_date + 50, current_date + 50);
+  if array_length(horas, 1) <> 3 then
+    raise exception 'FALHA: master viu % saída(s), esperava 3', array_length(horas, 1);
+  end if;
+  if horas[3] is not null then
+    raise exception 'FALHA: quem não marcou hora não ficou por último (%)', horas;
+  end if;
+  raise notice 'ok  no master também, e quem não marcou hora fica por último';
+end $$;
+rollback;
+
 do $$ begin raise notice ''; raise notice 'TODOS OS TESTES DE RLS PASSARAM'; end $$;

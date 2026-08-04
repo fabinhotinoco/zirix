@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { formatarBRL } from '@pescavertical/core/dinheiro';
+import { rotuloDaHora } from '@pescavertical/core/hora';
 import { mensagemDeErro } from '@/lib/erros';
 import { cancelarReserva, minhasReservas, paraBR, type MinhaReserva } from '@/lib/reservas';
 import { Erro, Subtitulo, Titulo } from '@/ui/componentes';
@@ -100,6 +101,12 @@ export default function Reservas() {
           {r.barco_nome} · {r.qtd_pescadores}{' '}
           {r.qtd_pescadores === 1 ? 'pescador' : 'pescadores'}
         </Text>
+        {!encerrada && (
+          <Text style={estilos.hora}>
+            {rotuloDaHora(r.hora_saida)}
+            {r.observacao ? ` · ${r.observacao}` : ''}
+          </Text>
+        )}
         {r.codigo ? <Text style={estilos.codigo}>Código {r.codigo}</Text> : null}
 
         <View style={estilos.valores}>
@@ -204,6 +211,7 @@ const criarEstilos = (cores: Cores) =>
     seloNeutro: { backgroundColor: cores.superficieAlta, color: cores.textoSuave },
     guia: { fontSize: 15, fontWeight: '600', color: cores.texto, marginTop: 6 },
     detalhe: { fontSize: 13, color: cores.textoSuave, marginTop: 4 },
+    hora: { fontSize: 13, color: cores.acento, fontWeight: '600', marginTop: 4 },
     codigo: { fontSize: 13, color: cores.textoSuave, marginTop: 4, fontWeight: '600' },
     valores: { marginTop: 12 },
     valorTotal: { fontSize: 20, fontWeight: '700', color: cores.texto },

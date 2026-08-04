@@ -6,12 +6,12 @@
  * cada saída e um filtro para estreitar num guia só. Se a separação vivesse
  * aqui, bastaria um `curl` para pular por cima dela.
  *
- * POR QUE NÃO TEM GRADE DE HORAS, como o Google Agenda:
+ * POR QUE NÃO TEM FAIXAS DE HORA, como o Google Agenda:
  *
- * Uma pescaria ocupa o dia. Não guardamos hora de saída — o combinado vai na
- * observação do dia, em texto. Desenhar faixas horárias inventaria uma precisão
- * que o dado não tem, e a primeira pergunta seria "por que está marcado às 8h
- * se saímos às 5h?". Então: mês em grade, semana em faixa, dia em detalhe.
+ * A hora de saída existe, mas uma pescaria ocupa o dia inteiro — sai antes de
+ * amanhecer e volta à tarde. Desenhar uma faixa de uma hora às 5h daria a
+ * entender que o barco está livre às 7h, e não está. A hora aparece em cada
+ * saída e ordena o dia; a caixa continua sendo o dia.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -20,6 +20,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { formatarBRL } from '@pescavertical/core/dinheiro';
+import { formatarHora, rotuloDaHora } from '@pescavertical/core/hora';
 import {
   DIAS_DA_SEMANA,
   deslocar,
@@ -252,6 +253,9 @@ export default function Calendario() {
                 <View key={`${l.boat_id}-${l.booking_id ?? 'livre'}`} style={estilos.saida}>
                   <View style={estilos.saidaTopo}>
                     <Text style={estilos.barco}>
+                      {formatarHora(l.hora_saida) ? (
+                        <Text style={estilos.hora}>{formatarHora(l.hora_saida)} </Text>
+                      ) : null}
                       {l.barco_nome}
                       {master ? <Text style={estilos.operacao}> · {l.guia_nome}</Text> : null}
                     </Text>
@@ -296,7 +300,10 @@ export default function Calendario() {
                         `${formatarBRL(l.preco_passageiro_centavos ?? 0)} por pescador`}
                     </Text>
                   )}
-                  {l.observacao ? <Text style={estilos.obs}>{l.observacao}</Text> : null}
+                  <Text style={estilos.obs}>
+                    {rotuloDaHora(l.hora_saida)}
+                    {l.observacao ? ` · ${l.observacao}` : ''}
+                  </Text>
                 </View>
               );
             })}
@@ -576,6 +583,7 @@ const criarEstilos = (cores: Cores) =>
       gap: 8,
     },
     barco: { fontSize: 16, fontWeight: '700', color: cores.texto, flexShrink: 1 },
+    hora: { color: cores.acento },
     operacao: { fontSize: 13, fontWeight: '600', color: cores.textoSuave },
     selo: {
       fontSize: 11,

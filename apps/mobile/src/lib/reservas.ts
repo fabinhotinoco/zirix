@@ -39,6 +39,7 @@ export interface BarcoPublico {
 
 export interface DiaLivre {
   data: string;
+  hora_saida: string | null;
   preco_barco_centavos: number;
   preco_passageiro_centavos: number;
   observacao: string | null;
@@ -53,6 +54,7 @@ export interface MinhaReserva {
   id: string;
   codigo: string | null;
   data: string;
+  hora_saida: string | null;
   qtd_pescadores: number;
   valor_total_centavos: number;
   desconto_centavos: number;
@@ -65,6 +67,7 @@ export interface MinhaReserva {
   guia_nome: string;
   guia_cidade: string | null;
   barco_nome: string;
+  observacao: string | null;
   participantes: Participante[];
 }
 
