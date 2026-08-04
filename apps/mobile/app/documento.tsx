@@ -5,15 +5,18 @@
  * painel aparece na hora, sem depender de atualização na loja.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { buscarTextoDocumento, type DocumentoSlug } from '@/lib/legal';
-import { Erro, cores } from '@/ui/componentes';
+import { Erro } from '@/ui/componentes';
+import { useTema, type Cores } from '@/ui/tema';
 
 export default function Documento() {
+  const { cores } = useTema();
+  const estilos = useMemo(() => criarEstilos(cores), [cores]);
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { slug, versao } = useLocalSearchParams<{ slug: string; versao: string }>();
@@ -48,14 +51,15 @@ export default function Documento() {
   );
 }
 
-const estilos = StyleSheet.create({
-  barra: {
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: cores.borda,
-  },
-  voltar: { color: cores.agua, fontSize: 16, fontWeight: '600' },
-  conteudo: { padding: 20, paddingBottom: 64 },
-  texto: { fontSize: 14, lineHeight: 22, color: cores.texto },
-});
+const criarEstilos = (cores: Cores) =>
+  StyleSheet.create({
+    barra: {
+      paddingHorizontal: 20,
+      paddingBottom: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: cores.borda,
+    },
+    voltar: { color: cores.acento, fontSize: 16, fontWeight: '600' },
+    conteudo: { padding: 20, paddingBottom: 64 },
+    texto: { fontSize: 14, lineHeight: 22, color: cores.texto },
+  });

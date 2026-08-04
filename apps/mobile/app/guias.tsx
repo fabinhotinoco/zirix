@@ -7,7 +7,7 @@
  * guia isento, e isso precisa ser uma escolha explícita, nunca um descuido.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -29,9 +29,12 @@ import {
   type Guia,
   type StatusGuia,
 } from '@/lib/guias';
-import { Botao, Campo, Erro, Subtitulo, Titulo, cores } from '@/ui/componentes';
+import { Botao, Campo, Erro, Subtitulo, Titulo } from '@/ui/componentes';
+import { useTema, type Cores } from '@/ui/tema';
 
 export default function Guias() {
+  const { cores } = useTema();
+  const estilos = useMemo(() => criarEstilos(cores), [cores]);
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { sessao, perfil } = useAuth();
@@ -204,34 +207,35 @@ export default function Guias() {
   );
 }
 
-const estilos = StyleSheet.create({
-  conteudo: { paddingHorizontal: 24, paddingBottom: 64 },
-  cartao: {
-    borderWidth: 1,
-    borderColor: cores.borda,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 12,
-  },
-  linha: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  nome: { fontSize: 16, fontWeight: '700', color: cores.texto, flexShrink: 1 },
-  selo: {
-    fontSize: 11,
-    fontWeight: '700',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    overflow: 'hidden',
-  },
-  pendente: { backgroundColor: '#FFF7E6', color: '#8A6100' },
-  aprovado: { backgroundColor: cores.aguaClara, color: cores.agua },
-  suspenso: { backgroundColor: '#FDECEA', color: cores.erro },
-  detalhe: { fontSize: 13, color: cores.suave, marginTop: 4 },
-  decisao: { marginTop: 14, borderTopWidth: 1, borderTopColor: cores.borda, paddingTop: 14 },
-  nota: { fontSize: 12, color: cores.suave, marginTop: -8, marginBottom: 12, lineHeight: 17 },
-  suspender: { marginTop: 14, alignItems: 'center' },
-  suspenderTexto: { color: cores.erro, fontWeight: '600' },
-  vazio: { color: cores.suave, textAlign: 'center', marginTop: 20 },
-  voltar: { marginTop: 28, alignItems: 'center' },
-  voltarTexto: { color: cores.agua, fontWeight: '600' },
-});
+const criarEstilos = (cores: Cores) =>
+  StyleSheet.create({
+    conteudo: { paddingHorizontal: 24, paddingBottom: 64 },
+    cartao: {
+      borderWidth: 1,
+      borderColor: cores.borda,
+      borderRadius: 12,
+      padding: 14,
+      marginBottom: 12,
+    },
+    linha: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+    nome: { fontSize: 16, fontWeight: '700', color: cores.texto, flexShrink: 1 },
+    selo: {
+      fontSize: 11,
+      fontWeight: '700',
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 999,
+      overflow: 'hidden',
+    },
+    pendente: { backgroundColor: cores.superficieAlta, color: cores.aviso },
+    aprovado: { backgroundColor: cores.acentoSuave, color: cores.acento },
+    suspenso: { backgroundColor: cores.superficieAlta, color: cores.erro },
+    detalhe: { fontSize: 13, color: cores.textoSuave, marginTop: 4 },
+    decisao: { marginTop: 14, borderTopWidth: 1, borderTopColor: cores.borda, paddingTop: 14 },
+    nota: { fontSize: 12, color: cores.textoSuave, marginTop: -8, marginBottom: 12, lineHeight: 17 },
+    suspender: { marginTop: 14, alignItems: 'center' },
+    suspenderTexto: { color: cores.erro, fontWeight: '600' },
+    vazio: { color: cores.textoSuave, textAlign: 'center', marginTop: 20 },
+    voltar: { marginTop: 28, alignItems: 'center' },
+    voltarTexto: { color: cores.acento, fontWeight: '600' },
+  });

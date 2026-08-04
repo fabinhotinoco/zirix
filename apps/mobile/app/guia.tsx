@@ -7,7 +7,7 @@
  * permissão que não existe.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -23,7 +23,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/lib/auth';
 import { mensagemDeErro } from '@/lib/erros';
 import { comissaoPadrao, meuGuia, salvarDadosDoGuia, type Guia } from '@/lib/guias';
-import { Botao, Campo, Erro, Subtitulo, Titulo, cores } from '@/ui/componentes';
+import { Botao, Campo, Erro, Subtitulo, Titulo } from '@/ui/componentes';
+import { useTema, type Cores } from '@/ui/tema';
 
 const EXPLICACAO: Record<Guia['status'], string> = {
   pendente:
@@ -38,6 +39,8 @@ const EXPLICACAO: Record<Guia['status'], string> = {
 };
 
 export default function PainelGuia() {
+  const { cores } = useTema();
+  const estilos = useMemo(() => criarEstilos(cores), [cores]);
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { sessao } = useAuth();
@@ -198,25 +201,26 @@ export default function PainelGuia() {
   );
 }
 
-const estilos = StyleSheet.create({
-  conteudo: { paddingHorizontal: 24, paddingBottom: 64 },
-  faixa: { borderRadius: 12, padding: 14, marginBottom: 16, borderWidth: 1 },
-  pendente: { backgroundColor: '#FFF7E6', borderColor: '#E6C77A' },
-  aprovado: { backgroundColor: cores.aguaClara, borderColor: cores.agua },
-  suspenso: { backgroundColor: '#FDECEA', borderColor: cores.erro },
-  faixaTitulo: { fontWeight: '700', color: cores.texto, marginBottom: 4 },
-  faixaTexto: { color: cores.texto, lineHeight: 20 },
-  cartao: {
-    borderWidth: 1,
-    borderColor: cores.borda,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 20,
-  },
-  rotulo: { fontSize: 12, color: cores.suave },
-  valor: { fontSize: 16, color: cores.texto, fontWeight: '600', marginTop: 2 },
-  nota: { fontSize: 12, color: cores.suave, marginTop: 8, lineHeight: 17 },
-  ok: { color: cores.agua, fontWeight: '600', marginTop: 12, textAlign: 'center' },
-  voltar: { marginTop: 28, alignItems: 'center' },
-  voltarTexto: { color: cores.agua, fontWeight: '600' },
-});
+const criarEstilos = (cores: Cores) =>
+  StyleSheet.create({
+    conteudo: { paddingHorizontal: 24, paddingBottom: 64 },
+    faixa: { borderRadius: 12, padding: 14, marginBottom: 16, borderWidth: 1 },
+    pendente: { backgroundColor: cores.superficieAlta, borderColor: cores.aviso },
+    aprovado: { backgroundColor: cores.acentoSuave, borderColor: cores.acento },
+    suspenso: { backgroundColor: cores.superficieAlta, borderColor: cores.erro },
+    faixaTitulo: { fontWeight: '700', color: cores.texto, marginBottom: 4 },
+    faixaTexto: { color: cores.texto, lineHeight: 20 },
+    cartao: {
+      borderWidth: 1,
+      borderColor: cores.borda,
+      borderRadius: 12,
+      padding: 14,
+      marginBottom: 20,
+    },
+    rotulo: { fontSize: 12, color: cores.textoSuave },
+    valor: { fontSize: 16, color: cores.texto, fontWeight: '600', marginTop: 2 },
+    nota: { fontSize: 12, color: cores.textoSuave, marginTop: 8, lineHeight: 17 },
+    ok: { color: cores.acento, fontWeight: '600', marginTop: 12, textAlign: 'center' },
+    voltar: { marginTop: 28, alignItems: 'center' },
+    voltarTexto: { color: cores.acento, fontWeight: '600' },
+  });

@@ -7,7 +7,7 @@
  * aviso deixaria de servir para conferir nada.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,7 +15,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatarBRL } from '@pescavertical/core/dinheiro';
 import { marcarLido, marcarTodosLidos, meusAvisos, type Aviso } from '@/lib/avisos';
 import { mensagemDeErro } from '@/lib/erros';
-import { Erro, Subtitulo, Titulo, cores } from '@/ui/componentes';
+import { Erro, Subtitulo, Titulo } from '@/ui/componentes';
+import { useTema, type Cores } from '@/ui/tema';
 
 /** "hoje às 14:32", "ontem às 9:05", "12/03/2026". */
 function quando(iso: string): string {
@@ -30,6 +31,8 @@ function quando(iso: string): string {
 }
 
 export default function Avisos() {
+  const { cores } = useTema();
+  const estilos = useMemo(() => criarEstilos(cores), [cores]);
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
@@ -149,28 +152,29 @@ export default function Avisos() {
   );
 }
 
-const estilos = StyleSheet.create({
-  conteudo: { paddingHorizontal: 24, paddingBottom: 64 },
-  lerTudo: { alignItems: 'flex-end', marginBottom: 12 },
-  link: { color: cores.agua, fontWeight: '600' },
-  cartao: {
-    borderWidth: 1,
-    borderColor: cores.borda,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
-  },
-  naoLido: { borderColor: cores.agua, backgroundColor: cores.aguaClara },
-  topo: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  titulo: { fontSize: 15, fontWeight: '700', color: cores.texto, flex: 1 },
-  ponto: { width: 10, height: 10, borderRadius: 5, backgroundColor: cores.agua },
-  corpo: { fontSize: 14, color: cores.texto, lineHeight: 20, marginTop: 6 },
-  valores: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, marginTop: 10 },
-  valorRotulo: { fontSize: 13, color: cores.suave },
-  valorForte: { fontWeight: '700', color: cores.texto },
-  emAberto: { color: cores.erro },
-  quando: { fontSize: 12, color: cores.suave, marginTop: 10 },
-  vazio: { color: cores.suave, textAlign: 'center', lineHeight: 21 },
-  voltar: { marginTop: 28, alignItems: 'center' },
-  voltarTexto: { color: cores.agua, fontWeight: '600' },
-});
+const criarEstilos = (cores: Cores) =>
+  StyleSheet.create({
+    conteudo: { paddingHorizontal: 24, paddingBottom: 64 },
+    lerTudo: { alignItems: 'flex-end', marginBottom: 12 },
+    link: { color: cores.acento, fontWeight: '600' },
+    cartao: {
+      borderWidth: 1,
+      borderColor: cores.borda,
+      borderRadius: 12,
+      padding: 14,
+      marginBottom: 10,
+    },
+    naoLido: { borderColor: cores.acento, backgroundColor: cores.acentoSuave },
+    topo: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    titulo: { fontSize: 15, fontWeight: '700', color: cores.texto, flex: 1 },
+    ponto: { width: 10, height: 10, borderRadius: 5, backgroundColor: cores.acento },
+    corpo: { fontSize: 14, color: cores.texto, lineHeight: 20, marginTop: 6 },
+    valores: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, marginTop: 10 },
+    valorRotulo: { fontSize: 13, color: cores.textoSuave },
+    valorForte: { fontWeight: '700', color: cores.texto },
+    emAberto: { color: cores.erro },
+    quando: { fontSize: 12, color: cores.textoSuave, marginTop: 10 },
+    vazio: { color: cores.textoSuave, textAlign: 'center', lineHeight: 21 },
+    voltar: { marginTop: 28, alignItems: 'center' },
+    voltarTexto: { color: cores.acento, fontWeight: '600' },
+  });

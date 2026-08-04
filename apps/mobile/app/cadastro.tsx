@@ -8,7 +8,7 @@
  *   3. O botão só habilita quando todas estiverem marcadas.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -30,17 +30,12 @@ import {
   type DocumentoSlug,
   type DocumentoVigente,
 } from '@/lib/legal';
-import {
-  Botao,
-  CaixaAceite,
-  Campo,
-  Erro,
-  Subtitulo,
-  Titulo,
-  cores,
-} from '@/ui/componentes';
+import { Botao, CaixaAceite, Campo, Erro, Subtitulo, Titulo } from '@/ui/componentes';
+import { useTema, type Cores } from '@/ui/tema';
 
 export default function Cadastro() {
+  const { cores } = useTema();
+  const estilos = useMemo(() => criarEstilos(cores), [cores]);
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { sessao, recarregarPerfil, sair } = useAuth();
@@ -258,29 +253,30 @@ export default function Cadastro() {
   );
 }
 
-const estilos = StyleSheet.create({
-  conteudo: { paddingHorizontal: 24, paddingBottom: 64 },
-  sair: { marginTop: 28, alignItems: 'center' },
-  sairTexto: { color: cores.agua, fontWeight: '600' },
-  rotulo: { fontSize: 13, fontWeight: '600', color: cores.texto, marginBottom: 6 },
-  abas: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  aba: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: cores.borda,
-    alignItems: 'center',
-  },
-  abaAtiva: { backgroundColor: cores.aguaClara, borderColor: cores.agua },
-  abaTexto: { color: cores.suave, fontWeight: '600' },
-  abaTextoAtivo: { color: cores.agua },
-  aviso: { fontSize: 13, color: cores.suave, lineHeight: 19, marginBottom: 8 },
-  divisor: { height: 1, backgroundColor: cores.borda, marginVertical: 24 },
-  secao: { fontSize: 15, fontWeight: '700', color: cores.texto, marginBottom: 14 },
-  carregando: { color: cores.suave, marginBottom: 16 },
-  aceiteTexto: { fontSize: 14, color: cores.texto, lineHeight: 20 },
-  link: { color: cores.agua, fontWeight: '600', textDecorationLine: 'underline' },
-  versao: { fontSize: 12, color: cores.suave, marginTop: 2 },
-  dica: { fontSize: 13, color: cores.suave, marginTop: 10, textAlign: 'center' },
-});
+const criarEstilos = (cores: Cores) =>
+  StyleSheet.create({
+    conteudo: { paddingHorizontal: 24, paddingBottom: 64 },
+    sair: { marginTop: 28, alignItems: 'center' },
+    sairTexto: { color: cores.acento, fontWeight: '600' },
+    rotulo: { fontSize: 13, fontWeight: '600', color: cores.texto, marginBottom: 6 },
+    abas: { flexDirection: 'row', gap: 8, marginBottom: 16 },
+    aba: {
+      flex: 1,
+      paddingVertical: 10,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: cores.borda,
+      alignItems: 'center',
+    },
+    abaAtiva: { backgroundColor: cores.acentoSuave, borderColor: cores.acento },
+    abaTexto: { color: cores.textoSuave, fontWeight: '600' },
+    abaTextoAtivo: { color: cores.acento },
+    aviso: { fontSize: 13, color: cores.textoSuave, lineHeight: 19, marginBottom: 8 },
+    divisor: { height: 1, backgroundColor: cores.borda, marginVertical: 24 },
+    secao: { fontSize: 15, fontWeight: '700', color: cores.texto, marginBottom: 14 },
+    carregando: { color: cores.textoSuave, marginBottom: 16 },
+    aceiteTexto: { fontSize: 14, color: cores.texto, lineHeight: 20 },
+    link: { color: cores.acento, fontWeight: '600', textDecorationLine: 'underline' },
+    versao: { fontSize: 12, color: cores.textoSuave, marginTop: 2 },
+    dica: { fontSize: 13, color: cores.textoSuave, marginTop: 10, textAlign: 'center' },
+  });

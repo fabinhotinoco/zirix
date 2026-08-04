@@ -7,14 +7,16 @@
  * de número.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { mensagemDeErro } from '@/lib/erros';
 import { supabase } from '@/lib/supabase';
-import { Botao, Campo, Erro, Subtitulo, Titulo, cores } from '@/ui/componentes';
+import { Botao, Campo, Erro, Subtitulo, Titulo } from '@/ui/componentes';
+import { Marca } from '@/ui/logo';
+import { useTema, type Cores } from '@/ui/tema';
 
 // `senha` existe porque o envio de e-mail do projeto pode falhar — e falhou.
 // Sem um caminho que não dependa de e-mail, uma configuração errada no painel
@@ -31,6 +33,8 @@ function paraE164(bruto: string): string | null {
 }
 
 export default function Entrar() {
+  const { cores } = useTema();
+  const estilos = useMemo(() => criarEstilos(cores), [cores]);
   const insets = useSafeAreaInsets();
   const router = useRouter();
   // Senha primeiro, de propósito. O caminho do código depende do envio de
@@ -151,7 +155,9 @@ export default function Entrar() {
         contentContainerStyle={[estilos.conteudo, { paddingTop: insets.top + 48 }]}
         keyboardShouldPersistTaps="handled"
       >
-        <Titulo>PescaVerticalAPP</Titulo>
+        <View style={estilos.marca}>
+          <Marca tamanho={48} />
+        </View>
 
         {etapa === 'identificacao' ? (
           <>
@@ -287,22 +293,24 @@ export default function Entrar() {
   );
 }
 
-const estilos = StyleSheet.create({
-  conteudo: { paddingHorizontal: 24, paddingBottom: 48 },
-  abas: { flexDirection: 'row', gap: 8, marginBottom: 20 },
-  aba: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: cores.borda,
-    alignItems: 'center',
-  },
-  abaAtiva: { backgroundColor: cores.aguaClara, borderColor: cores.agua },
-  abaTexto: { color: cores.suave, fontWeight: '600' },
-  abaTextoAtivo: { color: cores.agua },
-  ajuda: { fontSize: 13, color: cores.suave, lineHeight: 19, marginTop: 16, textAlign: 'center' },
-  voltar: { marginTop: 18, alignItems: 'center' },
-  voltarTexto: { color: cores.agua, fontWeight: '600' },
-  voltarTextoInativo: { color: cores.suave },
-});
+const criarEstilos = (cores: Cores) =>
+  StyleSheet.create({
+    marca: { alignItems: 'center', marginBottom: 28 },
+    conteudo: { paddingHorizontal: 24, paddingBottom: 48 },
+    abas: { flexDirection: 'row', gap: 8, marginBottom: 20 },
+    aba: {
+      flex: 1,
+      paddingVertical: 10,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: cores.borda,
+      alignItems: 'center',
+    },
+    abaAtiva: { backgroundColor: cores.acentoSuave, borderColor: cores.acento },
+    abaTexto: { color: cores.textoSuave, fontWeight: '600' },
+    abaTextoAtivo: { color: cores.acento },
+    ajuda: { fontSize: 13, color: cores.textoSuave, lineHeight: 19, marginTop: 16, textAlign: 'center' },
+    voltar: { marginTop: 18, alignItems: 'center' },
+    voltarTexto: { color: cores.acento, fontWeight: '600' },
+    voltarTextoInativo: { color: cores.textoSuave },
+  });

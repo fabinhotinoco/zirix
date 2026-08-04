@@ -6,14 +6,15 @@
  * mantê-la — e só um deles é o que protege.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { mensagemDeErro } from '@/lib/erros';
 import { guiasAbertos, type GuiaPublico } from '@/lib/reservas';
-import { Erro, Subtitulo, Titulo, cores } from '@/ui/componentes';
+import { Erro, Subtitulo, Titulo } from '@/ui/componentes';
+import { useTema, type Cores } from '@/ui/tema';
 
 function combina(g: GuiaPublico, busca: string): boolean {
   const alvo = `${g.nome_operacao} ${g.cidade ?? ''}`.toLowerCase();
@@ -21,6 +22,8 @@ function combina(g: GuiaPublico, busca: string): boolean {
 }
 
 export default function Buscar() {
+  const { cores } = useTema();
+  const estilos = useMemo(() => criarEstilos(cores), [cores]);
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
@@ -60,7 +63,7 @@ export default function Buscar() {
         value={busca}
         onChangeText={setBusca}
         placeholder="Buscar por nome ou cidade"
-        placeholderTextColor={cores.suave}
+        placeholderTextColor={cores.textoSuave}
         autoCorrect={false}
       />
 
@@ -101,30 +104,31 @@ export default function Buscar() {
   );
 }
 
-const estilos = StyleSheet.create({
-  conteudo: { paddingHorizontal: 24, paddingBottom: 64 },
-  busca: {
-    borderWidth: 1,
-    borderColor: cores.borda,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: cores.texto,
-    marginBottom: 20,
-  },
-  cartao: {
-    borderWidth: 1,
-    borderColor: cores.borda,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-  },
-  nome: { fontSize: 17, fontWeight: '700', color: cores.texto },
-  cidade: { fontSize: 13, color: cores.suave, marginTop: 2 },
-  bio: { fontSize: 14, color: cores.texto, marginTop: 8, lineHeight: 20 },
-  link: { color: cores.agua, fontWeight: '700', marginTop: 12 },
-  vazio: { color: cores.suave, textAlign: 'center', lineHeight: 21 },
-  voltar: { marginTop: 28, alignItems: 'center' },
-  voltarTexto: { color: cores.agua, fontWeight: '600' },
-});
+const criarEstilos = (cores: Cores) =>
+  StyleSheet.create({
+    conteudo: { paddingHorizontal: 24, paddingBottom: 64 },
+    busca: {
+      borderWidth: 1,
+      borderColor: cores.borda,
+      borderRadius: 10,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      fontSize: 16,
+      color: cores.texto,
+      marginBottom: 20,
+    },
+    cartao: {
+      borderWidth: 1,
+      borderColor: cores.borda,
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 12,
+    },
+    nome: { fontSize: 17, fontWeight: '700', color: cores.texto },
+    cidade: { fontSize: 13, color: cores.textoSuave, marginTop: 2 },
+    bio: { fontSize: 14, color: cores.texto, marginTop: 8, lineHeight: 20 },
+    link: { color: cores.acento, fontWeight: '700', marginTop: 12 },
+    vazio: { color: cores.textoSuave, textAlign: 'center', lineHeight: 21 },
+    voltar: { marginTop: 28, alignItems: 'center' },
+    voltarTexto: { color: cores.acento, fontWeight: '600' },
+  });

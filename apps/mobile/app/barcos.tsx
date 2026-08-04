@@ -6,7 +6,7 @@
  * não existe, não.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -23,9 +23,12 @@ import { useAuth } from '@/lib/auth';
 import { barcosDoGuia, criarBarco, salvarBarco, type Barco } from '@/lib/barcos';
 import { mensagemDeErro } from '@/lib/erros';
 import { meuGuia, type Guia } from '@/lib/guias';
-import { Botao, Campo, Erro, Subtitulo, Titulo, cores } from '@/ui/componentes';
+import { Botao, Campo, Erro, Subtitulo, Titulo } from '@/ui/componentes';
+import { useTema, type Cores } from '@/ui/tema';
 
 export default function Barcos() {
+  const { cores } = useTema();
+  const estilos = useMemo(() => criarEstilos(cores), [cores]);
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { sessao } = useAuth();
@@ -236,43 +239,44 @@ export default function Barcos() {
   );
 }
 
-const estilos = StyleSheet.create({
-  conteudo: { paddingHorizontal: 24, paddingBottom: 64 },
-  aviso: {
-    backgroundColor: '#FFF7E6',
-    borderColor: '#E6C77A',
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 16,
-  },
-  avisoTexto: { color: cores.texto, lineHeight: 20 },
-  cartao: {
-    borderWidth: 1,
-    borderColor: cores.borda,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 12,
-  },
-  linha: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-  nome: { fontSize: 16, fontWeight: '700', color: cores.texto, flexShrink: 1 },
-  selo: {
-    fontSize: 11,
-    fontWeight: '700',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    overflow: 'hidden',
-  },
-  ativo: { backgroundColor: cores.aguaClara, color: cores.agua },
-  inativo: { backgroundColor: '#EEE', color: cores.suave },
-  detalhe: { fontSize: 13, color: cores.suave, marginTop: 4 },
-  acoes: { flexDirection: 'row', gap: 20, marginTop: 12 },
-  link: { color: cores.agua, fontWeight: '700' },
-  linkSuave: { color: cores.suave, fontWeight: '600' },
-  formulario: { marginTop: 8 },
-  dica: { color: cores.suave, fontSize: 13, marginTop: 10, textAlign: 'center' },
-  cancelar: { marginTop: 16, alignItems: 'center' },
-  voltar: { marginTop: 28, alignItems: 'center' },
-  voltarTexto: { color: cores.agua, fontWeight: '600' },
-});
+const criarEstilos = (cores: Cores) =>
+  StyleSheet.create({
+    conteudo: { paddingHorizontal: 24, paddingBottom: 64 },
+    aviso: {
+      backgroundColor: cores.superficieAlta,
+      borderColor: cores.aviso,
+      borderWidth: 1,
+      borderRadius: 12,
+      padding: 14,
+      marginBottom: 16,
+    },
+    avisoTexto: { color: cores.texto, lineHeight: 20 },
+    cartao: {
+      borderWidth: 1,
+      borderColor: cores.borda,
+      borderRadius: 12,
+      padding: 14,
+      marginBottom: 12,
+    },
+    linha: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
+    nome: { fontSize: 16, fontWeight: '700', color: cores.texto, flexShrink: 1 },
+    selo: {
+      fontSize: 11,
+      fontWeight: '700',
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 999,
+      overflow: 'hidden',
+    },
+    ativo: { backgroundColor: cores.acentoSuave, color: cores.acento },
+    inativo: { backgroundColor: cores.superficieAlta, color: cores.textoSuave },
+    detalhe: { fontSize: 13, color: cores.textoSuave, marginTop: 4 },
+    acoes: { flexDirection: 'row', gap: 20, marginTop: 12 },
+    link: { color: cores.acento, fontWeight: '700' },
+    linkSuave: { color: cores.textoSuave, fontWeight: '600' },
+    formulario: { marginTop: 8 },
+    dica: { color: cores.textoSuave, fontSize: 13, marginTop: 10, textAlign: 'center' },
+    cancelar: { marginTop: 16, alignItems: 'center' },
+    voltar: { marginTop: 28, alignItems: 'center' },
+    voltarTexto: { color: cores.acento, fontWeight: '600' },
+  });

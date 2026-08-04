@@ -6,7 +6,7 @@
  * continua existindo para abrir datas e mexer em preço; esta é para enxergar.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,7 +22,8 @@ import {
 } from '@pescavertical/core/periodo';
 import { agendaDoGuia, resumir, type LinhaDaAgenda } from '@/lib/agenda';
 import { mensagemDeErro } from '@/lib/erros';
-import { Erro, Subtitulo, Titulo, cores } from '@/ui/componentes';
+import { Erro, Subtitulo, Titulo } from '@/ui/componentes';
+import { useTema, type Cores } from '@/ui/tema';
 
 const VISTAS: { chave: Vista; nome: string }[] = [
   { chave: 'semana', nome: 'Semana' },
@@ -47,6 +48,8 @@ function dataDigitada(bruto: string): string | null {
 }
 
 export default function MinhaAgenda() {
+  const { cores } = useTema();
+  const estilos = useMemo(() => criarEstilos(cores), [cores]);
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
@@ -143,7 +146,7 @@ export default function MinhaAgenda() {
             value={irPara}
             onChangeText={setIrPara}
             placeholder="Ir para dd/mm/aaaa"
-            placeholderTextColor={cores.suave}
+            placeholderTextColor={cores.textoSuave}
             keyboardType="number-pad"
           />
           <Pressable
@@ -236,14 +239,13 @@ export default function MinhaAgenda() {
                       Total {formatarBRL(l.valor_liquido_centavos ?? 0)} · sua parte{' '}
                       {formatarBRL(l.repasse_guia_centavos ?? 0)}
                     </Text>
-                    <Text
-                      style={[
-                        estilos.dinheiro,
-                        (l.valor_aberto_centavos ?? 0) > 0 && estilos.emAberto,
-                      ]}
-                    >
+                    {/* Só o que está em aberto vai de vermelho. Pintar a linha
+                        inteira faz o valor já quitado parecer problema. */}
+                    <Text style={estilos.dinheiro}>
                       Quitado {formatarBRL(l.valor_pago_centavos ?? 0)} · em aberto{' '}
-                      {formatarBRL(l.valor_aberto_centavos ?? 0)}
+                      <Text style={(l.valor_aberto_centavos ?? 0) > 0 ? estilos.emAberto : undefined}>
+                        {formatarBRL(l.valor_aberto_centavos ?? 0)}
+                      </Text>
                       {l.status_pagamento ? ` (${ROTULO_PAGAMENTO[l.status_pagamento]})` : ''}
                     </Text>
                   </>
@@ -278,104 +280,105 @@ export default function MinhaAgenda() {
   );
 }
 
-const estilos = StyleSheet.create({
-  conteudo: { paddingHorizontal: 24, paddingBottom: 64 },
-  abas: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  aba: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: cores.borda,
-    alignItems: 'center',
-  },
-  abaAtiva: { backgroundColor: cores.aguaClara, borderColor: cores.agua },
-  abaTexto: { fontWeight: '600', color: cores.suave },
-  abaTextoAtivo: { color: cores.agua },
-  navegacao: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  seta: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: cores.borda,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  setaTexto: { fontSize: 24, color: cores.agua, lineHeight: 28 },
-  periodo: { flex: 1, textAlign: 'center', fontSize: 16, fontWeight: '700', color: cores.texto },
-  voltarHoje: { alignItems: 'center', marginTop: 10 },
-  link: { color: cores.agua, fontWeight: '600' },
-  irPara: { flexDirection: 'row', gap: 8, marginTop: 14 },
-  campoData: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: cores.borda,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-    fontSize: 16,
-    color: cores.texto,
-  },
-  irBotao: {
-    paddingHorizontal: 22,
-    justifyContent: 'center',
-    borderRadius: 10,
-    backgroundColor: cores.agua,
-  },
-  irBotaoInativo: { backgroundColor: cores.borda },
-  irTexto: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  irTextoInativo: { color: cores.texto },
-  dica: { color: cores.suave, fontSize: 13, marginTop: 8, textAlign: 'center' },
-  resumo: {
-    borderWidth: 1,
-    borderColor: cores.borda,
-    borderRadius: 12,
-    padding: 14,
-    marginTop: 18,
-    marginBottom: 20,
-    gap: 6,
-  },
-  resumoLinha: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
-  resumoRotulo: { color: cores.suave, fontSize: 14 },
-  resumoValor: { color: cores.texto, fontSize: 15, fontWeight: '700' },
-  divisoria: { height: 1, backgroundColor: cores.borda, marginVertical: 4 },
-  emAberto: { color: cores.erro },
-  dia: { marginBottom: 18 },
-  diaData: { fontSize: 15, fontWeight: '700', color: cores.texto, marginBottom: 8 },
-  saida: {
-    borderWidth: 1,
-    borderColor: cores.borda,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 8,
-  },
-  saidaTopo: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-  barco: { fontSize: 16, fontWeight: '700', color: cores.texto, flexShrink: 1 },
-  selo: {
-    fontSize: 11,
-    fontWeight: '700',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    overflow: 'hidden',
-  },
-  seloReservado: { backgroundColor: cores.aguaClara, color: cores.agua },
-  seloLivre: { backgroundColor: '#EEE', color: cores.suave },
-  detalhe: { fontSize: 13, color: cores.suave, marginTop: 5 },
-  dinheiro: { fontSize: 13, color: cores.texto, marginTop: 5, fontWeight: '600' },
-  obs: { fontSize: 12, color: cores.suave, marginTop: 5, fontStyle: 'italic' },
-  vazio: { color: cores.suave, textAlign: 'center', lineHeight: 21 },
-  acao: {
-    marginTop: 16,
-    borderWidth: 1,
-    borderColor: cores.agua,
-    backgroundColor: cores.aguaClara,
-    borderRadius: 12,
-    padding: 16,
-  },
-  acaoTexto: { fontSize: 16, fontWeight: '700', color: cores.agua },
-  acaoNota: { fontSize: 13, color: cores.suave, marginTop: 2 },
-  voltar: { marginTop: 24, alignItems: 'center' },
-  voltarTexto: { color: cores.agua, fontWeight: '600' },
-});
+const criarEstilos = (cores: Cores) =>
+  StyleSheet.create({
+    conteudo: { paddingHorizontal: 24, paddingBottom: 64 },
+    abas: { flexDirection: 'row', gap: 8, marginBottom: 16 },
+    aba: {
+      flex: 1,
+      paddingVertical: 10,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: cores.borda,
+      alignItems: 'center',
+    },
+    abaAtiva: { backgroundColor: cores.acentoSuave, borderColor: cores.acento },
+    abaTexto: { fontWeight: '600', color: cores.textoSuave },
+    abaTextoAtivo: { color: cores.acento },
+    navegacao: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    seta: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      borderWidth: 1,
+      borderColor: cores.borda,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    setaTexto: { fontSize: 24, color: cores.acento, lineHeight: 28 },
+    periodo: { flex: 1, textAlign: 'center', fontSize: 16, fontWeight: '700', color: cores.texto },
+    voltarHoje: { alignItems: 'center', marginTop: 10 },
+    link: { color: cores.acento, fontWeight: '600' },
+    irPara: { flexDirection: 'row', gap: 8, marginTop: 14 },
+    campoData: {
+      flex: 1,
+      borderWidth: 1,
+      borderColor: cores.borda,
+      borderRadius: 10,
+      paddingHorizontal: 14,
+      paddingVertical: 11,
+      fontSize: 16,
+      color: cores.texto,
+    },
+    irBotao: {
+      paddingHorizontal: 22,
+      justifyContent: 'center',
+      borderRadius: 10,
+      backgroundColor: cores.acento,
+    },
+    irBotaoInativo: { backgroundColor: cores.borda },
+    irTexto: { color: cores.acentoTexto, fontWeight: '700', fontSize: 16 },
+    irTextoInativo: { color: cores.texto },
+    dica: { color: cores.textoSuave, fontSize: 13, marginTop: 8, textAlign: 'center' },
+    resumo: {
+      borderWidth: 1,
+      borderColor: cores.borda,
+      borderRadius: 12,
+      padding: 14,
+      marginTop: 18,
+      marginBottom: 20,
+      gap: 6,
+    },
+    resumoLinha: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
+    resumoRotulo: { color: cores.textoSuave, fontSize: 14 },
+    resumoValor: { color: cores.texto, fontSize: 15, fontWeight: '700' },
+    divisoria: { height: 1, backgroundColor: cores.borda, marginVertical: 4 },
+    emAberto: { color: cores.erro },
+    dia: { marginBottom: 18 },
+    diaData: { fontSize: 15, fontWeight: '700', color: cores.texto, marginBottom: 8 },
+    saida: {
+      borderWidth: 1,
+      borderColor: cores.borda,
+      borderRadius: 12,
+      padding: 14,
+      marginBottom: 8,
+    },
+    saidaTopo: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
+    barco: { fontSize: 16, fontWeight: '700', color: cores.texto, flexShrink: 1 },
+    selo: {
+      fontSize: 11,
+      fontWeight: '700',
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 999,
+      overflow: 'hidden',
+    },
+    seloReservado: { backgroundColor: cores.acentoSuave, color: cores.acento },
+    seloLivre: { backgroundColor: cores.superficieAlta, color: cores.textoSuave },
+    detalhe: { fontSize: 13, color: cores.textoSuave, marginTop: 5 },
+    dinheiro: { fontSize: 13, color: cores.texto, marginTop: 5, fontWeight: '600' },
+    obs: { fontSize: 12, color: cores.textoSuave, marginTop: 5, fontStyle: 'italic' },
+    vazio: { color: cores.textoSuave, textAlign: 'center', lineHeight: 21 },
+    acao: {
+      marginTop: 16,
+      borderWidth: 1,
+      borderColor: cores.acento,
+      backgroundColor: cores.acentoSuave,
+      borderRadius: 12,
+      padding: 16,
+    },
+    acaoTexto: { fontSize: 16, fontWeight: '700', color: cores.acento },
+    acaoNota: { fontSize: 13, color: cores.textoSuave, marginTop: 2 },
+    voltar: { marginTop: 24, alignItems: 'center' },
+    voltarTexto: { color: cores.acento, fontWeight: '600' },
+  });

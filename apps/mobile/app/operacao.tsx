@@ -8,7 +8,7 @@
  * depois de escolher os acompanhantes.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -24,9 +24,12 @@ import {
   type DiaLivre,
   type GuiaPublico,
 } from '@/lib/reservas';
-import { Erro, Subtitulo, Titulo, cores } from '@/ui/componentes';
+import { Erro, Subtitulo, Titulo } from '@/ui/componentes';
+import { useTema, type Cores } from '@/ui/tema';
 
 export default function Operacao() {
+  const { cores } = useTema();
+  const estilos = useMemo(() => criarEstilos(cores), [cores]);
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { guia } = useLocalSearchParams<{ guia: string }>();
@@ -150,34 +153,35 @@ export default function Operacao() {
   );
 }
 
-const estilos = StyleSheet.create({
-  conteudo: { paddingHorizontal: 24, paddingBottom: 64 },
-  cartao: {
-    borderWidth: 1,
-    borderColor: cores.borda,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-  },
-  nome: { fontSize: 17, fontWeight: '700', color: cores.texto },
-  detalhe: { fontSize: 13, color: cores.suave, marginTop: 4 },
-  secao: { fontSize: 13, fontWeight: '700', color: cores.texto, marginTop: 16, marginBottom: 8 },
-  semData: { fontSize: 14, color: cores.suave },
-  dia: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    borderWidth: 1,
-    borderColor: cores.borda,
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 8,
-  },
-  diaData: { fontSize: 16, fontWeight: '700', color: cores.texto },
-  diaPreco: { fontSize: 13, color: cores.suave, marginTop: 2 },
-  diaObs: { fontSize: 12, color: cores.suave, marginTop: 4, fontStyle: 'italic' },
-  escolher: { color: cores.agua, fontWeight: '700' },
-  vazio: { color: cores.suave, textAlign: 'center', lineHeight: 21 },
-  voltar: { marginTop: 28, alignItems: 'center' },
-  voltarTexto: { color: cores.agua, fontWeight: '600' },
-});
+const criarEstilos = (cores: Cores) =>
+  StyleSheet.create({
+    conteudo: { paddingHorizontal: 24, paddingBottom: 64 },
+    cartao: {
+      borderWidth: 1,
+      borderColor: cores.borda,
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 16,
+    },
+    nome: { fontSize: 17, fontWeight: '700', color: cores.texto },
+    detalhe: { fontSize: 13, color: cores.textoSuave, marginTop: 4 },
+    secao: { fontSize: 13, fontWeight: '700', color: cores.texto, marginTop: 16, marginBottom: 8 },
+    semData: { fontSize: 14, color: cores.textoSuave },
+    dia: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      borderWidth: 1,
+      borderColor: cores.borda,
+      borderRadius: 10,
+      padding: 12,
+      marginBottom: 8,
+    },
+    diaData: { fontSize: 16, fontWeight: '700', color: cores.texto },
+    diaPreco: { fontSize: 13, color: cores.textoSuave, marginTop: 2 },
+    diaObs: { fontSize: 12, color: cores.textoSuave, marginTop: 4, fontStyle: 'italic' },
+    escolher: { color: cores.acento, fontWeight: '700' },
+    vazio: { color: cores.textoSuave, textAlign: 'center', lineHeight: 21 },
+    voltar: { marginTop: 28, alignItems: 'center' },
+    voltarTexto: { color: cores.acento, fontWeight: '600' },
+  });

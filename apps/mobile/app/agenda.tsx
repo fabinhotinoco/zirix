@@ -6,7 +6,7 @@
  * a mudar o cadastro toda vez — mudando junto o preço de datas já abertas.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -22,7 +22,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatarBRL, paraCentavos } from '@pescavertical/core/dinheiro';
 import { abrirDia, agendaDoBarco, fecharDia, type DiaDaAgenda } from '@/lib/barcos';
 import { mensagemDeErro } from '@/lib/erros';
-import { Botao, Campo, Erro, Subtitulo, Titulo, cores } from '@/ui/componentes';
+import { Botao, Campo, Erro, Subtitulo, Titulo } from '@/ui/componentes';
+import { useTema, type Cores } from '@/ui/tema';
 
 /** dd/mm/aaaa para o formato do banco, ou null se a data não existir. */
 function paraISO(bruto: string): string | null {
@@ -42,6 +43,8 @@ function paraBR(iso: string): string {
 }
 
 export default function Agenda() {
+  const { cores } = useTema();
+  const estilos = useMemo(() => criarEstilos(cores), [cores]);
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { barco } = useLocalSearchParams<{ barco: string }>();
@@ -216,35 +219,36 @@ export default function Agenda() {
   );
 }
 
-const estilos = StyleSheet.create({
-  conteudo: { paddingHorizontal: 24, paddingBottom: 64 },
-  formulario: { marginBottom: 8 },
-  previa: {
-    backgroundColor: cores.aguaClara,
-    color: cores.agua,
-    fontWeight: '600',
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  dica: { color: cores.suave, fontSize: 13, marginTop: 10, textAlign: 'center' },
-  secao: { fontSize: 15, fontWeight: '700', color: cores.texto, marginTop: 24, marginBottom: 10 },
-  dia: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    borderWidth: 1,
-    borderColor: cores.borda,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
-  },
-  diaData: { fontSize: 16, fontWeight: '700', color: cores.texto },
-  diaPreco: { fontSize: 13, color: cores.suave, marginTop: 2 },
-  diaObs: { fontSize: 12, color: cores.suave, marginTop: 4, fontStyle: 'italic' },
-  fechar: { color: cores.erro, fontWeight: '600' },
-  vazio: { color: cores.suave, textAlign: 'center' },
-  voltar: { marginTop: 28, alignItems: 'center' },
-  voltarTexto: { color: cores.agua, fontWeight: '600' },
-});
+const criarEstilos = (cores: Cores) =>
+  StyleSheet.create({
+    conteudo: { paddingHorizontal: 24, paddingBottom: 64 },
+    formulario: { marginBottom: 8 },
+    previa: {
+      backgroundColor: cores.acentoSuave,
+      color: cores.acento,
+      fontWeight: '600',
+      borderRadius: 8,
+      padding: 10,
+      marginBottom: 12,
+      textAlign: 'center',
+    },
+    dica: { color: cores.textoSuave, fontSize: 13, marginTop: 10, textAlign: 'center' },
+    secao: { fontSize: 15, fontWeight: '700', color: cores.texto, marginTop: 24, marginBottom: 10 },
+    dia: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      borderWidth: 1,
+      borderColor: cores.borda,
+      borderRadius: 12,
+      padding: 14,
+      marginBottom: 10,
+    },
+    diaData: { fontSize: 16, fontWeight: '700', color: cores.texto },
+    diaPreco: { fontSize: 13, color: cores.textoSuave, marginTop: 2 },
+    diaObs: { fontSize: 12, color: cores.textoSuave, marginTop: 4, fontStyle: 'italic' },
+    fechar: { color: cores.erro, fontWeight: '600' },
+    vazio: { color: cores.textoSuave, textAlign: 'center' },
+    voltar: { marginTop: 28, alignItems: 'center' },
+    voltarTexto: { color: cores.acento, fontWeight: '600' },
+  });

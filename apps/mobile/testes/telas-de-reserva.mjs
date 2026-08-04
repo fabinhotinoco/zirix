@@ -349,6 +349,70 @@ await pagina.waitForTimeout(500);
 exigir((await textoDaTela()).includes('Data inválida'),
   'data que não existe é recusada em vez de virar 03/03');
 
+// --- 8. aparência: três modos, três paletas ---------------------------------
+await pagina.goto(`http://localhost:${PORTA}/aparencia`);
+await pagina.waitForTimeout(1800);
+const telaAparencia = await textoDaTela();
+for (const m of ['Dia', 'Noite', 'Híbrido']) {
+  exigir(telaAparencia.includes(m), `a tela de aparência oferece o modo ${m}`);
+}
+for (const p of ['Abissal', 'Brasa', 'Linha']) {
+  exigir(telaAparencia.includes(p), `a tela de aparência oferece a paleta ${p}`);
+}
+
+/**
+ * A cor que o navegador está de fato pintando no fundo.
+ *
+ * `querySelector('div')` pega a div externa, que é transparente — e transparente
+ * comparado com transparente dá "igual" para qualquer tema. Aqui procura-se o
+ * primeiro elemento com fundo de verdade.
+ */
+const fundoDaTela = () =>
+  pagina.evaluate(() => {
+    for (const el of document.querySelectorAll('div')) {
+      const c = getComputedStyle(el).backgroundColor;
+      if (c && c !== 'transparent' && !c.startsWith('rgba(0, 0, 0, 0)')) return c;
+    }
+    return '';
+  });
+
+await pagina.getByRole('radio', { name: /^Dia/ }).click();
+await pagina.waitForTimeout(700);
+const fundoDia = await fundoDaTela();
+
+await pagina.getByRole('radio', { name: /^Noite/ }).click();
+await pagina.waitForTimeout(700);
+const fundoNoite = await fundoDaTela();
+
+// Trocar o modo tem de mudar a tela de verdade. Um seletor bonito que não
+// pinta nada passaria em qualquer teste de texto.
+exigir(fundoDia !== fundoNoite && fundoDia !== '' && fundoNoite !== '',
+  `dia e noite pintam fundos diferentes (${fundoDia} vs ${fundoNoite})`);
+
+const brilho = (rgb) => {
+  const [r, g, b] = (rgb.match(/\d+/g) ?? ['0', '0', '0']).map(Number);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+exigir(brilho(fundoNoite) < brilho(fundoDia), 'o modo noite é mesmo o mais escuro dos dois');
+
+// A escolha tem de sobreviver a recarregar: preferência que some a cada visita
+// não é preferência.
+await pagina.reload();
+await pagina.waitForTimeout(2200);
+exigir(await fundoDaTela() === fundoNoite, 'o modo escolhido sobrevive a recarregar a página');
+
+// Trocar de paleta muda o acento em toda parte, não só no cartão da escolha.
+await pagina.getByRole('radio', { name: /Linha/ }).click();
+await pagina.waitForTimeout(700);
+await pagina.goto(`http://localhost:${PORTA}/inicio`);
+await pagina.waitForTimeout(1600);
+const acentoLinha = await pagina.evaluate(() => {
+  const el = [...document.querySelectorAll('div')].find((d) =>
+    d.textContent?.trim().startsWith('Procurar pescaria'));
+  return el ? getComputedStyle(el).borderColor : '';
+});
+exigir(acentoLinha !== '', 'a paleta escolhida chega às outras telas');
+
 await navegador.close();
 servidor.close();
 

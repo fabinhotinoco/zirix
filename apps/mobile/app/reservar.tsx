@@ -12,7 +12,7 @@
  * derruba a cláusula.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -37,7 +37,8 @@ import {
   type BarcoPublico,
   type DiaLivre,
 } from '@/lib/reservas';
-import { Botao, CaixaAceite, Campo, Erro, Subtitulo, Titulo, cores } from '@/ui/componentes';
+import { Botao, CaixaAceite, Campo, Erro, Subtitulo, Titulo } from '@/ui/componentes';
+import { useTema, type Cores } from '@/ui/tema';
 
 interface Acompanhante {
   nome: string;
@@ -45,6 +46,8 @@ interface Acompanhante {
 }
 
 export default function Reservar() {
+  const { cores } = useTema();
+  const estilos = useMemo(() => criarEstilos(cores), [cores]);
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { barco: barcoId, data } = useLocalSearchParams<{ barco: string; data: string }>();
@@ -318,48 +321,49 @@ export default function Reservar() {
   );
 }
 
-const estilos = StyleSheet.create({
-  conteudo: { paddingHorizontal: 24, paddingBottom: 64 },
-  secao: { fontSize: 15, fontWeight: '700', color: cores.texto, marginTop: 24, marginBottom: 10 },
-  contador: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 24 },
-  passo: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: cores.agua,
-    backgroundColor: cores.aguaClara,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  passoInativo: { borderColor: cores.borda, backgroundColor: '#F4F7F9' },
-  passoTexto: { fontSize: 24, fontWeight: '700', color: cores.agua, lineHeight: 28 },
-  qtd: { fontSize: 32, fontWeight: '700', color: cores.texto, minWidth: 48, textAlign: 'center' },
-  dica: { color: cores.suave, fontSize: 13, marginTop: 10, textAlign: 'center' },
-  dicaEsquerda: { color: cores.suave, fontSize: 13, lineHeight: 19, marginBottom: 12 },
-  previa: {
-    backgroundColor: cores.aguaClara,
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 20,
-    alignItems: 'center',
-  },
-  previaValor: { fontSize: 26, fontWeight: '700', color: cores.agua },
-  previaNota: { fontSize: 12, color: cores.suave, textAlign: 'center', marginTop: 6, lineHeight: 17 },
-  acompanhante: {
-    borderWidth: 1,
-    borderColor: cores.borda,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 12,
-  },
-  remover: { color: cores.erro, fontWeight: '600', textAlign: 'right' },
-  adicionar: { paddingVertical: 12, alignItems: 'center' },
-  adicionarTexto: { color: cores.agua, fontWeight: '700' },
-  aceiteTexto: { fontSize: 14, color: cores.texto, lineHeight: 20 },
-  aceiteLink: { color: cores.agua, fontWeight: '700', textDecorationLine: 'underline' },
-  versao: { color: cores.suave, fontSize: 12 },
-  rodape: { fontSize: 12, color: cores.suave, marginTop: 20, lineHeight: 18, textAlign: 'center' },
-  voltar: { marginTop: 24, alignItems: 'center' },
-  voltarTexto: { color: cores.agua, fontWeight: '600' },
-});
+const criarEstilos = (cores: Cores) =>
+  StyleSheet.create({
+    conteudo: { paddingHorizontal: 24, paddingBottom: 64 },
+    secao: { fontSize: 15, fontWeight: '700', color: cores.texto, marginTop: 24, marginBottom: 10 },
+    contador: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 24 },
+    passo: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      borderWidth: 1,
+      borderColor: cores.acento,
+      backgroundColor: cores.acentoSuave,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    passoInativo: { borderColor: cores.borda, backgroundColor: cores.superficieAlta },
+    passoTexto: { fontSize: 24, fontWeight: '700', color: cores.acento, lineHeight: 28 },
+    qtd: { fontSize: 32, fontWeight: '700', color: cores.texto, minWidth: 48, textAlign: 'center' },
+    dica: { color: cores.textoSuave, fontSize: 13, marginTop: 10, textAlign: 'center' },
+    dicaEsquerda: { color: cores.textoSuave, fontSize: 13, lineHeight: 19, marginBottom: 12 },
+    previa: {
+      backgroundColor: cores.acentoSuave,
+      borderRadius: 12,
+      padding: 16,
+      marginTop: 20,
+      alignItems: 'center',
+    },
+    previaValor: { fontSize: 26, fontWeight: '700', color: cores.acento },
+    previaNota: { fontSize: 12, color: cores.textoSuave, textAlign: 'center', marginTop: 6, lineHeight: 17 },
+    acompanhante: {
+      borderWidth: 1,
+      borderColor: cores.borda,
+      borderRadius: 12,
+      padding: 14,
+      marginBottom: 12,
+    },
+    remover: { color: cores.erro, fontWeight: '600', textAlign: 'right' },
+    adicionar: { paddingVertical: 12, alignItems: 'center' },
+    adicionarTexto: { color: cores.acento, fontWeight: '700' },
+    aceiteTexto: { fontSize: 14, color: cores.texto, lineHeight: 20 },
+    aceiteLink: { color: cores.acento, fontWeight: '700', textDecorationLine: 'underline' },
+    versao: { color: cores.textoSuave, fontSize: 12 },
+    rodape: { fontSize: 12, color: cores.textoSuave, marginTop: 20, lineHeight: 18, textAlign: 'center' },
+    voltar: { marginTop: 24, alignItems: 'center' },
+    voltarTexto: { color: cores.acento, fontWeight: '600' },
+  });

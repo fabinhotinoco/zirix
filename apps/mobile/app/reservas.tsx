@@ -9,7 +9,7 @@
  * diz o que está pendente sem prometer um botão que não funcionaria.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,7 +17,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatarBRL } from '@pescavertical/core/dinheiro';
 import { mensagemDeErro } from '@/lib/erros';
 import { cancelarReserva, minhasReservas, paraBR, type MinhaReserva } from '@/lib/reservas';
-import { Erro, Subtitulo, Titulo, cores } from '@/ui/componentes';
+import { Erro, Subtitulo, Titulo } from '@/ui/componentes';
+import { useTema, type Cores } from '@/ui/tema';
 
 const ROTULO_STATUS: Record<MinhaReserva['status'], string> = {
   pendente: 'Aguardando pagamento',
@@ -33,6 +34,8 @@ const ROTULO_PAGAMENTO: Record<MinhaReserva['status_pagamento'], string> = {
 };
 
 export default function Reservas() {
+  const { cores } = useTema();
+  const estilos = useMemo(() => criarEstilos(cores), [cores]);
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
@@ -176,47 +179,48 @@ export default function Reservas() {
   );
 }
 
-const estilos = StyleSheet.create({
-  conteudo: { paddingHorizontal: 24, paddingBottom: 64 },
-  cartao: {
-    borderWidth: 1,
-    borderColor: cores.borda,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-  },
-  cartaoApagado: { opacity: 0.6 },
-  linha: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-  data: { fontSize: 18, fontWeight: '700', color: cores.texto },
-  selo: {
-    fontSize: 11,
-    fontWeight: '700',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    overflow: 'hidden',
-  },
-  seloBom: { backgroundColor: cores.aguaClara, color: cores.agua },
-  seloNeutro: { backgroundColor: '#EEE', color: cores.suave },
-  guia: { fontSize: 15, fontWeight: '600', color: cores.texto, marginTop: 6 },
-  detalhe: { fontSize: 13, color: cores.suave, marginTop: 4 },
-  codigo: { fontSize: 13, color: cores.suave, marginTop: 4, fontWeight: '600' },
-  valores: { marginTop: 12 },
-  valorTotal: { fontSize: 20, fontWeight: '700', color: cores.texto },
-  desconto: { fontSize: 12, color: cores.agua, marginTop: 2, fontWeight: '600' },
-  desistir: { color: cores.erro, fontWeight: '600', marginTop: 14 },
-  secao: { fontSize: 15, fontWeight: '700', color: cores.texto, marginTop: 20, marginBottom: 10 },
-  vazio: { color: cores.suave, textAlign: 'center', lineHeight: 21 },
-  acao: {
-    marginTop: 16,
-    borderWidth: 1,
-    borderColor: cores.agua,
-    backgroundColor: cores.aguaClara,
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-  },
-  acaoTexto: { fontSize: 16, fontWeight: '700', color: cores.agua },
-  voltar: { marginTop: 28, alignItems: 'center' },
-  voltarTexto: { color: cores.agua, fontWeight: '600' },
-});
+const criarEstilos = (cores: Cores) =>
+  StyleSheet.create({
+    conteudo: { paddingHorizontal: 24, paddingBottom: 64 },
+    cartao: {
+      borderWidth: 1,
+      borderColor: cores.borda,
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 12,
+    },
+    cartaoApagado: { opacity: 0.6 },
+    linha: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
+    data: { fontSize: 18, fontWeight: '700', color: cores.texto },
+    selo: {
+      fontSize: 11,
+      fontWeight: '700',
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 999,
+      overflow: 'hidden',
+    },
+    seloBom: { backgroundColor: cores.acentoSuave, color: cores.acento },
+    seloNeutro: { backgroundColor: cores.superficieAlta, color: cores.textoSuave },
+    guia: { fontSize: 15, fontWeight: '600', color: cores.texto, marginTop: 6 },
+    detalhe: { fontSize: 13, color: cores.textoSuave, marginTop: 4 },
+    codigo: { fontSize: 13, color: cores.textoSuave, marginTop: 4, fontWeight: '600' },
+    valores: { marginTop: 12 },
+    valorTotal: { fontSize: 20, fontWeight: '700', color: cores.texto },
+    desconto: { fontSize: 12, color: cores.acento, marginTop: 2, fontWeight: '600' },
+    desistir: { color: cores.erro, fontWeight: '600', marginTop: 14 },
+    secao: { fontSize: 15, fontWeight: '700', color: cores.texto, marginTop: 20, marginBottom: 10 },
+    vazio: { color: cores.textoSuave, textAlign: 'center', lineHeight: 21 },
+    acao: {
+      marginTop: 16,
+      borderWidth: 1,
+      borderColor: cores.acento,
+      backgroundColor: cores.acentoSuave,
+      borderRadius: 12,
+      padding: 16,
+      alignItems: 'center',
+    },
+    acaoTexto: { fontSize: 16, fontWeight: '700', color: cores.acento },
+    voltar: { marginTop: 28, alignItems: 'center' },
+    voltarTexto: { color: cores.acento, fontWeight: '600' },
+  });
