@@ -349,6 +349,22 @@ verdade depois que o pagamento estiver no ar.**
 
 Rodar com **revogar** desfaz.
 
+## Robô 11 — Definir quem é o administrador master
+
+O papel de master **não** aparece na tela de cadastro. Se aparecesse, qualquer
+pessoa se promoveria a dona da plataforma. Ele é definido aqui, fora do
+aplicativo, por quem tem a senha do banco.
+
+É o master que aprova guias, define a comissão caso a caso e vê o extrato
+consolidado. **Sem uma conta master, nenhum guia sai de "pendente"** — e sem
+guia aprovado o cliente não encontra barco nenhum.
+
+Usa o segredo `ADMIN_EMAIL` (o mesmo do robô 7). A conta precisa já existir e
+já ter concluído o cadastro no aplicativo — nome preenchido e documentos
+aceitos. Se faltar alguma dessas coisas, o robô diz exatamente qual.
+
+Rodar com **cliente** devolve a conta ao papel comum.
+
 ---
 
 ## Se der erro

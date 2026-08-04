@@ -1,0 +1,96 @@
+name: 11. Definir quem é o administrador master
+
+# O papel de master não pode ser escolhido na tela de cadastro — se pudesse,
+# qualquer pessoa se promoveria a dona da plataforma. Ele é definido aqui, fora
+# do aplicativo, por quem tem a senha do banco.
+#
+# É o master que aprova guias, define comissão caso a caso e vê o extrato
+# consolidado. Sem uma conta master, nenhum guia sai de "pendente" — e sem guia
+# aprovado o cliente não encontra barco nenhum.
+#
+# A conta precisa JÁ EXISTIR e já ter concluído o cadastro no aplicativo (nome
+# e aceite dos documentos). Este robô muda o papel de um perfil que existe; ele
+# não cria conta. Para criar, use o robô 7.
+#
+# Identifica a pessoa pelo segredo ADMIN_EMAIL (o mesmo do robô 7) — e não por
+# um campo de formulário, porque este repositório é público.
+on:
+  workflow_dispatch:
+    inputs:
+      papel:
+        description: 'master = promove · cliente = devolve ao papel comum'
+        required: true
+        default: master
+        type: choice
+        options: [master, cliente]
+
+jobs:
+  definir:
+    name: Definir o papel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Conferir o endereço de conexão
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: tools/checar-conexao.sh
+
+      - name: Aplicar
+        env:
+          URL: ${{ secrets.SUPABASE_DB_URL }}
+          EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          PAPEL: ${{ inputs.papel }}
+        run: |
+          if [ -z "$EMAIL" ]; then
+            echo "::error::Falta o segredo ADMIN_EMAIL (o mesmo usado pelo robô 7)."
+            exit 1
+          fi
+          echo "::add-mask::$EMAIL"
+
+          # As três situações precisam de mensagens diferentes: conta que não
+          # existe, conta que existe mas não concluiu o cadastro, e sucesso.
+          # Uma mensagem só para as três manda a pessoa procurar no lugar errado.
+          # -o /dev/null: o `select set_config` devolveria o e-mail como
+          # resultado, e este registro é público. Os avisos (raise notice) saem
+          # pelo outro canal e continuam aparecendo.
+          psql "$URL" -v ON_ERROR_STOP=1 -q -o /dev/null \
+               -v email="$EMAIL" -v papel="$PAPEL" <<'SQL'
+          -- O psql NÃO substitui :'variavel' dentro de um bloco $$…$$. Por isso
+          -- os valores entram por set_config aqui fora e saem por current_setting
+          -- lá dentro. Sem isto, o bloco receberia o texto ":'email'" literal.
+          select set_config('pv.email', :'email', false),
+                 set_config('pv.papel', :'papel', false);
+
+          do $$
+          declare
+            v_email  text := lower(btrim(current_setting('pv.email')));
+            v_papel  text := current_setting('pv.papel');
+            v_user   uuid;
+          begin
+            select id into v_user from auth.users where lower(email) = v_email;
+            if v_user is null then
+              raise exception 'Não existe conta com esse e-mail. Rode o robô 7 primeiro.';
+            end if;
+
+            if not exists (select 1 from public.profiles where id = v_user) then
+              raise exception 'A conta existe, mas o cadastro no aplicativo não foi concluído. Entre no aplicativo, preencha o nome e aceite os documentos — depois rode este robô de novo.';
+            end if;
+
+            update public.profiles set role = v_papel where id = v_user;
+            raise notice 'Papel definido como %.', v_papel;
+          end $$;
+          SQL
+
+      - name: Conferir sem revelar dados
+        env:
+          URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          psql "$URL" -c "
+            select role as papel, count(*) as pessoas
+            from public.profiles
+            group by role
+            order by role;"
+          echo ""
+          echo "Entre no aplicativo com essa conta: a tela inicial passa a mostrar"
+          echo "'Guias da plataforma', onde você aprova a inscrição e define a comissão."
