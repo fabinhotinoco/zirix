@@ -330,6 +330,25 @@ reservas abandonadas fica desatualizado, o que atrapalha relatório, não venda.
 Usa o mesmo `SUPABASE_DB_URL`. Também pode ser disparado à mão em **Actions** →
 **9. Liberar datas de reservas não pagas** → **Run workflow**.
 
+## Robô 10 — Liberar um guia para teste (sem Mercado Pago)
+
+**Atalho de teste. Não é parte do produto.**
+
+O banco só deixa abrir data na agenda — e só mostra o barco ao cliente — se o
+guia tiver o Mercado Pago conectado. É a porta que impede alguém reservar e
+pagar sem que exista caminho para o dinheiro chegar ao guia.
+
+A conexão de verdade é por OAuth e entra na etapa de pagamento. Até lá, este
+robô marca a **conta de teste** (a do segredo `GUIA_EMAIL`) como conectada,
+para dar para percorrer o fluxo inteiro: abrir data → o cliente encontrar o
+barco → reservar.
+
+É seguro agora justamente porque o pagamento ainda não existe: não há como
+cobrar ninguém por um caminho que não foi construído. **Não use em guia de
+verdade depois que o pagamento estiver no ar.**
+
+Rodar com **revogar** desfaz.
+
 ---
 
 ## Se der erro

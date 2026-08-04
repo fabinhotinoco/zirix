@@ -1,0 +1,81 @@
+name: 10. Liberar um guia para teste (sem Mercado Pago)
+
+# ATALHO DE TESTE, NÃO É PARTE DO PRODUTO.
+#
+# O banco só deixa abrir data na agenda — e só oferece o barco ao cliente — se o
+# guia tiver o Mercado Pago conectado. É a porta que impede alguém reservar e
+# pagar sem que exista caminho para o dinheiro chegar ao guia.
+#
+# A conexão de verdade é por OAuth e entra na etapa de pagamento. Até lá, este
+# robô marca a conta de teste como "conectada" para que dê para percorrer o
+# fluxo inteiro: abrir data, o cliente encontrar o barco, reservar.
+#
+# É seguro agora justamente porque pagamento ainda não existe: não há como
+# cobrar ninguém por um caminho que não foi construído. Assim que o OAuth
+# entrar, a conexão real substitui esta marca.
+#
+# NÃO USE em guia de verdade depois que o pagamento estiver no ar.
+#
+# Identifica o guia pelo segredo GUIA_EMAIL (o mesmo do robô 7) — e não por um
+# campo de formulário, porque este repositório é público.
+on:
+  workflow_dispatch:
+    inputs:
+      acao:
+        description: 'liberar = marca como conectado · revogar = desfaz'
+        required: true
+        default: liberar
+        type: choice
+        options: [liberar, revogar]
+
+jobs:
+  liberar:
+    name: Marcar a conta de teste
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Conferir o endereço de conexão
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: tools/checar-conexao.sh
+
+      - name: Aplicar
+        env:
+          URL: ${{ secrets.SUPABASE_DB_URL }}
+          EMAIL: ${{ secrets.GUIA_EMAIL }}
+          ACAO: ${{ inputs.acao }}
+        run: |
+          if [ -z "$EMAIL" ]; then
+            echo "::error::Falta o segredo GUIA_EMAIL (o mesmo usado pelo robô 7)."
+            exit 1
+          fi
+          echo "::add-mask::$EMAIL"
+
+          if [ "$ACAO" = "revogar" ]; then VALOR="null"; else VALOR="now()"; fi
+
+          # -tA e nenhum select de e-mail: este registro é público.
+          psql "$URL" -v ON_ERROR_STOP=1 -tA -v email="$EMAIL" <<SQL
+          update public.guides g
+             set mp_conectado_em = $VALOR
+            from auth.users u
+           where u.id = g.user_id
+             and lower(u.email) = lower(btrim(:'email'));
+          SQL
+
+          echo "Feito ($ACAO)."
+
+      - name: Conferir sem revelar dados
+        env:
+          URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          psql "$URL" -c "
+            select status,
+                   count(*)                                              as guias,
+                   count(*) filter (where mp_conectado_em is not null)    as com_recebimento
+            from public.guides
+            group by status
+            order by status;"
+          echo ""
+          echo "Guia com recebimento marcado já consegue abrir datas na agenda,"
+          echo "e o barco dele passa a aparecer para o cliente reservar."
