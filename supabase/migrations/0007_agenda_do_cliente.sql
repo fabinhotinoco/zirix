@@ -53,7 +53,12 @@ comment on function public.expirar_reservas(uuid, date) is
 -- -----------------------------------------------------------------------------
 -- Datas que o cliente pode realmente reservar neste barco.
 -- -----------------------------------------------------------------------------
-create or replace function public.datas_disponiveis(p_boat_id uuid)
+-- Derruba antes de criar. O `atualizacoes.sql` reaplica todas as migrações a
+-- cada execução, e uma migração posterior muda o tipo de retorno desta função —
+-- `create or replace` recusa mudança de retorno e travaria o robô 5 no banco
+-- que já está de pé.
+drop function if exists public.datas_disponiveis(uuid);
+create function public.datas_disponiveis(p_boat_id uuid)
 returns table (
   data                      date,
   preco_barco_centavos      integer,
@@ -102,7 +107,8 @@ comment on function public.datas_disponiveis(uuid) is
 -- desativa — e a reserva dele não pode virar uma linha sem nome por causa
 -- disso.
 -- -----------------------------------------------------------------------------
-create or replace function public.minhas_reservas()
+drop function if exists public.minhas_reservas();
+create function public.minhas_reservas()
 returns table (
   id                   uuid,
   codigo               text,

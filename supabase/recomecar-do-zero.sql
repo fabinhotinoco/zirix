@@ -1479,7 +1479,12 @@ comment on function public.expirar_reservas(uuid, date) is
 -- -----------------------------------------------------------------------------
 -- Datas que o cliente pode realmente reservar neste barco.
 -- -----------------------------------------------------------------------------
-create or replace function public.datas_disponiveis(p_boat_id uuid)
+-- Derruba antes de criar. O `atualizacoes.sql` reaplica todas as migrações a
+-- cada execução, e uma migração posterior muda o tipo de retorno desta função —
+-- `create or replace` recusa mudança de retorno e travaria o robô 5 no banco
+-- que já está de pé.
+drop function if exists public.datas_disponiveis(uuid);
+create function public.datas_disponiveis(p_boat_id uuid)
 returns table (
   data                      date,
   preco_barco_centavos      integer,
@@ -1528,7 +1533,8 @@ comment on function public.datas_disponiveis(uuid) is
 -- desativa — e a reserva dele não pode virar uma linha sem nome por causa
 -- disso.
 -- -----------------------------------------------------------------------------
-create or replace function public.minhas_reservas()
+drop function if exists public.minhas_reservas();
+create function public.minhas_reservas()
 returns table (
   id                   uuid,
   codigo               text,
@@ -2070,7 +2076,10 @@ revoke all on function public.dia_com_reserva_nao_fecha() from public, anon, aut
 -- Idempotente.
 -- =============================================================================
 
-create or replace function public.agenda(
+-- Mesmo motivo do 0007: uma migração posterior muda o tipo de retorno, e o
+-- `create or replace` recusaria a mudança quando tudo é reaplicado.
+drop function if exists public.agenda(date, date, uuid);
+create function public.agenda(
   p_de   date,
   p_ate  date,
   p_guia uuid default null

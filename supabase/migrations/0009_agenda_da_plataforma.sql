@@ -12,7 +12,10 @@
 -- Idempotente.
 -- =============================================================================
 
-create or replace function public.agenda(
+-- Mesmo motivo do 0007: uma migração posterior muda o tipo de retorno, e o
+-- `create or replace` recusaria a mudança quando tudo é reaplicado.
+drop function if exists public.agenda(date, date, uuid);
+create function public.agenda(
   p_de   date,
   p_ate  date,
   p_guia uuid default null

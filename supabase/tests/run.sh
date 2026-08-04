@@ -57,6 +57,14 @@ aplicar "$RAIZ/supabase/tests/00_shim_auth.sql"
 for m in "$RAIZ"/supabase/migrations/*.sql; do aplicar "$m"; done
 aplicar "$RAIZ/supabase/seed.sql"
 
+# Reaplicar tudo por cima, que é o que o robô 5 faz num banco que já está de pé.
+# Sem este passo, o CI só testa banco vazio — e uma migração que muda o tipo de
+# retorno de uma função criada por outra anterior passa aqui e trava lá. Já
+# aconteceu: `datas_disponiveis` ganhou a hora de saída e o robô 5 parou com
+# "cannot change return type of existing function".
+echo "→ reaplicando atualizacoes.sql (o que o robô 5 faz num banco existente)"
+aplicar "$RAIZ/supabase/atualizacoes.sql"
+
 echo
 psql -h /tmp -p "$PORT" -U postgres -d "$DB" -q -v ON_ERROR_STOP=1 \
      -f "$RAIZ/supabase/tests/01_rls_test.sql" 2>&1 \

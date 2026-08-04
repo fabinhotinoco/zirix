@@ -52,6 +52,13 @@ jobs:
           for m in supabase/migrations/*.sql; do $PSQL -f "$m"; done
           $PSQL -f supabase/seed.sql
 
+      # O robô 5 aplica atualizacoes.sql num banco que JÁ está de pé, e reaplica
+      # tudo a cada execução. Testar só o banco vazio deixa passar a migração
+      # que muda o tipo de retorno de uma função criada por outra anterior —
+      # `create or replace` recusa isso e o robô trava com o banco no meio.
+      - name: Reaplicar por cima (o que o robô 5 faz num banco existente)
+        run: $PSQL -f supabase/atualizacoes.sql
+
       - name: Publicar documentos legais
         run: |
           node tools/seed-legal.mjs > /tmp/legal.sql
