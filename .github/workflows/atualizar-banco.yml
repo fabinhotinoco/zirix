@@ -16,6 +16,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
 
       - name: Conferir o endereço de conexão
         env:
@@ -39,14 +42,47 @@ jobs:
           URL: ${{ secrets.SUPABASE_DB_URL }}
         run: psql "$URL" -v ON_ERROR_STOP=1 -f supabase/atualizacoes.sql
 
+      # Os documentos legais não vão no atualizacoes.sql: eles vivem em
+      # docs/legal/ e mudam por conta própria. Publicar aqui é o que permite
+      # subir uma versão nova sem terminal — e sem ela, texto novo revisado por
+      # advogado ficaria só no repositório.
+      - name: Publicar os documentos legais
+        env:
+          URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          node tools/seed-legal.mjs > /tmp/legal.sql
+          psql "$URL" -v ON_ERROR_STOP=1 -f /tmp/legal.sql > /dev/null
+          psql "$URL" -c "
+            select slug, versao, to_char(vigente_desde, 'DD/MM/YYYY') as desde
+            from public.legal_documents
+            order by slug, vigente_desde;"
+
       - name: Conferir
         env:
           URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
+          # Versão nova ao lado da antiga é o esperado: quem já aceitou continua
+          # regido pela versão da época, e o aplicativo pede a nova no próximo
+          # acesso. O que NÃO pode acontecer é o hash de um aceite deixar de
+          # bater — isso quer dizer que um texto foi editado sem trocar a versão,
+          # e o registro perde o valor probatório.
           psql "$URL" -c "
-            select tgname as gatilho, tgenabled as ativo
-            from pg_trigger
-            where tgrelid = 'public.terms_acceptances'::regclass
-              and not tgisinternal;"
-          echo "Pronto. Aceites gravados a partir de agora terão IP e user-agent."
-          echo "Os anteriores não mudam — o robô 4 continua mostrando 0 em com_ip para eles."
+            select
+              a.documento_slug as documento,
+              a.versao,
+              count(*) as aceites,
+              case when bool_and(a.hash_sha256 = d.hash_sha256)
+                   then 'confere'
+                   else 'ATENCAO: texto editado sem trocar a versao' end as situacao
+            from public.terms_acceptances a
+            left join public.legal_documents d
+              on d.slug = a.documento_slug and d.versao = a.versao
+            group by a.documento_slug, a.versao
+            order by a.documento_slug;"
+
+          psql "$URL" -c "
+            select count(*) as tabelas
+            from information_schema.tables where table_schema = 'public';"
+          echo ""
+          echo "Pronto. Se algum documento ganhou versão nova, quem já tem cadastro"
+          echo "cai na tela de aceite no próximo acesso — só com o que mudou."
