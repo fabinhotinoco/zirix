@@ -26,6 +26,15 @@ security definer
 set search_path = public, pg_temp
 as $$
 begin
+  -- Fora de uma sessão de usuário (psql, migração, Edge Function com
+  -- service_role) não há quem barrar. Sem esta saída, o próprio semeador do
+  -- banco tem os valores reescritos em silêncio: um guia inserido como
+  -- 'aprovado' vira 'pendente' e a comissão combinada vira nula, sem erro
+  -- nenhum. Foi assim que o teste da porta da agenda quebrou.
+  if auth.uid() is null then
+    return new;
+  end if;
+
   -- O master decide; qualquer outra pessoa só edita a própria apresentação.
   if public.is_master() then
     return new;
@@ -66,6 +75,15 @@ security definer
 set search_path = public, pg_temp
 as $$
 begin
+  -- Fora de uma sessão de usuário (psql, migração, Edge Function com
+  -- service_role) não há quem barrar. Sem esta saída, o próprio semeador do
+  -- banco tem os valores reescritos em silêncio: um guia inserido como
+  -- 'aprovado' vira 'pendente' e a comissão combinada vira nula, sem erro
+  -- nenhum. Foi assim que o teste da porta da agenda quebrou.
+  if auth.uid() is null then
+    return new;
+  end if;
+
   if public.is_master() then
     return new;
   end if;

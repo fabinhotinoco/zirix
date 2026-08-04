@@ -29,12 +29,15 @@ insert into public.profiles (id, nome, role) values
   ('00000000-0000-0000-0000-0000000000c1', 'Cliente Comum', 'cliente'),
   ('00000000-0000-0000-0000-0000000000c2', 'Cliente Diamond','cliente');
 
-insert into public.guides (id, user_id, nome_operacao, status, comissao_percentual, mp_access_token)
+insert into public.guides (id, user_id, nome_operacao, status, comissao_percentual,
+                           mp_access_token, mp_conectado_em)
 values
+  -- Guia A está pronto: aprovado e com conta de recebimento conectada.
   ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000b1',
-   'Pesca Vertical', 'aprovado', 10, 'TOKEN-SECRETO-A'),
+   'Pesca Vertical', 'aprovado', 10, 'TOKEN-SECRETO-A', now()),
+  -- Guia B está aprovado, mas ainda NÃO conectou o Mercado Pago.
   ('10000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-0000000000b2',
-   'Pescaria do Zé', 'aprovado', 12, 'TOKEN-SECRETO-B');
+   'Pescaria do Zé', 'aprovado', 12, 'TOKEN-SECRETO-B', null);
 
 insert into public.boats (id, guide_id, nome, capacidade_max) values
   ('20000000-0000-0000-0000-00000000000a', '10000000-0000-0000-0000-00000000000a', 'Barco A', 4),
@@ -381,16 +384,19 @@ begin
   end if;
 
   -- O ataque não precisa do aplicativo: a chave publicável e um curl bastam.
+  -- O guia A já está aprovado no semeador, então a tentativa tem de mudar para
+  -- um valor DIFERENTE — senão o gatilho não vê alteração e o teste passaria
+  -- sem provar nada.
   begin
-    update public.guides set status = 'aprovado'
+    update public.guides set status = 'suspenso'
      where id = '10000000-0000-0000-0000-00000000000a';
-    raise exception 'FALHA: guia conseguiu se aprovar';
+    raise exception 'FALHA: guia conseguiu mudar o próprio status';
   exception when insufficient_privilege then
     raise notice 'ok  guia não consegue mudar o próprio status';
   end;
 
   begin
-    update public.guides set comissao_percentual = 0
+    update public.guides set comissao_percentual = 1
      where id = '10000000-0000-0000-0000-00000000000a';
     raise exception 'FALHA: guia conseguiu zerar a própria comissão';
   exception when insufficient_privilege then
@@ -536,6 +542,81 @@ begin
   -- E as políticas, que dependem de is_master/is_guide_owner, também.
   select count(*) into n from public.guides;
   raise notice 'ok  políticas seguem avaliando (guides respondeu com % linha(s))', n;
+end $$;
+rollback;
+
+-- =============================================================================
+do $$ begin raise notice '--- 15. Sem Mercado Pago conectado, não se abre data ---'; end $$;
+-- =============================================================================
+-- Se essa porta não existir, um cliente reserva e paga sem que exista caminho
+-- para o dinheiro chegar ao guia — e o problema aparece só no pagamento, com o
+-- cliente no meio.
+begin;
+select auth.entrar_como('00000000-0000-0000-0000-0000000000b2');
+
+do $$
+begin
+  if current_user <> 'authenticated' then
+    raise exception 'FALHA: teste rodando como %, não como authenticated', current_user;
+  end if;
+
+  begin
+    insert into public.boat_availability
+      (boat_id, data, preco_barco_centavos, preco_passageiro_centavos)
+    values ('20000000-0000-0000-0000-00000000000b', current_date + 60, 50000, 0);
+    raise exception 'FALHA: guia sem Mercado Pago conseguiu abrir data';
+  exception when insufficient_privilege then
+    raise notice 'ok  guia sem Mercado Pago conectado não abre data';
+  end;
+end $$;
+rollback;
+
+begin;
+select auth.entrar_como('00000000-0000-0000-0000-0000000000b1');
+do $$
+begin
+  insert into public.boat_availability
+    (boat_id, data, preco_barco_centavos, preco_passageiro_centavos)
+  values ('20000000-0000-0000-0000-00000000000a', current_date + 60, 50000, 0);
+  raise notice 'ok  guia pronto abre data normalmente';
+end $$;
+rollback;
+
+-- =============================================================================
+do $$ begin raise notice '--- 16. Agenda de operação não aprovada não é pública ---'; end $$;
+-- =============================================================================
+begin;
+set role postgres;
+insert into auth.users (id, email)
+  values ('00000000-0000-0000-0000-0000000000b9', 'pendente@teste');
+insert into public.profiles (id, nome, role)
+  values ('00000000-0000-0000-0000-0000000000b9', 'Guia Pendente', 'guia');
+insert into public.guides (id, user_id, nome_operacao, status)
+  values ('10000000-0000-0000-0000-00000000000c',
+          '00000000-0000-0000-0000-0000000000b9', 'Ainda Pendente', 'pendente');
+insert into public.boats (id, guide_id, nome, capacidade_max)
+  values ('20000000-0000-0000-0000-00000000000c',
+          '10000000-0000-0000-0000-00000000000c', 'Barco C', 5);
+insert into public.boat_availability (boat_id, data, preco_barco_centavos, preco_passageiro_centavos)
+  values ('20000000-0000-0000-0000-00000000000c', current_date + 40, 99000, 0);
+
+select auth.entrar_como('00000000-0000-0000-0000-0000000000c1');
+do $$
+declare n integer;
+begin
+  select count(*) into n from public.boat_availability
+   where boat_id = '20000000-0000-0000-0000-00000000000c';
+  if n <> 0 then
+    raise exception 'FALHA: cliente viu a agenda e o preço de operação pendente';
+  end if;
+  raise notice 'ok  cliente não vê agenda nem preço de operação pendente';
+
+  select count(*) into n from public.boat_availability
+   where boat_id = '20000000-0000-0000-0000-00000000000a';
+  if n < 1 then
+    raise exception 'FALHA: cliente deixou de ver a agenda de operação aprovada';
+  end if;
+  raise notice 'ok  agenda de operação aprovada continua visível';
 end $$;
 rollback;
 

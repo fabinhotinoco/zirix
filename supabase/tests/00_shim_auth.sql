@@ -15,10 +15,16 @@ create table if not exists auth.users (
 );
 
 -- Igual ao Supabase: lê o sub do JWT injetado na sessão.
+-- O cast precisa ser tolerante: fora de uma requisição a configuração pode
+-- estar ausente OU vazia, e ''::jsonb estoura com "invalid input syntax for
+-- type json" — um erro que não tem nada a ver com o teste em andamento.
 create or replace function auth.uid()
 returns uuid
 language sql stable as $$
-  select nullif(current_setting('request.jwt.claims', true)::jsonb ->> 'sub', '')::uuid;
+  select nullif(
+           nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub',
+           ''
+         )::uuid;
 $$;
 
 do $$
