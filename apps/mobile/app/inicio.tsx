@@ -15,8 +15,18 @@ export default function Inicio() {
     <ScrollView contentContainerStyle={[estilos.conteudo, { paddingTop: insets.top + 32 }]}>
       <Titulo>Olá, {perfil?.nome.split(' ')[0]}</Titulo>
       <Subtitulo>
-        Cadastro concluído e aceites registrados. A agenda de pescarias entra na próxima etapa.
+        Escolha um guia, veja as datas livres e feche a pescaria. O pagamento pelo
+        aplicativo entra na próxima etapa.
       </Subtitulo>
+
+      <Pressable onPress={() => router.push('/buscar')} style={estilos.acao}>
+        <Text style={estilos.acaoTexto}>Procurar pescaria</Text>
+        <Text style={estilos.acaoNota}>Guias, barcos e datas livres</Text>
+      </Pressable>
+      <Pressable onPress={() => router.push('/reservas')} style={estilos.acao}>
+        <Text style={estilos.acaoTexto}>Minhas reservas</Text>
+        <Text style={estilos.acaoNota}>Datas, acompanhantes e valores</Text>
+      </Pressable>
 
       <View style={estilos.cartao}>
         <Text style={estilos.rotulo}>Perfil</Text>

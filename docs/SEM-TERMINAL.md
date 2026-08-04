@@ -313,8 +313,22 @@ criar outra.
 ## Robô 8 — Testes (roda sozinho)
 
 Não precisa apertar nada. A cada alteração no código, ele confere as regras de
-segurança do banco e as contas de comissão e cancelamento. Se algo quebrar,
-aparece um ✗ vermelho na aba **Actions**.
+segurança do banco, as contas de comissão e cancelamento, e percorre as telas de
+reserva num navegador de verdade. Se algo quebrar, aparece um ✗ vermelho na aba
+**Actions**.
+
+## Robô 9 — Liberar datas de reservas não pagas (roda sozinho)
+
+De 15 em 15 minutos, marca como expirada toda reserva que passou do prazo de
+pagamento, devolvendo a data à agenda.
+
+É faxina, não a trava principal. Quem chega para reservar já limpa o próprio dia
+antes de tentar, e a agenda do cliente ignora reserva vencida. Se este robô
+ficar uma semana sem rodar, **nenhuma data fica presa** — só o rótulo de
+reservas abandonadas fica desatualizado, o que atrapalha relatório, não venda.
+
+Usa o mesmo `SUPABASE_DB_URL`. Também pode ser disparado à mão em **Actions** →
+**9. Liberar datas de reservas não pagas** → **Run workflow**.
 
 ---
 

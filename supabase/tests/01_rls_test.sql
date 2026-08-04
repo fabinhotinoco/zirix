@@ -1006,4 +1006,167 @@ begin
 end $$;
 rollback;
 
+-- =============================================================================
+do $$ begin raise notice '--- 18. O que o cliente vê da agenda e das reservas ---'; end $$;
+-- =============================================================================
+-- "Esta data está ocupada" é informação sobre a reserva de outra pessoa. O
+-- cliente precisa dela para não escolher um dia vendido — e não pode receber
+-- nada além dela.
+begin;
+set role postgres;
+insert into public.legal_documents (slug, versao, titulo, corpo_markdown) values
+  ('politica_cancelamento',  'teste-1', 'Política', 'texto da política'),
+  ('termo_responsabilidade', 'teste-1', 'Termo',    'texto do termo');
+insert into public.boat_availability (boat_id, data, preco_barco_centavos, preco_passageiro_centavos)
+values ('20000000-0000-0000-0000-00000000000a', current_date + 45, 60000, 15000),
+       ('20000000-0000-0000-0000-00000000000a', current_date + 46, 60000, 15000),
+       ('20000000-0000-0000-0000-00000000000a', current_date + 47, 60000, 15000);
+-- +47 fica bloqueada pelo guia.
+update public.boat_availability set status = 'bloqueado'
+ where boat_id = '20000000-0000-0000-0000-00000000000a' and data = current_date + 47;
+
+select auth.entrar_como('00000000-0000-0000-0000-0000000000c2');
+do $$
+declare n integer;
+begin
+  perform public.criar_reserva('20000000-0000-0000-0000-00000000000a',
+                               current_date + 46, 2, '[]'::jsonb, true, true);
+  select count(*) into n from public.datas_disponiveis('20000000-0000-0000-0000-00000000000a')
+   where data = current_date + 46;
+  if n <> 0 then raise exception 'FALHA: data que acabei de reservar continua sendo oferecida'; end if;
+end $$;
+
+select auth.entrar_como('00000000-0000-0000-0000-0000000000c1');
+do $$
+declare n integer;
+begin
+  -- A data +30 já está confirmada na massa de teste; +46 acabou de ser
+  -- reservada por outra pessoa; +47 está bloqueada. Sobra a +45 e a +60 que
+  -- nenhum bloco anterior criou.
+  select count(*) into n from public.datas_disponiveis('20000000-0000-0000-0000-00000000000a')
+   where data in (current_date + 30, current_date + 46, current_date + 47);
+  if n <> 0 then
+    raise exception 'FALHA: agenda ofereceu % data(s) já vendida(s) ou fechada(s)', n;
+  end if;
+
+  select count(*) into n from public.datas_disponiveis('20000000-0000-0000-0000-00000000000a')
+   where data = current_date + 45;
+  if n <> 1 then raise exception 'FALHA: a data livre sumiu da agenda'; end if;
+  raise notice 'ok  agenda esconde data vendida, expirada e bloqueada, e mostra a livre';
+
+  -- Barco de guia sem Mercado Pago não aparece para ninguém reservar.
+  select count(*) into n from public.datas_disponiveis('20000000-0000-0000-0000-00000000000b');
+  if n <> 0 then
+    raise exception 'FALHA: agenda de guia sem caminho de recebimento foi oferecida';
+  end if;
+  raise notice 'ok  agenda de guia sem Mercado Pago não é oferecida';
+
+  -- E "minhas reservas" continua sendo só minha.
+  select count(*) into n from public.minhas_reservas() where data = current_date + 46;
+  if n <> 0 then
+    raise exception 'FALHA: minhas_reservas devolveu a reserva de outra pessoa';
+  end if;
+  select count(*) into n from public.minhas_reservas();
+  if n <> 1 then
+    raise exception 'FALHA: esperava a própria reserva confirmada, vieram %', n;
+  end if;
+  raise notice 'ok  minhas_reservas devolve só as próprias, com nome do guia e do barco';
+end $$;
+rollback;
+
+-- --- reserva abandonada devolve a data -------------------------------------
+begin;
+set role postgres;
+insert into public.legal_documents (slug, versao, titulo, corpo_markdown) values
+  ('politica_cancelamento',  'teste-1', 'Política', 'texto da política'),
+  ('termo_responsabilidade', 'teste-1', 'Termo',    'texto do termo');
+insert into public.boat_availability (boat_id, data, preco_barco_centavos, preco_passageiro_centavos)
+values ('20000000-0000-0000-0000-00000000000a', current_date + 45, 60000, 15000);
+
+select auth.entrar_como('00000000-0000-0000-0000-0000000000c2');
+do $$
+declare r public.bookings;
+begin
+  r := public.criar_reserva('20000000-0000-0000-0000-00000000000a',
+                            current_date + 45, 2, '[]'::jsonb, true, true);
+  -- Ninguém pagou e os 20 minutos passaram.
+  set local role postgres;
+  update public.bookings set expira_em = now() - interval '1 minute' where id = r.id;
+end $$;
+
+select auth.entrar_como('00000000-0000-0000-0000-0000000000c1');
+do $$
+declare n integer; r public.bookings;
+begin
+  select count(*) into n from public.datas_disponiveis('20000000-0000-0000-0000-00000000000a')
+   where data = current_date + 45;
+  if n <> 1 then
+    raise exception 'FALHA: reserva abandonada continuou segurando a data';
+  end if;
+  raise notice 'ok  reserva não paga e vencida devolve a data à agenda';
+
+  -- E outra pessoa consegue fechá-la de verdade, sem esbarrar na trava única.
+  r := public.criar_reserva('20000000-0000-0000-0000-00000000000a',
+                            current_date + 45, 2, '[]'::jsonb, true, true);
+  if r.user_id <> '00000000-0000-0000-0000-0000000000c1' then
+    raise exception 'FALHA: a data não passou para quem reservou depois';
+  end if;
+  raise notice 'ok  a data vencida é efetivamente reservável por outra pessoa';
+end $$;
+rollback;
+
+-- --- desistir antes de pagar -------------------------------------------------
+begin;
+set role postgres;
+insert into public.legal_documents (slug, versao, titulo, corpo_markdown) values
+  ('politica_cancelamento',  'teste-1', 'Política', 'texto da política'),
+  ('termo_responsabilidade', 'teste-1', 'Termo',    'texto do termo');
+insert into public.boat_availability (boat_id, data, preco_barco_centavos, preco_passageiro_centavos)
+values ('20000000-0000-0000-0000-00000000000a', current_date + 45, 60000, 15000);
+
+select auth.entrar_como('00000000-0000-0000-0000-0000000000c1');
+do $$
+declare r public.bookings; n integer;
+begin
+  r := public.criar_reserva('20000000-0000-0000-0000-00000000000a',
+                            current_date + 45, 2, '[]'::jsonb, true, true);
+  r := public.cancelar_reserva(r.id);
+  if r.status <> 'cancelada' or r.cancelada_em is null then
+    raise exception 'FALHA: cancelamento não pegou (status %)', r.status;
+  end if;
+
+  select count(*) into n from public.datas_disponiveis('20000000-0000-0000-0000-00000000000a')
+   where data = current_date + 45;
+  if n <> 1 then raise exception 'FALHA: cancelar não devolveu a data à agenda'; end if;
+  raise notice 'ok  desistência antes de pagar devolve a data na hora';
+
+  -- Repetir o cancelamento não pode virar erro: o dedo escorrega, a rede cai.
+  perform public.cancelar_reserva(r.id);
+  raise notice 'ok  cancelar de novo é inofensivo';
+end $$;
+
+-- A reserva confirmada e paga da massa de teste tem de resistir.
+do $$
+begin
+  begin
+    perform public.cancelar_reserva('30000000-0000-0000-0000-00000000000a');
+    raise exception 'FALHA: cancelou reserva com sinal pago sem devolver nada';
+  exception when check_violation then
+    raise notice 'ok  reserva com dinheiro dentro não é cancelada por esta função';
+  end;
+end $$;
+
+-- E ninguém cancela a reserva alheia.
+select auth.entrar_como('00000000-0000-0000-0000-0000000000c2');
+do $$
+begin
+  begin
+    perform public.cancelar_reserva('30000000-0000-0000-0000-00000000000a');
+    raise exception 'FALHA: cancelou a reserva de outra pessoa';
+  exception when insufficient_privilege then
+    raise notice 'ok  reserva alheia não é cancelável';
+  end;
+end $$;
+rollback;
+
 do $$ begin raise notice ''; raise notice 'TODOS OS TESTES DE RLS PASSARAM'; end $$;

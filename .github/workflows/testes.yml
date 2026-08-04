@@ -92,3 +92,34 @@ jobs:
 
       - name: Empacotar o JavaScript (Android)
         run: npx expo export --platform android --output-dir /tmp/bundle-android
+
+  telas:
+    name: Telas (navegador de verdade, banco simulado)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    env:
+      EXPO_PUBLIC_SUPABASE_URL: https://exemplo.supabase.co
+      EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: chave-de-mentira-so-para-empacotar
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      - name: Gerar a versão web
+        run: npx expo export --platform web --output-dir /tmp/dist-teste
+
+      # Tipo certo e empacotamento em ordem não impedem um botão de ficar
+      # desabilitado sem explicar o motivo. Isto abre a tela num navegador e
+      # percorre o caminho da pessoa. Nenhuma requisição sai daqui: todo host
+      # supabase.co é interceptado e respondido com massa de teste.
+      - name: Percorrer as telas de reserva
+        env:
+          DIST: /tmp/dist-teste
+        run: node testes/telas-de-reserva.mjs

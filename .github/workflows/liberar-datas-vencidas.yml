@@ -1,0 +1,49 @@
+name: 9. Liberar datas de reservas não pagas
+
+# Marca como expirada toda reserva que ficou pendente além do prazo de
+# pagamento, devolvendo a data à agenda.
+#
+# É faxina, não a trava principal: quem chega para reservar já limpa o próprio
+# dia antes de tentar (função criar_reserva), e a agenda do cliente ignora
+# reserva vencida (função datas_disponiveis). Ou seja, se este robô ficar uma
+# semana sem rodar, nenhuma data fica presa — só o campo `status` de reservas
+# abandonadas fica desatualizado, o que atrapalha relatório, não venda.
+#
+# Roda sozinho de 15 em 15 minutos e também pode ser disparado à mão.
+# Usa o mesmo segredo SUPABASE_DB_URL.
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+# Duas execuções ao mesmo tempo fariam o mesmo trabalho duas vezes.
+concurrency:
+  group: liberar-datas-vencidas
+  cancel-in-progress: false
+
+jobs:
+  liberar:
+    name: Liberar as datas
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Conferir o endereço de conexão
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: tools/checar-conexao.sh
+
+      - name: Expirar e mostrar quantas
+        env:
+          URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          # Só o número. Este registro é público: nada de código de reserva,
+          # nome de guia ou valor.
+          N=$(psql "$URL" -tAc "select public.expirar_reservas();")
+          echo "Reservas expiradas nesta passagem: ${N:-0}"
+
+          psql "$URL" -c "
+            select status, count(*) as reservas
+            from public.bookings
+            group by status
+            order by status;"

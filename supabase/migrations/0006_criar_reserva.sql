@@ -193,6 +193,18 @@ begin
   v_comissao_cent := round(v_liquido * v_comissao / 100.0);
   v_sinal         := round(v_liquido * v_sinal_pct / 100.0);
 
+  -- Reserva não paga que passou da hora não segura mais a data. Varrer aqui,
+  -- e não só num agendador, é o que impede que uma falha do robô deixe datas
+  -- presas: quem chega para reservar limpa o próprio dia antes de tentar.
+  update public.bookings
+     set status = 'expirada'
+   where boat_id = p_boat_id
+     and data    = p_data
+     and status  = 'pendente'
+     and status_pagamento = 'aguardando_sinal'
+     and expira_em is not null
+     and expira_em < now();
+
   insert into public.bookings (
     user_id, guide_id, boat_id, data, qtd_pescadores,
     preco_barco_centavos, preco_passageiro_centavos,
