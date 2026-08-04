@@ -105,3 +105,56 @@ export function rotulo(vista: Vista, ancora: string): string {
   const [ano, mes] = de.split('-').map(Number);
   return `${MESES[mes - 1]} de ${ano}`;
 }
+
+/**
+ * As semanas que o mês ocupa na tela, de domingo a sábado.
+ *
+ * Começa no domingo ANTES do dia 1 e termina no sábado DEPOIS do último — é o
+ * que faz a grade ficar retangular. Os dias das pontas pertencem aos meses
+ * vizinhos e continuam sendo dias de verdade: escondê-los deixaria buracos e,
+ * pior, esconderia uma pescaria marcada para 31 de janeiro de quem está
+ * olhando fevereiro.
+ */
+export function gradeDoMes(ancora: string): string[][] {
+  const { de, ate } = intervalo('mes', ancora);
+  const inicio = somarDias(de, -paraData(de).getUTCDay());
+  const fim = somarDias(ate, 6 - paraData(ate).getUTCDay());
+
+  const semanas: string[][] = [];
+  let dia = inicio;
+  while (dia <= fim) {
+    const semana: string[] = [];
+    for (let i = 0; i < 7; i++) {
+      semana.push(dia);
+      dia = somarDias(dia, 1);
+    }
+    semanas.push(semana);
+  }
+  return semanas;
+}
+
+/**
+ * O intervalo que precisa ser BUSCADO, que não é sempre o que a vista cobre.
+ *
+ * Na grade do mês aparecem dias dos meses vizinhos. Buscar só o mês deixaria
+ * essas casas vazias — e uma casa vazia não se distingue de um dia sem saída.
+ */
+export function intervaloVisivel(vista: Vista, ancora: string): Intervalo {
+  if (vista !== 'mes') return intervalo(vista, ancora);
+  const semanas = gradeDoMes(ancora);
+  return { de: semanas[0][0], ate: semanas[semanas.length - 1][6] };
+}
+
+/** Iniciais dos dias, de domingo a sábado. */
+export const DIAS_DA_SEMANA = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'] as const;
+
+/** Os sete dias da semana que contém a âncora. */
+export function diasDaSemana(ancora: string): string[] {
+  const { de } = intervalo('semana', ancora);
+  return Array.from({ length: 7 }, (_, i) => somarDias(de, i));
+}
+
+/** O mês de um dia, para separar o que é do mês em exibição do que é vizinho. */
+export function mesDe(iso: string): string {
+  return iso.slice(0, 7);
+}

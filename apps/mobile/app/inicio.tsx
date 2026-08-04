@@ -99,16 +99,16 @@ export default function Inicio() {
           pescaria, o guia vem ver o dia dele, o master vem aprovar. */}
       {guia ? (
         <Acao
-          para="/minha-agenda"
+          para="/calendario"
           titulo="Minha agenda"
-          nota="Semana, mês ou um dia — com quitado e em aberto"
+          nota="Mês, semana ou dia — com quitado e em aberto"
           principal
         />
       ) : master ? (
         <Acao
-          para="/guias"
-          titulo="Guias da plataforma"
-          nota="Aprovar inscrições e definir comissões"
+          para="/calendario"
+          titulo="Agenda da plataforma"
+          nota="Todas as operações, num calendário só"
           principal
         />
       ) : (
@@ -129,6 +129,13 @@ export default function Inicio() {
 
       {!guia && !master && (
         <Acao para="/reservas" titulo="Minhas reservas" nota="Datas, acompanhantes e valores" />
+      )}
+      {master && (
+        <Acao
+          para="/guias"
+          titulo="Guias da plataforma"
+          nota="Aprovar inscrições e definir comissões"
+        />
       )}
       {(guia || master) && (
         <Acao para="/buscar" titulo="Procurar pescaria" nota="Ver a plataforma como um cliente vê" />

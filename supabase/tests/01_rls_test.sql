@@ -1335,7 +1335,7 @@ end $$;
 rollback;
 
 -- =============================================================================
-do $$ begin raise notice '--- 20. Agenda do guia: semana, mês e dia ---'; end $$;
+do $$ begin raise notice '--- 20. Agenda: do guia, do master, por período ---'; end $$;
 -- =============================================================================
 begin;
 set role postgres;
@@ -1366,26 +1366,26 @@ begin
   end if;
 
   -- Semana
-  select count(*) into n from public.agenda_do_guia(current_date, current_date + 7);
+  select count(*) into n from public.agenda(current_date, current_date + 7);
   if n <> 1 then raise exception 'FALHA: a semana devolveu % dia(s), esperado 1', n; end if;
 
   -- Mês. Contar às cegas esconde erro: a massa de teste já tem a data +30
   -- vendida, e ela precisa aparecer junto. Então confere-se o conjunto.
-  select count(*) into n from public.agenda_do_guia(current_date, current_date + 30)
+  select count(*) into n from public.agenda(current_date, current_date + 30)
    where data in (current_date + 3, current_date + 10, current_date + 30);
   if n <> 3 then raise exception 'FALHA: faltou dia no mês (achei % dos 3)', n; end if;
 
-  select count(*) into n from public.agenda_do_guia(current_date, current_date + 30)
+  select count(*) into n from public.agenda(current_date, current_date + 30)
    where data = current_date + 40;
   if n <> 0 then raise exception 'FALHA: o mês trouxe uma data de fora do período'; end if;
 
   -- Dia específico
-  select count(*) into n from public.agenda_do_guia(current_date + 10, current_date + 10);
+  select count(*) into n from public.agenda(current_date + 10, current_date + 10);
   if n <> 1 then raise exception 'FALHA: o dia devolveu % linha(s)', n; end if;
   raise notice 'ok  a mesma função responde semana, mês e dia específico';
 
   -- O dia reservado traz cliente e dinheiro; o dia livre não inventa zero.
-  select * into l from public.agenda_do_guia(current_date + 3, current_date + 3);
+  select * into l from public.agenda(current_date + 3, current_date + 3);
   if l.cliente_nome is null or l.booking_id is null then
     raise exception 'FALHA: dia reservado veio sem cliente';
   end if;
@@ -1395,7 +1395,7 @@ begin
   end if;
   raise notice 'ok  dia reservado mostra o cliente, o quitado e o que está em aberto';
 
-  select * into l from public.agenda_do_guia(current_date + 10, current_date + 10);
+  select * into l from public.agenda(current_date + 10, current_date + 10);
   if l.valor_pago_centavos is not null then
     raise exception 'FALHA: dia livre veio com "pago %" em vez de vazio', l.valor_pago_centavos;
   end if;
@@ -1409,14 +1409,58 @@ declare n integer;
 begin
   -- Zero linhas provaria pouco: o guia B tem barco próprio e data própria no
   -- período. O que não pode aparecer é o barco do guia A.
-  select count(*) into n from public.agenda_do_guia(current_date, current_date + 60)
+  select count(*) into n from public.agenda(current_date, current_date + 60)
    where boat_id = '20000000-0000-0000-0000-00000000000a';
   if n <> 0 then raise exception 'FALHA: guia B viu % dia(s) do barco do guia A', n; end if;
 
-  select count(*) into n from public.agenda_do_guia(current_date, current_date + 60)
+  select count(*) into n from public.agenda(current_date, current_date + 60)
    where boat_id = '20000000-0000-0000-0000-00000000000b';
   if n < 1 then raise exception 'FALHA: guia B deixou de ver o próprio barco'; end if;
   raise notice 'ok  cada guia vê a própria agenda, e só a própria';
+
+  -- E pedir explicitamente a agenda do outro não abre nada: o filtro de dono
+  -- vem antes do filtro de guia, e é essa ordem que sustenta a função.
+  select count(*) into n from public.agenda(current_date, current_date + 60,
+                                            '10000000-0000-0000-0000-00000000000a');
+  if n <> 0 then
+    raise exception 'FALHA: guia B pediu a agenda do guia A e recebeu % linha(s)', n;
+  end if;
+  raise notice 'ok  pedir a agenda alheia pelo nome não contorna nada';
+
+  -- E a lista de guias do filtro é só do master.
+  select count(*) into n from public.guias_com_agenda();
+  if n <> 0 then raise exception 'FALHA: guia enxergou a lista de operações do master'; end if;
+  raise notice 'ok  a lista de operações do filtro é exclusiva do master';
+end $$;
+
+-- O master vê a plataforma inteira, e consegue estreitar num guia só.
+select auth.entrar_como('00000000-0000-0000-0000-0000000000aa');
+do $$
+declare n integer; l record;
+begin
+  select count(distinct guide_id) into n from public.agenda(current_date, current_date + 60);
+  if n < 2 then
+    raise exception 'FALHA: master viu % operação(ões), esperava as duas', n;
+  end if;
+  raise notice 'ok  o master enxerga a agenda de todos os guias';
+
+  select count(distinct guide_id) into n
+    from public.agenda(current_date, current_date + 60, '10000000-0000-0000-0000-00000000000a');
+  if n <> 1 then
+    raise exception 'FALHA: filtrar por um guia devolveu % operação(ões)', n;
+  end if;
+  raise notice 'ok  o master consegue estreitar num guia só';
+
+  select * into l from public.agenda(current_date + 3, current_date + 3);
+  if l.guia_nome is null then raise exception 'FALHA: linha sem o nome da operação'; end if;
+  if l.comissao_centavos is null then
+    raise exception 'FALHA: master não recebeu a comissão da reserva';
+  end if;
+  raise notice 'ok  cada linha traz a operação e a comissão da plataforma';
+
+  select count(*) into n from public.guias_com_agenda();
+  if n < 2 then raise exception 'FALHA: filtro do master listou % operação(ões)', n; end if;
+  raise notice 'ok  o master recebe a lista de operações para filtrar';
 end $$;
 rollback;
 

@@ -41,8 +41,8 @@ const PARES: Par[] = [
   { frente: 'acento', fundo: 'acentoSuave', minimo: TEXTO, onde: 'texto do selo tingido' },
   { frente: 'erro', fundo: 'fundo', minimo: TEXTO, onde: 'mensagem de erro' },
   { frente: 'erro', fundo: 'superficie', minimo: TEXTO, onde: 'erro dentro do cartão' },
-  { frente: 'sucesso', fundo: 'superficie', minimo: INTERFACE, onde: 'confirmação' },
-  { frente: 'aviso', fundo: 'superficie', minimo: INTERFACE, onde: 'alerta' },
+  { frente: 'sucesso', fundo: 'superficie', minimo: TEXTO, onde: 'texto de confirmação' },
+  { frente: 'aviso', fundo: 'superficie', minimo: TEXTO, onde: 'texto de alerta' },
   { frente: 'borda', fundo: 'superficie', minimo: 1.25, onde: 'borda do cartão' },
 ];
 

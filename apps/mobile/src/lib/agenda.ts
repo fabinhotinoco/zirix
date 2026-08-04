@@ -1,15 +1,21 @@
 /**
- * A agenda do guia, todos os barcos juntos.
+ * A agenda: a do guia e a do master.
  *
- * Vem de uma função do banco e não de consultas soltas: uma linha reúne preço,
- * reserva, cliente e dinheiro, e montar isso no aplicativo exigiria quatro
- * consultas — com a chance de uma delas trazer o que o guia não pode ver.
+ * Uma função só no banco, e não duas. A regra de quem enxerga o quê tem de
+ * morar num lugar — duas consultas parecidas divergem, e no dia em que
+ * divergirem o lado que vaza é o do master vendo tudo.
+ *
+ * Nada aqui filtra por guia como proteção: `guiaId` só estreita o que o banco
+ * já permitiu. Um guia que passe o identificador de outro recebe zero linhas,
+ * porque lá dentro o filtro de dono vem antes.
  */
 
 import { supabase } from './supabase';
 
 export interface LinhaDaAgenda {
   data: string;
+  guide_id: string;
+  guia_nome: string;
   boat_id: string;
   barco_nome: string;
   /** Nulo quando o dia foi fechado mas a reserva continua de pé. */
@@ -30,12 +36,34 @@ export interface LinhaDaAgenda {
   valor_pago_centavos: number | null;
   valor_aberto_centavos: number | null;
   repasse_guia_centavos: number | null;
+  comissao_centavos: number | null;
 }
 
-export async function agendaDoGuia(de: string, ate: string): Promise<LinhaDaAgenda[]> {
-  const { data, error } = await supabase.rpc('agenda_do_guia', { p_de: de, p_ate: ate });
+export interface GuiaDoFiltro {
+  id: string;
+  nome_operacao: string;
+  cidade: string | null;
+}
+
+export async function agenda(
+  de: string,
+  ate: string,
+  guiaId?: string | null,
+): Promise<LinhaDaAgenda[]> {
+  const { data, error } = await supabase.rpc('agenda', {
+    p_de: de,
+    p_ate: ate,
+    p_guia: guiaId ?? null,
+  });
   if (error) throw new Error(error.message);
   return (data ?? []) as unknown as LinhaDaAgenda[];
+}
+
+/** Operações aprovadas, para o filtro do master. Vazia para quem não é master. */
+export async function guiasComAgenda(): Promise<GuiaDoFiltro[]> {
+  const { data, error } = await supabase.rpc('guias_com_agenda');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as GuiaDoFiltro[];
 }
 
 export interface ResumoDoPeriodo {
@@ -43,6 +71,7 @@ export interface ResumoDoPeriodo {
   reservados: number;
   livres: number;
   aReceber: number;
+  comissao: number;
   recebido: number;
   emAberto: number;
 }
@@ -50,12 +79,33 @@ export interface ResumoDoPeriodo {
 /** O total do período. Só soma o que tem reserva — dia livre não entra em conta. */
 export function resumir(linhas: LinhaDaAgenda[]): ResumoDoPeriodo {
   const comReserva = linhas.filter((l) => l.booking_id !== null);
+  const soma = (f: (l: LinhaDaAgenda) => number | null) =>
+    comReserva.reduce((s, l) => s + (f(l) ?? 0), 0);
+
   return {
     dias: linhas.length,
     reservados: comReserva.length,
     livres: linhas.length - comReserva.length,
-    aReceber: comReserva.reduce((s, l) => s + (l.repasse_guia_centavos ?? 0), 0),
-    recebido: comReserva.reduce((s, l) => s + (l.valor_pago_centavos ?? 0), 0),
-    emAberto: comReserva.reduce((s, l) => s + (l.valor_aberto_centavos ?? 0), 0),
+    aReceber: soma((l) => l.repasse_guia_centavos),
+    comissao: soma((l) => l.comissao_centavos),
+    recebido: soma((l) => l.valor_pago_centavos),
+    emAberto: soma((l) => l.valor_aberto_centavos),
   };
+}
+
+export type EstadoDoDia = 'confirmada' | 'pendente' | 'aberto' | 'bloqueado';
+
+/** Em que pé está uma saída — é o que decide a cor no calendário. */
+export function estadoDa(l: LinhaDaAgenda): EstadoDoDia {
+  if (l.reserva_status === 'confirmada') return 'confirmada';
+  if (l.reserva_status === 'pendente') return 'pendente';
+  return l.dia_status === 'bloqueado' ? 'bloqueado' : 'aberto';
+}
+
+/** As linhas agrupadas por data, para a grade do calendário. */
+export function porData(linhas: LinhaDaAgenda[]): Record<string, LinhaDaAgenda[]> {
+  return linhas.reduce<Record<string, LinhaDaAgenda[]>>((mapa, l) => {
+    (mapa[l.data] ??= []).push(l);
+    return mapa;
+  }, {});
 }

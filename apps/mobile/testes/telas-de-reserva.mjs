@@ -57,7 +57,9 @@ const DOCS = [
   { slug: 'termo_responsabilidade', versao: 'v1', titulo: 'Termo de Responsabilidade', hash_sha256: 'b'.repeat(64), vigente_desde: '2026-01-01T00:00:00Z' },
 ];
 
+const PERFIL = { id: 'u-1', nome: 'Fabio Tinoco', role: 'cliente' };
 let chamadaCriarReserva = null;
+let chamadaAgenda = null;
 const RESERVAS = [];
 
 const AVISOS = [
@@ -79,11 +81,32 @@ const AVISOS = [
   },
 ];
 
+/**
+ * Datas relativas a hoje. Massa com data fixa envelhece: um teste escrito em
+ * agosto com dados de dezembro passa hoje e falha em janeiro, e o motivo não
+ * aparece em lugar nenhum.
+ */
+const emDias = (n) => {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  const p = (v) => String(v).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+};
+const brDe = (iso) => iso.split('-').reverse().join('/');
+const DIA_VENDIDO = emDias(0);
+const DIA_LIVRE = emDias(1);
+
+const GUIAS_FILTRO = [
+  { id: 'g-1', nome_operacao: 'Pesca Vertical', cidade: 'Boa Esperança' },
+  { id: 'g-2', nome_operacao: 'Pescaria do Zé', cidade: 'Guapé' },
+];
+
 // Um dia vendido e um livre, para conferir que a tela não inventa "pago zero"
 // num dia em que não existe pescaria.
 const AGENDA = [
   {
-    data: '2026-12-20', boat_id: 'b-1', barco_nome: 'Tucunaré I',
+    data: DIA_VENDIDO, guide_id: 'g-1', guia_nome: 'Pesca Vertical', comissao_centavos: 10500,
+    boat_id: 'b-1', barco_nome: 'Tucunaré I',
     dia_status: 'aberto', preco_barco_centavos: 60000, preco_passageiro_centavos: 15000,
     observacao: 'Saída 5h', booking_id: 'r-9', reserva_status: 'confirmada',
     status_pagamento: 'sinal_pago', cliente_nome: 'Fabio Tinoco',
@@ -92,7 +115,8 @@ const AGENDA = [
     valor_aberto_centavos: 73500, repasse_guia_centavos: 94500,
   },
   {
-    data: '2026-12-22', boat_id: 'b-1', barco_nome: 'Tucunaré I',
+    data: DIA_LIVRE, guide_id: 'g-1', guia_nome: 'Pesca Vertical', comissao_centavos: null,
+    boat_id: 'b-1', barco_nome: 'Tucunaré I',
     dia_status: 'aberto', preco_barco_centavos: 60000, preco_passageiro_centavos: 15000,
     observacao: null, booking_id: null, reserva_status: null,
     status_pagamento: null, cliente_nome: null, cliente_telefone: null,
@@ -133,7 +157,7 @@ await ctx.route(/supabase\.co/, async (rota) => {
   if (p.startsWith('/auth/v1/token')) return json(SESSAO);
   if (p.startsWith('/auth/v1/logout')) return rota.fulfill({ status: 204, body: '' });
 
-  if (p === '/rest/v1/profiles') return json([{ id: 'u-1', nome: 'Fabio Tinoco', role: 'cliente' }]);
+  if (p === '/rest/v1/profiles') return json([PERFIL]);
   if (p === '/rest/v1/guides') return json(GUIAS);
   if (p === '/rest/v1/boats') {
     const id = url.searchParams.get('id');
@@ -159,7 +183,14 @@ await ctx.route(/supabase\.co/, async (rota) => {
     if (rota.request().method() === 'PATCH') return json([]);
     return json(AVISOS);
   }
-  if (p === '/rest/v1/rpc/agenda_do_guia') return json(AGENDA);
+  if (p === '/rest/v1/rpc/agenda') {
+    const corpo = JSON.parse(rota.request().postData() ?? '{}');
+    chamadaAgenda = corpo;
+    // O filtro por guia é do master. Simular aqui prova que a tela manda o
+    // parâmetro; que ele não vaze nada é assunto do teste de banco.
+    return json(corpo.p_guia ? AGENDA.filter((l) => l.guide_id === corpo.p_guia) : AGENDA);
+  }
+  if (p === '/rest/v1/rpc/guias_com_agenda') return json(GUIAS_FILTRO);
   if (p === '/rest/v1/rpc/datas_disponiveis') return json(DIAS);
   if (p === '/rest/v1/rpc/minhas_reservas') return json(RESERVAS);
   if (p === '/rest/v1/rpc/criar_reserva') {
@@ -310,44 +341,68 @@ exigir(telaAvisos.includes('Marcar os 1 como lidos'), 'oferece marcar os não li
 exigir(/Em aberto\s*R\$\s*1\.050,00/.test(telaAvisos),
   'o aviso antigo mantém o valor congelado, sem ser reescrito pelo saldo atual');
 
-// --- 7. agenda do guia -------------------------------------------------------
-await pagina.goto(`http://localhost:${PORTA}/minha-agenda`);
-await pagina.waitForTimeout(1800);
+// --- 7. calendário --------------------------------------------------------
+// A agenda ganhou forma de calendário. Uma grade que não mostra o que está
+// marcado é só uma tabela de números: o que se verifica aqui é que o dia
+// vendido chega até a casa dele.
+// O papel vem do perfil, e o perfil é lido na montagem: trocar exige recarregar.
+PERFIL.role = 'guia';
+await pagina.goto(`http://localhost:${PORTA}/calendario`);
+await pagina.waitForTimeout(2000);
 let telaAgenda = await textoDaTela();
-exigir(telaAgenda.includes('Minha agenda'), 'a agenda do guia abre');
-exigir(telaAgenda.includes('Semana') && telaAgenda.includes('Mês') && telaAgenda.includes('Dia'),
-  'oferece as três vistas: semana, mês e dia');
-exigir(telaAgenda.includes('Fabio Tinoco'), 'o dia vendido mostra o cliente');
-exigir(/Quitado\s*R\$\s*315,00/.test(telaAgenda), 'mostra o quitado do dia vendido');
-exigir(/em aberto\s*R\$\s*735,00/.test(telaAgenda), 'mostra o que está em aberto');
-exigir(telaAgenda.includes('Livre'), 'o dia sem reserva aparece como livre');
-// Total do período: uma reserva de R$ 945,00 de repasse, e nada a mais.
-exigir(/Sua parte no período\s*R\$\s*945,00/.test(telaAgenda),
-  'o resumo soma a parte do guia no período');
+exigir(telaAgenda.includes('Minha agenda'), 'o calendário abre para o guia');
+exigir(
+  telaAgenda.includes('Mês') && telaAgenda.includes('Semana') && telaAgenda.includes('Dia'),
+  'oferece as três vistas: mês, semana e dia',
+);
+exigir(telaAgenda.includes('Reservado') && telaAgenda.includes('Livre'),
+  'a legenda explica as cores da grade');
 
-// Navegar de mês em mês não pode pular fevereiro nem travar.
-await pagina.getByRole('tab', { name: 'Mês' }).click();
+// O mês abre por padrão: sete colunas, uma por dia da semana.
+const colunas = await pagina.evaluate(() =>
+  [...document.querySelectorAll('div')]
+    .filter((d) => /^[DSTQ]$/.test(d.textContent?.trim() ?? '')).length);
+exigir(colunas >= 7, `a grade do mês tem cabeçalho de sete dias (achei ${colunas})`);
+
+// Tocar num dia leva para o detalhe daquele dia — é o gesto do Google Agenda.
+await pagina.getByRole('button', { name: new RegExp('^' + brDe(DIA_VENDIDO)) }).first().click();
 await pagina.waitForTimeout(900);
 telaAgenda = await textoDaTela();
-const temMes = /janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro/
-  .test(telaAgenda);
-exigir(temMes, 'a vista de mês mostra o nome do mês por extenso');
+exigir(telaAgenda.includes('Fabio Tinoco'), 'tocar no dia abre o detalhe com o cliente');
+exigir(/Quitado\s*R\$\s*315,00/.test(telaAgenda), 'o detalhe mostra o quitado');
+exigir(/em aberto\s*R\$\s*735,00/.test(telaAgenda), 'e o que está em aberto');
+exigir(/Sua parte\s*R\$\s*945,00/.test(telaAgenda), 'o resumo mostra a parte do guia');
+exigir(!telaAgenda.includes('Comissão da plataforma'),
+  'o guia não vê a linha de comissão da plataforma');
 
+await pagina.getByRole('tab', { name: 'Semana' }).click();
+await pagina.waitForTimeout(800);
+// `innerText` devolve o texto já com o text-transform aplicado: o rótulo está
+// em maiúsculas na tela, mesmo escrito em minúsculas no código.
+exigir(/na semana/i.test(await textoDaTela()), 'a vista de semana muda o resumo');
+
+await pagina.getByRole('tab', { name: 'Mês' }).click();
+await pagina.waitForTimeout(800);
 await pagina.getByRole('button', { name: 'Próximo período' }).click();
 await pagina.waitForTimeout(700);
 exigir((await textoDaTela()).includes('Voltar para hoje'),
   'sair do período atual oferece o caminho de volta');
 
-await pagina.getByRole('tab', { name: 'Dia' }).click();
-await pagina.waitForTimeout(700);
-// Texto de placeholder não entra no innerText da página — tem de ser procurado
-// como campo, senão a asserção falha com a tela certa na frente.
-exigir(await pagina.getByPlaceholder('Ir para dd/mm/aaaa').isVisible(),
-  'a vista de dia permite pular para uma data específica');
-await pagina.getByPlaceholder('Ir para dd/mm/aaaa').fill('31/02/2026');
-await pagina.waitForTimeout(500);
-exigir((await textoDaTela()).includes('Data inválida'),
-  'data que não existe é recusada em vez de virar 03/03');
+// --- 7b. o mesmo calendário, pelo lado do master ---------------------------
+PERFIL.role = 'master';
+await pagina.goto(`http://localhost:${PORTA}/calendario`);
+await pagina.waitForTimeout(2000);
+const telaMaster = await textoDaTela();
+exigir(telaMaster.includes('Agenda da plataforma'), 'o master vê a agenda da plataforma');
+exigir(telaMaster.includes('Todas') && telaMaster.includes('Pescaria do Zé'),
+  'o master recebe o filtro por operação');
+exigir(telaMaster.includes('Comissão da plataforma'),
+  'o resumo do master mostra a comissão, não o repasse do guia');
+
+await pagina.getByRole('radio', { name: 'Pescaria do Zé' }).click();
+await pagina.waitForTimeout(1200);
+exigir(chamadaAgenda?.p_guia === 'g-2', 'filtrar manda o guia escolhido para o servidor');
+PERFIL.role = 'guia';
 
 // --- 8. aparência: três modos, três paletas ---------------------------------
 await pagina.goto(`http://localhost:${PORTA}/aparencia`);
