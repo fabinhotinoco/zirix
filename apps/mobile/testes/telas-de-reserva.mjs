@@ -55,9 +55,14 @@ const DIAS = [{ data: '2026-12-20', hora_saida: '05:00:00', preco_barco_centavos
 const DOCS = [
   { slug: 'politica_cancelamento', versao: 'v1', titulo: 'Política de Cancelamento', hash_sha256: 'a'.repeat(64), vigente_desde: '2026-01-01T00:00:00Z' },
   { slug: 'termo_responsabilidade', versao: 'v1', titulo: 'Termo de Responsabilidade', hash_sha256: 'b'.repeat(64), vigente_desde: '2026-01-01T00:00:00Z' },
+  { slug: 'contrato_cliente', versao: 'v1', titulo: 'Termos de Uso', hash_sha256: 'c'.repeat(64), vigente_desde: '2026-01-01T00:00:00Z' },
+  { slug: 'politica_privacidade', versao: 'v1', titulo: 'Política de Privacidade', hash_sha256: 'd'.repeat(64), vigente_desde: '2026-01-01T00:00:00Z' },
 ];
 
 const PERFIL = { id: 'u-1', nome: 'Fabio Tinoco', role: 'cliente' };
+/** O que a pessoa já aceitou. Vazio = documento vigente ainda por aceitar. */
+let ACEITES = [];
+let aceitesGravados = null;
 let chamadaCriarReserva = null;
 let chamadaAgenda = null;
 const RESERVAS = [];
@@ -182,7 +187,13 @@ await ctx.route(/supabase\.co/, async (rota) => {
     return json(id ? BARCOS.filter((b) => `eq.${b.id}` === id) : BARCOS);
   }
   if (p === '/rest/v1/legal_documents') return json(DOCS);
-  if (p === '/rest/v1/terms_acceptances') return json([]);
+  if (p === '/rest/v1/terms_acceptances') {
+    if (rota.request().method() === 'POST') {
+      aceitesGravados = JSON.parse(rota.request().postData() ?? '[]');
+      return json(aceitesGravados);
+    }
+    return json(ACEITES);
+  }
 
   if (p === '/rest/v1/notifications') {
     // head=true com count: a contagem vem no cabeçalho, não no corpo.
@@ -252,6 +263,11 @@ pagina.on('requestfailed', (r) => {
   falhas.push(`requisição não simulada: ${r.method()} ${r.url().slice(0, 120)} — ${motivo}`);
 });
 pagina.on('pageerror', (e) => falhas.push('erro de página: ' + e.message));
+
+ACEITES = [
+  { documento_slug: 'contrato_cliente', versao: 'v1', hash_sha256: 'c'.repeat(64) },
+  { documento_slug: 'politica_privacidade', versao: 'v1', hash_sha256: 'd'.repeat(64) },
+];
 
 // --- 0. entrar pela própria tela de login -----------------------------------
 // Semear a sessão na marra dependeria de detalhes internos do armazenamento;
@@ -461,6 +477,40 @@ exigir(telaVitrine.includes('loja.exemplo.com.br'),
 await pagina.getByRole('link', { name: /Varas e molinetes/ }).click();
 await pagina.waitForTimeout(900);
 exigir(cliqueRegistrado?.p_anuncio === 'an-1', 'o clique é contado no anúncio certo');
+
+// --- 7d. documento com versão nova ------------------------------------------
+// Publicar um texto novo sem esta tela seria publicar para ninguém: quem já tem
+// perfil vai direto para o início e a versão que passa a valer não teria sido
+// aceita por pessoa nenhuma.
+DOCS[3] = { ...DOCS[3], versao: 'v2', hash_sha256: 'e'.repeat(64) };
+aceitesGravados = null;
+await pagina.goto(`http://localhost:${PORTA}/`);
+await pagina.waitForTimeout(2500);
+
+const telaAceite = await textoDaTela();
+exigir(/documento mudou|documentos mudaram/i.test(telaAceite),
+  'versão nova leva quem já tem cadastro para a tela de aceite');
+exigir(telaAceite.includes('Política de Privacidade'), 'o documento que mudou aparece');
+exigir(!telaAceite.includes('Termos de Uso'),
+  'o documento que NÃO mudou não é pedido de novo');
+
+const botaoAceite = pagina.getByRole('button', { name: 'Confirmar e continuar' });
+exigir(await botaoAceite.isDisabled(), 'a caixa nasce desmarcada e o botão espera');
+exigir(/falta marcar/i.test(await textoDaTela()), 'e a tela diz o que falta marcar');
+
+await pagina.getByRole('checkbox', { name: /Política de Privacidade/ }).click();
+await pagina.waitForTimeout(400);
+exigir(await botaoAceite.isEnabled(), 'marcado, o botão libera');
+
+// Ao confirmar, o registro grava a versão NOVA — não a antiga.
+ACEITES = [...ACEITES, { documento_slug: 'politica_privacidade', versao: 'v2', hash_sha256: 'e'.repeat(64) }];
+await botaoAceite.click();
+await pagina.waitForTimeout(2500);
+exigir(Array.isArray(aceitesGravados) && aceitesGravados[0]?.versao === 'v2',
+  'grava a versão nova, com o hash do texto que foi mostrado');
+exigir(aceitesGravados?.[0]?.hash_sha256 === 'e'.repeat(64),
+  'o hash gravado é o do texto novo');
+exigir((await textoDaTela()).includes('Olá'), 'aceito, a pessoa segue para o início');
 
 // --- 8. aparência: três modos, três paletas ---------------------------------
 await pagina.goto(`http://localhost:${PORTA}/aparencia`);

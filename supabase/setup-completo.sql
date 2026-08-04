@@ -2657,9 +2657,9 @@ insert into public.cancellation_rules (guide_id, dias_min, dias_max, retencao_pe
 -- altere os arquivos em docs/legal/ e rode o script de novo.
 -- O hash é recalculado pelo gatilho trg_hash_documento.
 
--- contrato-adesao-guia.md  (sha256 be493e1caac2c78cd50f5d4d43bf2702d34f20c413a23e3bbfa0150e13b85684)
+-- contrato-adesao-guia.md  (sha256 81b89f2bc204173529c6fc169e68e1c17809b85352afa54b6a2b22220fe8ba85)
 insert into public.legal_documents (slug, versao, titulo, corpo_markdown)
-values ('contrato_guia', '1.0', $doc$Contrato de Adesão — Guia de Pesca$doc$, $doc$> **AVISO — ESTE DOCUMENTO É UMA MINUTA.** Foi redigido como ponto de partida técnico e precisa de
+values ('contrato_guia', '1.1', $doc$Contrato de Adesão — Guia de Pesca$doc$, $doc$> **AVISO — ESTE DOCUMENTO É UMA MINUTA.** Foi redigido como ponto de partida técnico e precisa de
 > revisão por advogado antes de entrar em produção. Os campos em MAIÚSCULAS entre colchetes devem ser
 > preenchidos. Nenhuma cláusula aqui substitui parecer jurídico.
 
@@ -2767,7 +2767,9 @@ comissão de intermediação.
 ## 6. Estornos, chargebacks e compensação
 
 **6.1.** Havendo **estorno, chargeback, contestação, fraude ou reembolso** de qualquer valor pago por
-um cliente, a parcela correspondente será revertida.
+um cliente, o valor devolvido é debitado **proporcionalmente** da conta do GUIA e da conta da
+PLATAFORMA, na mesma divisão da cobrança original. Estorno parcial reverte parcela proporcional; a
+comissão da PLATAFORMA é revertida na mesma medida.
 
 **6.2.** **CLÁUSULA DE DESTAQUE — DEVOLUÇÃO E COMPENSAÇÃO.** Como o valor do GUIA é creditado
 diretamente na conta dele no momento do pagamento, **o GUIA obriga-se a restituir a parcela que lhe
@@ -2780,6 +2782,19 @@ do art. 784, III, do Código de Processo Civil.
 
 **6.4.** A comissão da PLATAFORMA sobre a operação estornada é igualmente revertida, com lançamento
 negativo no extrato.
+
+**6.5.** **CLÁUSULA DE DESTAQUE — SALDO INSUFICIENTE NO MOMENTO DO ESTORNO.** A devolução ao cliente
+depende de haver saldo disponível na conta do GUIA no provedor de pagamento. **Não havendo saldo
+suficiente, o provedor devolve apenas a parcela da PLATAFORMA e a devolução fica incompleta.** Nessa
+hipótese, a PLATAFORMA poderá, a seu critério e para não deixar o cliente sem o valor, **adiantar ao
+cliente a parcela que caberia ao GUIA**; feito o adiantamento, o valor constitui dívida líquida e
+certa do GUIA perante a PLATAFORMA, sujeita ao mesmo prazo, à mesma autorização de compensação e ao
+mesmo efeito de título executivo previstos nos itens 6.2 e 6.3.
+
+**6.6.** O GUIA reconhece que recebimentos por cartão parcelado são liberados progressivamente pelo
+provedor de pagamento e que, por isso, **um cancelamento próximo à venda pode ocorrer antes de o valor
+estar disponível na conta dele** — situação em que se aplica integralmente o item 6.5. A PLATAFORMA
+recomenda ao GUIA manter saldo compatível com as reservas em aberto.
 
 ## 7. Dados pessoais e não circunvenção
 

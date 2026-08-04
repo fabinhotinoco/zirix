@@ -88,6 +88,22 @@ export async function pendenciasDoCadastro(
   return documentosPendentes(DOCUMENTOS_DO_CADASTRO[papel], vigentes, aceitos);
 }
 
+/**
+ * O que falta a quem JÁ tem cadastro — normalmente porque um documento ganhou
+ * versão nova.
+ *
+ * O master entra na lista do cliente: ele também usa a plataforma como pescador
+ * e aceitou os mesmos documentos. Sem esse desvio, `DOCUMENTOS_DO_CADASTRO`
+ * seria indexado por 'master' e devolveria indefinido — a tela quebraria para a
+ * única pessoa que não pode ficar de fora.
+ */
+export async function pendenciasDoPerfil(
+  userId: string,
+  papel: 'master' | 'guia' | 'cliente',
+): Promise<DocumentoVigente[]> {
+  return pendenciasDoCadastro(userId, papel === 'guia' ? 'guia' : 'cliente');
+}
+
 /** O que precisa ser aceito no fechamento de uma reserva. */
 export async function pendenciasDaReserva(userId: string): Promise<DocumentoVigente[]> {
   const [vigentes, aceitos] = await Promise.all([

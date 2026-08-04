@@ -17,7 +17,9 @@ import {
 } from 'react';
 import type { Session } from '@supabase/supabase-js';
 
+import { pendenciasDoPerfil } from './legal';
 import { supabase } from './supabase';
+import type { DocumentoVigente } from '@pescavertical/core/legal';
 
 export type Papel = 'master' | 'guia' | 'cliente';
 
@@ -33,6 +35,12 @@ interface EstadoAuth {
   carregando: boolean;
   sessao: Session | null;
   perfil: Perfil | null;
+  /**
+   * Documentos que ganharam versão nova depois do cadastro. Publicar um texto
+   * novo sem isto seria publicar para ninguém: quem já tem perfil vai direto
+   * para o início e nunca mais veria uma tela de aceite.
+   */
+  aceitesPendentes: DocumentoVigente[];
   recarregarPerfil: () => Promise<void>;
   sair: () => Promise<void>;
 }
@@ -47,6 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // estados diferentes. Confundir os dois joga quem já tem cadastro de volta
   // para a tela de cadastro.
   const [buscandoPerfil, setBuscandoPerfil] = useState(false);
+  const [aceitesPendentes, setAceitesPendentes] = useState<DocumentoVigente[]>([]);
 
   async function carregarPerfil(userId: string): Promise<Perfil | null> {
     const { data, error } = await supabase
@@ -120,13 +129,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let ativo = true;
     if (!userId) {
       setPerfil(null);
+      setAceitesPendentes([]);
       setBuscandoPerfil(false);
       return;
     }
     setBuscandoPerfil(true);
     carregarPerfil(userId)
-      .then((p) => {
-        if (ativo) setPerfil(p);
+      .then(async (p) => {
+        if (!ativo) return;
+        setPerfil(p);
+        if (!p) {
+          setAceitesPendentes([]);
+          return;
+        }
+        // Falhar aqui não pode trancar ninguém para fora. Este portão é de
+        // consentimento, não de segurança: sem a resposta, o aplicativo segue e
+        // pergunta de novo na próxima abertura. Trancar por falha de rede
+        // trocaria um aceite atrasado por um aplicativo inutilizável.
+        const pend = await pendenciasDoPerfil(userId, p.role).catch(() => []);
+        if (ativo) setAceitesPendentes(pend);
       })
       .catch(() => {
         // Sem perfil o aplicativo manda para o cadastro, que é o destino certo
@@ -146,14 +167,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       carregando: carregando || buscandoPerfil,
       sessao,
       perfil,
+      aceitesPendentes,
       recarregarPerfil: async () => {
-        if (userId) setPerfil(await carregarPerfil(userId));
+        if (!userId) return;
+        const p = await carregarPerfil(userId);
+        setPerfil(p);
+        setAceitesPendentes(p ? await pendenciasDoPerfil(userId, p.role).catch(() => []) : []);
       },
       sair: async () => {
         await supabase.auth.signOut();
       },
     }),
-    [carregando, buscandoPerfil, sessao, perfil, userId],
+    [carregando, buscandoPerfil, sessao, perfil, aceitesPendentes, userId],
   );
 
   return <Contexto.Provider value={valor}>{children}</Contexto.Provider>;

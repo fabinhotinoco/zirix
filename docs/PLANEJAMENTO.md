@@ -138,17 +138,41 @@ dois lados e reforçam a boa-fé da política.
 
 O valor retido é dividido entre guia e plataforma **na mesma proporção da comissão**.
 
-**Comportamento do estorno parcial — A VERIFICAR (não testado ainda).** A expectativa é que o Mercado
-Pago debite proporcionalmente da conta do guia **e** da comissão da plataforma. Se for assim, o motor
-de cancelamento fica simples: basta enviar o valor a devolver, sem compensação manual de comissão.
-**Se a devolução sair inteira da conta do guia, a Fase 4 muda** — passamos a ter de calcular e
-compensar a comissão por conta própria, e o guia fica exposto a devolver mais do que recebeu.
+**Comportamento do estorno parcial — RESPONDIDO pela documentação do Mercado Pago.** A devolução é
+**proporcional**: o valor sai da conta do guia **e** da conta da plataforma, na mesma divisão da
+cobrança original. Nas palavras da documentação de Split de Pagamentos:
 
-O kit em `tools/mp-sandbox/` existe para responder isso, e o teste precisa acontecer **antes** de a
-Fase 4 começar. Enquanto não rodar, o texto abaixo descreve o desenho pretendido, não o comportamento
-observado.
+> *"In case of refund, the amount due to the end customer will be divided and subtracted from the
+> seller's account and the Marketplace account, being proportional to the parties involved."*
 
-Duas consequências que o código precisa refletir, **se a proporcionalidade se confirmar**:
+O motor de cancelamento fica simples, como se pretendia: envia-se o valor a devolver e o Mercado Pago
+divide. Não há compensação manual de comissão.
+
+**Mas apareceu um caso que o desenho original não previa — guia sem saldo:**
+
+> *"In 1:1 models, the Marketplace cannot perform a full refund if the seller does not have money in
+> the account. In this case, it is up to the Marketplace account to refund the equivalent of its share
+> and decide whether to return the remainder, which is the seller's responsibility, by another means."*
+
+Ou seja, **a devolução pode completar pela metade**. O provedor devolve a parcela da plataforma e para;
+a parcela do guia vira responsabilidade da plataforma resolver. O caso realista é o cartão parcelado:
+o dinheiro do guia é liberado progressivamente e um cancelamento próximo à venda chega antes da
+liberação.
+
+Três consequências:
+
+1. **O Pix aparece primeiro na tela de pagamento por proteção, não por preferência** — liberação
+   imediata significa saldo disponível para estorno.
+2. **O contrato do guia precisa da cláusula de saldo insuficiente** — feito: itens 6.5 e 6.6 da versão
+   1.1 do contrato de adesão, que autorizam o adiantamento pela plataforma e a compensação em repasses
+   futuros.
+3. **A Fase 4 precisa tratar o estorno que falha pela metade**: registrar a dívida do guia no
+   `ledger_entries`, alertar o master e não marcar a reserva como devolvida quando não foi.
+
+O kit em `tools/mp-sandbox/` deixa de ser bloqueio e vira **confirmação antes de dinheiro real** —
+principalmente para medir o caso do guia sem saldo, que a documentação não detalha.
+
+Duas consequências que o código precisa refletir:
 
 ```
 comissao_revertida = round(fee_da_cobranca × valor_estornado ÷ valor_da_cobranca)
@@ -546,7 +570,7 @@ aparece no perfil dele e no painel do master. Nota ≤ 3 gera alerta imediato.
 - **Tokens do Mercado Pago dos guias** são credenciais de terceiros. Ficam cifrados, acessíveis só pela `service_role` nas Edge Functions, nunca expostos ao app.
 - **Inadimplência do saldo.** Com tudo passando pela plataforma, surge um risco que antes não existia: o cliente paga o sinal e some. Por isso a quitação tem prazo (padrão: 3 dias antes), lembretes em D-10, D-5 e no vencimento, alerta no painel do guia e um job que aplica a política automaticamente — cancelar, reter o sinal e devolver a data para a lista de espera. A data não pode ficar bloqueada por uma reserva que não vai acontecer.
 - **A política de cancelamento é a peça de maior risco jurídico do app.** Retenção de valor em relação de consumo é terreno onde cláusula mal redigida é anulada e a plataforma devolve tudo, com custas. As três salvaguardas — teto no valor pago, devolução por revenda e arrependimento de 7 dias — existem para amarrar a retenção ao prejuízo real, que é o que a torna defensável. **Nenhuma das minutas em `docs/legal/` deve ir para produção sem revisão de advogado.**
-- **Exposição a estorno aumentou.** Antes só o sinal passava pelo app; agora é o valor cheio, e um chargeback pode vir semanas depois de o guia já ter recebido a parte dele. O Pix aparece primeiro na tela de pagamento justamente por isso. Num estorno, sua comissão é revertida junto e o `ledger_entries` registra o lançamento negativo — mas o acerto com o guia sobre a parte dele é contratual, não automático. Vale estar no contrato de adesão do guia.
+- **Exposição a estorno aumentou.** Antes só o sinal passava pelo app; agora é o valor cheio, e um chargeback pode vir semanas depois de o guia já ter recebido a parte dele. O Pix aparece primeiro na tela de pagamento justamente por isso. Num estorno, sua comissão é revertida proporcionalmente e o `ledger_entries` registra o lançamento negativo. **O risco concreto é o guia sem saldo**: nesse caso o provedor devolve só a sua parte e a devolução fica incompleta — você decide se adianta ao cliente e cobra do guia depois. Está coberto pelos itens 6.5 e 6.6 do contrato de adesão (versão 1.1), e a Fase 4 precisa tratar o estorno parcialmente falho como estado próprio, não como sucesso.
 - **Recebimento do guia:** cartão parcelado no Mercado Pago libera conforme a política da conta dele, não no ato. O guia precisa entender que "reserva quitada" não é o mesmo que "dinheiro disponível" — o extrato mostra as duas coisas separadas para evitar essa confusão.
 - **LGPD:** participantes são terceiros cadastrados por outra pessoa — aviso de autorização, registro do aceite e exclusão de dados. Alertas de captura exigem opt-in separado.
 - **Custo de SMS** (~R$ 0,08–0,15): confirmação, lembretes, lista de espera e vencimento do Diamond, sim. Alerta de captura, não — só push e e-mail.
