@@ -3,7 +3,7 @@
 Este guia é para quem não quer (ou não pode) usar o Terminal. Você faz tudo em
 páginas de site, clicando. Os robôs no GitHub fazem o trabalho pesado.
 
-São **cinco preparações que você faz uma única vez** e depois só aperta botão.
+São **seis preparações que você faz uma única vez** e depois só aperta botão.
 (A quarta só é necessária quando o envio de e-mails começar a esbarrar no limite;
 a quinta, quando chegar a hora de receber pagamento.)
 
@@ -313,6 +313,40 @@ desenho de cancelamento que ainda não foi confirmado na prática.
 
 Se você criar as contas de teste, me avise: eu monto o robô que roda essa
 conferência antes de qualquer centavo real entrar.
+
+---
+
+## Preparação 6 — Deixar um robô publicar as funções do servidor
+
+Até agora nenhuma parte do sistema rodava **no servidor**. Tudo era banco de
+dados (robô 5) ou aplicativo (robô 2). A Fase 4 muda isso: a troca do código do
+Mercado Pago pelo token do guia precisa acontecer num lugar onde o
+`client_secret` possa morar, e esse lugar é uma **função do Supabase**.
+
+Publicar função normalmente é comando de Terminal. Para continuar sem Terminal,
+um robô publica por você — e para isso ele precisa de permissão na sua conta
+Supabase.
+
+### a) Criar o token
+
+1. Entre em <https://supabase.com/dashboard/account/tokens>
+2. **Generate new token**, dê um nome (ex.: `github`)
+3. **Copie** — ele só aparece uma vez
+
+### b) Guardar no GitHub
+
+1. Abra <https://github.com/fabinhotinoco/zirix/settings/secrets/actions>
+2. **New repository secret** → **Name**: `SUPABASE_ACCESS_TOKEN` → cole → **Add secret**
+
+⚠️ Esse token dá acesso à sua conta Supabase inteira. Vale a mesma regra dos
+outros: só no campo **Secret** do GitHub, nunca em mensagem ou chat — inclusive
+para mim. Se vazar, dá para revogá-lo na mesma página onde foi criado.
+
+> **Por que o `client_secret` do Mercado Pago vai precisar existir em dois
+> lugares.** No GitHub, para o robô 12 conferir; e dentro do Supabase, para a
+> função usar na hora da troca. O robô que publica a função copia um para o
+> outro sozinho — o valor sai de um cofre e entra em outro, sem passar por
+> tela, por registro de execução ou por conversa.
 
 ---
 
