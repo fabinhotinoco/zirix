@@ -18,7 +18,7 @@ import { luaDoDia, solDoDia, type Lua, type Sol } from './astro.ts';
 import { estadoDaMare, eventosDeMare, type EstadoDaMare, type EventoDeMare, type PontoDeNivel } from './mare.ts';
 import { favorabilidade, type Favorabilidade } from './especies.ts';
 import { indiceDePesca, type Indice } from './score.ts';
-import { estadoDoMar, NOME_DO_MAR, rumo, type Ambiente, type Local } from './tipos.ts';
+import { dec, estadoDoMar, NOME_DO_MAR, rumo, type Ambiente, type Local } from './tipos.ts';
 
 export type NivelDeAlerta = 'aviso' | 'perigo';
 
@@ -78,22 +78,22 @@ function alertasDe(a: Ambiente | null, mares: EventoDeMare[]): Alerta[] {
     lista.push({ chave, nivel, texto });
 
   if (a.trovoada) põe('trovoada', 'perigo', 'Trovoada prevista — risco de raio no mar aberto');
-  if (a.ventoNos !== null && a.ventoNos >= 25) põe('vento', 'perigo', `Vento de ${a.ventoNos.toFixed(0)} nós`);
-  else if (a.ventoNos !== null && a.ventoNos >= 20) põe('vento', 'aviso', `Vento acima de 20 nós (${a.ventoNos.toFixed(0)})`);
+  if (a.ventoNos !== null && a.ventoNos >= 25) põe('vento', 'perigo', `Vento de ${dec(a.ventoNos, 0)} nós`);
+  else if (a.ventoNos !== null && a.ventoNos >= 20) põe('vento', 'aviso', `Vento acima de 20 nós (${dec(a.ventoNos, 0)})`);
   if (a.rajadaNos !== null && a.ventoNos !== null && a.rajadaNos >= a.ventoNos + 12) {
-    põe('rajada', 'aviso', `Rajadas de ${a.rajadaNos.toFixed(0)} nós — bem acima do vento médio`);
+    põe('rajada', 'aviso', `Rajadas de ${dec(a.rajadaNos, 0)} nós — bem acima do vento médio`);
   }
-  if (a.ondaM !== null && a.ondaM >= 2.5) põe('onda', 'perigo', `Ondas de ${a.ondaM.toFixed(1)} m`);
-  else if (a.ondaM !== null && a.ondaM >= 2) põe('onda', 'aviso', `Ondas de ${a.ondaM.toFixed(1)} m — mar agitado`);
+  if (a.ondaM !== null && a.ondaM >= 2.5) põe('onda', 'perigo', `Ondas de ${dec(a.ondaM, 1)} m`);
+  else if (a.ondaM !== null && a.ondaM >= 2) põe('onda', 'aviso', `Ondas de ${dec(a.ondaM, 1)} m — mar agitado`);
   if (a.ondaM !== null && a.ondaPeriodoS !== null && a.ondaM >= 1.5 && a.ondaPeriodoS < 6) {
     põe('onda_curta', 'aviso', 'Onda curta e alta — batida desconfortável');
   }
-  if (a.correnteNos !== null && a.correnteNos >= 1.5) põe('corrente', 'aviso', `Corrente forte (${a.correnteNos.toFixed(1)} nós)`);
+  if (a.correnteNos !== null && a.correnteNos >= 1.5) põe('corrente', 'aviso', `Corrente forte (${dec(a.correnteNos, 1)} nós)`);
   if (a.visibilidadeKm !== null && a.visibilidadeKm < 1) põe('neblina', 'perigo', 'Visibilidade abaixo de 1 km — neblina densa');
   else if (a.visibilidadeKm !== null && a.visibilidadeKm < 3) põe('neblina', 'aviso', 'Visibilidade reduzida');
-  if (a.chuvaMm !== null && a.chuvaMm >= 10) põe('chuva', 'aviso', `Chuva forte prevista (${a.chuvaMm.toFixed(0)} mm)`);
-  if (a.uv !== null && a.uv >= 11) põe('uv', 'perigo', `Índice UV extremo (${a.uv.toFixed(0)})`);
-  else if (a.uv !== null && a.uv >= 8) põe('uv', 'aviso', `Índice UV muito alto (${a.uv.toFixed(0)})`);
+  if (a.chuvaMm !== null && a.chuvaMm >= 10) põe('chuva', 'aviso', `Chuva forte prevista (${dec(a.chuvaMm, 0)} mm)`);
+  if (a.uv !== null && a.uv >= 11) põe('uv', 'perigo', `Índice UV extremo (${dec(a.uv, 0)})`);
+  else if (a.uv !== null && a.uv >= 8) põe('uv', 'aviso', `Índice UV muito alto (${dec(a.uv, 0)})`);
 
   // Sizígia forte muda o planejamento do dia inteiro, e não é "perigo".
   const amplitudes = mares.slice(1).map((m, i) => Math.abs(m.alturaM - mares[i].alturaM));
@@ -151,14 +151,14 @@ function resumoDe(
     frases.push(
       a.ventoNos < 10
         ? `Vento fraco${direcao}, abaixo de 10 nós.`
-        : `Vento${direcao} de ${a.ventoNos.toFixed(0)} nós.`,
+        : `Vento${direcao} de ${dec(a.ventoNos, 0)} nós.`,
     );
   }
 
   if (a.pressaoHpa !== null) {
     const t = a.tendenciaPressao;
     frases.push(
-      `Pressão em ${a.pressaoHpa.toFixed(0)} hPa${
+      `Pressão em ${dec(a.pressaoHpa, 0)} hPa${
         t === 'caindo' ? ' e caindo, o que costuma abrir o apetite'
         : t === 'subindo' ? ' e subindo, típico do pós-frente'
         : t === 'estavel' ? ' e estável' : ''}.`,
@@ -166,7 +166,7 @@ function resumoDe(
   }
 
   if (local.agua === 'salgada' && a.ondaM !== null) {
-    frases.push(`Mar ${NOME_DO_MAR[estadoDoMar(a.ondaM)].toLowerCase()}, ${a.ondaM.toFixed(1)} m.`);
+    frases.push(`Mar ${NOME_DO_MAR[estadoDoMar(a.ondaM)].toLowerCase()}, ${dec(a.ondaM, 1)} m.`);
   }
 
   if (mare?.proximo) {

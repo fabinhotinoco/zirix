@@ -21,7 +21,7 @@
  * histórico de capturas na plataforma, os pesos passam a ter de onde sair.
  */
 
-import type { Ambiente, TipoDeAgua } from './tipos.ts';
+import { dec, type Ambiente, type TipoDeAgua } from './tipos.ts';
 import type { EstadoDaMare } from './mare.ts';
 import type { Lua, Sol } from './astro.ts';
 
@@ -103,7 +103,7 @@ function fatoresDe(e: Entrada): Fator[] {
     let nota = curva(a.pressaoHpa, [
       [995, 25], [1005, 55], [1013, 80], [1020, 90], [1028, 70], [1035, 45],
     ]);
-    let texto = `${a.pressaoHpa.toFixed(0)} hPa`;
+    let texto = `${dec(a.pressaoHpa, 0)} hPa`;
     if (a.tendenciaPressao === 'caindo') {
       // Peixe come ANTES da frente chegar. Queda lenta é a melhor janela que
       // existe — e é contraintuitivo para quem só olha "tempo bom".
@@ -128,7 +128,7 @@ function fatoresDe(e: Entrada): Fator[] {
       [0, 55], [4, 80], [8, 95], [12, 85], [16, 60], [20, 30], [25, 10], [30, 0],
     ]);
     põe('vento', 'Vento', nota,
-      `${a.ventoNos.toFixed(0)} nós${a.rajadaNos ? `, rajadas de ${a.rajadaNos.toFixed(0)}` : ''}`);
+      `${dec(a.ventoNos, 0)} nós${a.rajadaNos ? `, rajadas de ${dec(a.rajadaNos, 0)}` : ''}`);
   }
 
   // --- onda (só mar) --------------------------------------------------------
@@ -140,7 +140,7 @@ function fatoresDe(e: Entrada): Fator[] {
     // 12 s de período é navegável; com 5 s, é pancada.
     if (a.ondaPeriodoS !== null && a.ondaPeriodoS < 6 && a.ondaM > 1) nota -= 15;
     põe('onda', 'Ondas', nota,
-      `${a.ondaM.toFixed(1)} m${a.ondaPeriodoS ? ` a cada ${a.ondaPeriodoS.toFixed(0)} s` : ''}`);
+      `${dec(a.ondaM, 1)} m${a.ondaPeriodoS ? ` a cada ${dec(a.ondaPeriodoS, 0)} s` : ''}`);
   }
 
   // --- maré (só mar) --------------------------------------------------------
@@ -163,7 +163,7 @@ function fatoresDe(e: Entrada): Fator[] {
       ? 'lua nova — maré de sizígia e noites escuras'
       : Math.abs(lua.fracao - 0.5) < 0.06
         ? 'lua cheia — maré de sizígia e noite clara'
-        : `${(lua.iluminacao * 100).toFixed(0)}% iluminada`);
+        : `${dec(lua.iluminacao * 100, 0)}% iluminada`);
 
   // --- horário --------------------------------------------------------------
   const ateALuz = minutosAteALuz(a.instante, sol);
@@ -176,7 +176,7 @@ function fatoresDe(e: Entrada): Fator[] {
   if (a.nuvens !== null) {
     // Céu parcialmente encoberto é o melhor: sombra na água sem escuridão.
     põe('nuvens', 'Nebulosidade', curva(a.nuvens, [[0, 60], [30, 80], [60, 95], [90, 75], [100, 65]]),
-      `${a.nuvens.toFixed(0)}% de cobertura`);
+      `${dec(a.nuvens, 0)}% de cobertura`);
   }
 
   // --- chuva ----------------------------------------------------------------
@@ -187,7 +187,7 @@ function fatoresDe(e: Entrada): Fator[] {
     if (chance > 70 && mm < 1) nota -= 10;
     if (a.trovoada) nota = 0;
     põe('chuva', 'Chuva', nota,
-      a.trovoada ? 'trovoada prevista' : mm > 0 ? `${mm.toFixed(1)} mm previstos` : `${chance.toFixed(0)}% de chance`);
+      a.trovoada ? 'trovoada prevista' : mm > 0 ? `${dec(mm, 1)} mm previstos` : `${dec(chance, 0)}% de chance`);
   }
 
   // --- temperatura da água --------------------------------------------------
@@ -195,7 +195,7 @@ function fatoresDe(e: Entrada): Fator[] {
     // Faixa de conforto ampla; a preferência fina é por espécie, e mora em
     // `especies.ts`. Aqui só entram os extremos que param qualquer peixe.
     põe('agua', 'Temperatura da água', curva(a.aguaC, [[12, 25], [17, 65], [21, 90], [27, 90], [30, 60], [33, 25]]),
-      `${a.aguaC.toFixed(1)} °C`);
+      `${dec(a.aguaC, 1)} °C`);
   }
 
   return fatores;

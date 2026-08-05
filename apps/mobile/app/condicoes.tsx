@@ -22,7 +22,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { LeituraDoDia } from '@pescavertical/core/pesca/inteligencia';
-import { estadoDoMar, NOME_DO_MAR, rumo } from '@pescavertical/core/pesca/tipos';
+import { dec, estadoDoMar, NOME_DO_MAR, rumo } from '@pescavertical/core/pesca/tipos';
 import { NOME_DA_FASE } from '@pescavertical/core/pesca/astro';
 
 import { useAuth } from '@/lib/auth';
@@ -40,7 +40,7 @@ const diaCurto = (d: Date) =>
   d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });
 
 const numero = (v: number | null | undefined, casas = 0, sufixo = '') =>
-  v === null || v === undefined ? '—' : `${v.toFixed(casas)}${sufixo}`;
+  v === null || v === undefined ? '—' : `${dec(v, casas)}${sufixo}`;
 
 export default function CondicoesDePesca() {
   const { cores } = useTema();
@@ -275,10 +275,10 @@ export default function CondicoesDePesca() {
                   ['Temperatura', numero(hoje.agora.temperaturaC, 0, ' °C')],
                   ['Sensação', numero(hoje.agora.sensacaoC, 0, ' °C')],
                   ['Vento', hoje.agora.ventoNos === null ? '—'
-                    : `${hoje.agora.ventoNos.toFixed(0)} nós${hoje.agora.ventoDirecao !== null ? ` ${rumo(hoje.agora.ventoDirecao)}` : ''}`],
+                    : `${dec(hoje.agora.ventoNos, 0)} nós${hoje.agora.ventoDirecao !== null ? ` ${rumo(hoje.agora.ventoDirecao)}` : ''}`],
                   ['Rajadas', numero(hoje.agora.rajadaNos, 0, ' nós')],
                   ['Pressão', hoje.agora.pressaoHpa === null ? '—'
-                    : `${hoje.agora.pressaoHpa.toFixed(0)} hPa${
+                    : `${dec(hoje.agora.pressaoHpa, 0)} hPa${
                         hoje.agora.tendenciaPressao === 'subindo' ? ' ↑'
                         : hoje.agora.tendenciaPressao === 'caindo' ? ' ↓'
                         : hoje.agora.tendenciaPressao === 'estavel' ? ' →' : ''}`],
@@ -328,7 +328,7 @@ export default function CondicoesDePesca() {
                     {m.tipo === 'preamar' ? '▲ Preamar' : '▼ Baixa-mar'}
                   </Text>
                   <Text style={estilos.mareHora}>{hhmm(m.instante)}</Text>
-                  <Text style={estilos.mareAltura}>{m.alturaM.toFixed(2)} m</Text>
+                  <Text style={estilos.mareAltura}>{dec(m.alturaM, 2)} m</Text>
                 </View>
               ))}
               <Text style={estilos.rodapeSecao}>
@@ -361,7 +361,7 @@ export default function CondicoesDePesca() {
                 <Text style={estilos.destaque}>{NOME_DA_FASE[hoje.lua.fase]}</Text>
                 <Text style={estilos.rodapeSecao}>
                   {(hoje.lua.iluminacao * 100).toFixed(0)}% iluminada ·{' '}
-                  {hoje.lua.idadeDias.toFixed(1)} dias
+                  {dec(hoje.lua.idadeDias, 1)} dias
                 </Text>
                 <Text style={estilos.rodapeSecao}>
                   Nasce {hhmm(hoje.lua.nascer)} · Se põe {hhmm(hoje.lua.ocaso)}
@@ -403,7 +403,7 @@ export default function CondicoesDePesca() {
                     {numero(d.agora?.ventoNos, 0, ' nós')}
                   </Text>
                   {d.agora?.ondaM !== null && d.agora?.ondaM !== undefined && (
-                    <Text style={estilos.cartaoDiaDetalhe}>{d.agora.ondaM.toFixed(1)} m</Text>
+                    <Text style={estilos.cartaoDiaDetalhe}>{dec(d.agora.ondaM, 1)} m</Text>
                   )}
                   <Text style={estilos.cartaoDiaDetalhe}>
                     {numero(d.agora?.temperaturaC, 0, '°')}

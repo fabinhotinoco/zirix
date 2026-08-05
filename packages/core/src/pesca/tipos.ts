@@ -126,3 +126,21 @@ export function severidadeDaNota(nota: number): Severidade {
   if (nota >= 20) return 'ruim';
   return 'perigoso';
 }
+
+/**
+ * Número com vírgula decimal, como se escreve em português.
+ *
+ * `toFixed` devolve ponto: "0.7 m". Num aplicativo brasileiro isso lê como
+ * texto de máquina — e em número de maré, onde a diferença entre 0,7 e 7 é a
+ * diferença entre sair e não sair, ponto decimal é ruído perigoso.
+ */
+export function dec(valor: number, casas = 1): string {
+  return valor.toLocaleString('pt-BR', {
+    minimumFractionDigits: casas,
+    maximumFractionDigits: casas,
+    // Sem separador de milhar: pressão atmosférica se escreve "1017 hPa", não
+    // "1.017 hPa". Nenhuma grandeza desta tela passa de mil de um jeito que
+    // peça agrupamento, e o ponto no meio do número confunde com decimal.
+    useGrouping: false,
+  });
+}
