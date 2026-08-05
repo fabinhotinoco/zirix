@@ -1,6 +1,6 @@
 ---
 slug: contrato_guia
-versao: "1.1"
+versao: "1.2"
 titulo: "Contrato de Adesão — Guia de Pesca"
 vigente_desde: "A DEFINIR"
 ---
@@ -110,6 +110,13 @@ PLATAFORMA. **Reserva quitada não significa saldo imediatamente disponível.**
 dos tributos incidentes sobre sua receita. A PLATAFORMA emite documento fiscal apenas quanto à
 comissão de intermediação.
 
+**5.10.** **A TARIFA DE PROCESSAMENTO COBRADA PELO MERCADO PAGO É DESCONTADA DA PARCELA DO GUIA, E NÃO
+DA COMISSÃO DA PLATAFORMA.** Essa tarifa é do Mercado Pago, varia conforme o meio de pagamento
+escolhido pelo cliente — sendo em regra menor no Pix e maior no cartão de crédito parcelado — e não é
+receita da PLATAFORMA. O valor efetivamente creditado ao GUIA corresponde, portanto, ao valor da
+reserva **menos a tarifa do Mercado Pago e menos a comissão da PLATAFORMA**, nessa ordem. O extrato do
+GUIA no aplicativo discrimina as três parcelas separadamente.
+
 ## 6. Estornos, chargebacks e compensação
 
 **6.1.** Havendo **estorno, chargeback, contestação, fraude ou reembolso** de qualquer valor pago por
@@ -131,11 +138,17 @@ negativo no extrato.
 
 **6.5.** **CLÁUSULA DE DESTAQUE — SALDO INSUFICIENTE NO MOMENTO DO ESTORNO.** A devolução ao cliente
 depende de haver saldo disponível na conta do GUIA no provedor de pagamento. **Não havendo saldo
-suficiente, o provedor devolve apenas a parcela da PLATAFORMA e a devolução fica incompleta.** Nessa
-hipótese, a PLATAFORMA poderá, a seu critério e para não deixar o cliente sem o valor, **adiantar ao
+suficiente, a devolução pode ser recusada integralmente pelo provedor, ou completar-se apenas quanto à
+parcela da PLATAFORMA**, conforme as regras do provedor aplicáveis à operação. Em qualquer das duas
+hipóteses, a PLATAFORMA poderá, a seu critério e para não deixar o cliente sem o valor, **adiantar ao
 cliente a parcela que caberia ao GUIA**; feito o adiantamento, o valor constitui dívida líquida e
 certa do GUIA perante a PLATAFORMA, sujeita ao mesmo prazo, à mesma autorização de compensação e ao
 mesmo efeito de título executivo previstos nos itens 6.2 e 6.3.
+
+**6.5.1.** **O GUIA OBRIGA-SE A MANTER, NA CONTA CONECTADA, SALDO SUFICIENTE PARA FAZER FRENTE ÀS
+DEVOLUÇÕES DAS RESERVAS EM ABERTO.** A ausência de saldo que impeça ou retarde a devolução ao cliente
+constitui descumprimento contratual e autoriza a PLATAFORMA a suspender a publicação de novas datas do
+GUIA até a regularização.
 
 **6.6.** O GUIA reconhece que recebimentos por cartão parcelado são liberados progressivamente pelo
 provedor de pagamento e que, por isso, **um cancelamento próximo à venda pode ocorrer antes de o valor

@@ -1,0 +1,26 @@
+name: 12. Conferir o Mercado Pago
+
+# Só lê. Não move dinheiro, não toca em conta de guia nenhum.
+#
+# Confirma que MP_CLIENT_ID e MP_CLIENT_SECRET estão guardados, formam um par
+# válido e pertencem à conta certa — antes de existir a primeira reserva paga.
+#
+# Nada secreto aparece no registro: o repositório é público, e o `client_secret`
+# e o token são mascarados antes de qualquer coisa poder ecoá-los.
+on:
+  workflow_dispatch:
+
+jobs:
+  conferir:
+    name: Conferir as credenciais da aplicação
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Conferir as credenciais
+        env:
+          MP_CLIENT_ID: ${{ secrets.MP_CLIENT_ID }}
+          MP_CLIENT_SECRET: ${{ secrets.MP_CLIENT_SECRET }}
+        run: |
+          chmod +x tools/conferir-mercadopago.sh
+          tools/conferir-mercadopago.sh

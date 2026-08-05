@@ -511,6 +511,41 @@ Rodar com **cliente** devolve a conta ao papel comum.
 
 ---
 
+## Robô 12 — Conferir o Mercado Pago
+
+Confirma que os segredos `MP_CLIENT_ID` e `MP_CLIENT_SECRET` estão guardados,
+que formam um par válido e que a aplicação pertence à conta certa. Só lê: não
+move dinheiro e não toca em conta de guia nenhum.
+
+1. Aba **Actions** → **12. Conferir o Mercado Pago**
+2. **Run workflow** → escolha a branch → **Run workflow**
+
+Deve terminar com:
+
+```
+✓ credenciais válidas — o Mercado Pago devolveu um token
+✓ conta 000000000 · apelido ALGUMACOISA · país MLB
+```
+
+E imprime o **link de conexão do guia**. Abra esse link num navegador: tem de
+aparecer a tela do Mercado Pago pedindo autorização. Se aparecer erro falando em
+`redirect_uri`, o endereço cadastrado na aplicação está diferente do que o
+aplicativo vai enviar.
+
+**Por que existe.** Segredo guardado no GitHub não avisa quando está errado.
+`client_secret` copiado pela metade, ou copiado **antes** de renovar as
+credenciais de produção — renovar troca o segredo —, fica lá parecendo certo. O
+defeito só apareceria no dia em que o primeiro guia tentasse conectar a conta,
+com uma mensagem que fala em "credenciais inválidas" e não em "você guardou a
+versão antiga". Aqui isso se descobre apertando um botão, antes de existir
+dinheiro.
+
+Nada secreto aparece no registro: o `client_secret` e o token são mascarados
+antes de qualquer coisa poder ecoá-los, e o e-mail do titular da conta não é
+impresso.
+
+---
+
 ## Se der erro
 
 Clique no ✗ vermelho, depois no passo que falhou. Copie a mensagem e me mande.

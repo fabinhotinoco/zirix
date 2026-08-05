@@ -93,12 +93,34 @@ que é **`application_fee`** ao usar a API de pagamentos (`POST /v1/payments`, o
 ```
 Passeio R$ 1.000 · comissão 10% (R$ 100) · sinal 30%
 
-Sinal      R$ 300  →  R$  30 comissão (sua conta)  +  R$ 270 (conta do guia)
-Quitação   R$ 700  →  R$  70 comissão (sua conta)  +  R$ 630 (conta do guia)
+Sinal      R$ 300  →  R$  30 comissão (sua conta)  +  R$ 270 − tarifa MP (conta do guia)
+Quitação   R$ 700  →  R$  70 comissão (sua conta)  +  R$ 630 − tarifa MP (conta do guia)
 ```
 
 Você nunca recebe e repassa. Sua receita tributável é só a comissão, e não há risco de você ficar
 devendo repasse a guia nenhum.
+
+**Quem paga a tarifa do Mercado Pago — CONFIRMADO na documentação oficial** (*Como integrar o checkout
+em marketplace*, MLB, consultada em 05/08/2026 pelo MCP do Mercado Pago):
+
+> "A comissão do Mercado Pago é descontada do valor recebido pelo vendedor. Ou seja, primeiro, a
+> comissão do Mercado Pago é descontada e, em seguida, a comissão do Marketplace é descontada sobre o
+> valor restante."
+
+Ou seja: a **tarifa de processamento sai inteira da parte do guia**, e a sua comissão sai limpa por
+cima do que restou. Sua receita é exatamente `comissao_centavos`, sem desconto — a `marketplace_fee`
+não é rateada com o Mercado Pago.
+
+Três consequências:
+
+1. **O extrato do guia precisa mostrar três linhas, não duas**: valor da reserva, tarifa do Mercado
+   Pago, comissão da plataforma. Mostrar só "recebeu R$ 270" quando caíram R$ 256 gera reclamação
+   todo mês, e a culpa parece ser da plataforma.
+2. **O contrato de adesão precisa dizer isso com todas as letras** (cláusula 5.10), porque é dinheiro
+   que o guia não recebe e que não é nossa comissão.
+3. O guia tem interesse direto em **Pix** (~0,99%) sobre cartão (~4,98%) — a diferença é dele, não
+   sua. Vale expor isso no aplicativo: alinha o incentivo do guia com o meio de pagamento que também
+   nos expõe menos a estorno.
 
 **Contas envolvidas:** a **conta coletora da plataforma já existe** e é a sua — é dentro dela que se
 cria a aplicação Marketplace (client_id/client_secret). **Só os guias precisam conectar as contas
@@ -169,8 +191,34 @@ Três consequências:
 3. **A Fase 4 precisa tratar o estorno que falha pela metade**: registrar a dívida do guia no
    `ledger_entries`, alertar o master e não marcar a reserva como devolvida quando não foi.
 
-O kit em `tools/mp-sandbox/` deixa de ser bloqueio e vira **confirmação antes de dinheiro real** —
-principalmente para medir o caso do guia sem saldo, que a documentação não detalha.
+**A documentação em português diz outra coisa, e a diferença importa.** Consultada em 05/08/2026 pelo
+MCP do Mercado Pago (*Configurar reembolsos e cancelamentos*, Checkout Pro, MLB), ela afirma:
+
+> "**Dinheiro na conta**: É necessário ter saldo suficiente na conta para efetuar o reembolso. Caso
+> contrário, a transação será rejeitada."
+
+E, na página equivalente do Checkout API: *"caso contrário, a transação não será realizada"*.
+
+São **dois desfechos diferentes** para o mesmo caso:
+
+| Fonte | Guia sem saldo |
+|---|---|
+| Doc do marketplace 1:1 (en) | Devolve a parte da plataforma; a parte do guia fica em aberto |
+| Doc de reembolsos (pt, MLB) | **A devolução inteira é rejeitada** — nada volta ao cliente |
+
+Não dá para escolher entre as duas por leitura: uma descreve o modelo 1:1, a outra a chamada comum de
+reembolso, e nenhuma diz explicitamente o que acontece na nossa configuração. **A diferença é grande**:
+no primeiro caso o cliente recebe metade e a plataforma decide o resto; no segundo o cliente **não
+recebe nada** e o cancelamento fica travado até o guia ter saldo — o que é muito pior, porque o cliente
+já foi avisado de que a devolução estava a caminho.
+
+Por isso o motor de cancelamento da Fase 4 tem de tratar os **três** desfechos como estados distintos —
+devolvido, devolvido pela metade, e **recusado** — e nunca marcar a reserva como devolvida sem
+confirmação do provedor.
+
+O kit em `tools/mp-sandbox/` deixa de ser bloqueio e vira **confirmação antes de dinheiro real** — e o
+caso do guia sem saldo passa a ser o **primeiro** teste a rodar, não um detalhe: é ele que decide qual
+das duas linhas acima é a verdadeira.
 
 Duas consequências que o código precisa refletir:
 
