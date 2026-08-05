@@ -3,8 +3,9 @@
 Este guia é para quem não quer (ou não pode) usar o Terminal. Você faz tudo em
 páginas de site, clicando. Os robôs no GitHub fazem o trabalho pesado.
 
-São **quatro preparações que você faz uma única vez** e depois só aperta botão.
-(A quarta só é necessária quando o envio de e-mails começar a esbarrar no limite.)
+São **cinco preparações que você faz uma única vez** e depois só aperta botão.
+(A quarta só é necessária quando o envio de e-mails começar a esbarrar no limite;
+a quinta, quando chegar a hora de receber pagamento.)
 
 ---
 
@@ -178,6 +179,107 @@ Enquanto não trocar o serviço, a saída é esperar uma hora. Para resolver de 
 
 ⚠️ A chave do Resend é secreta: ela vai só nesse campo do painel do Supabase.
 Não precisa ir para o GitHub nem para o código.
+
+---
+
+## Preparação 5 — Criar a aplicação Marketplace no Mercado Pago
+
+É o que permite cada guia **conectar a conta dele** à plataforma. Sem isso não
+existe split: o dinheiro não teria como cair na conta certa, e a sua comissão
+não teria como ser retida na origem.
+
+Você faz isso **uma vez só**. Os guias não criam aplicação nenhuma — eles só
+clicam em "conectar" dentro do aplicativo.
+
+### a) Escolher a conta certa (decida antes de clicar)
+
+A aplicação tem de nascer dentro da **conta que vai receber a sua comissão** —
+a sua, em `fabio@zirix.com.br`. Não é a conta de um guia, nem uma conta nova de
+teste.
+
+⚠️ **Isso é difícil de desfazer.** Aplicação do Mercado Pago pertence à conta que
+a criou e não se transfere. Se um dia a plataforma passar a faturar por um CNPJ,
+será preciso criar outra aplicação naquela conta e **fazer todos os guias
+reconectarem** — os tokens antigos não valem para a nova. Se você já sabe que
+vai operar por CNPJ, vale abrir a conta do CNPJ agora e criar a aplicação lá.
+
+Duas conferências na conta antes de seguir:
+
+- **Cadastro concluído** (documento, dados bancários, chave Pix). Conta que ainda
+  não pode receber dinheiro cria a aplicação normalmente, mas quebra no primeiro
+  pagamento — e o erro que aparece não fala em cadastro.
+- **Você entra nela sozinho.** O `client_secret` só aparece para quem entra na
+  conta; se o acesso for de outra pessoa, o segredo passa por ela.
+
+### b) Criar a aplicação
+
+1. Entre em <https://www.mercadopago.com.br/developers/panel> com o e-mail
+   `fabio@zirix.com.br`
+2. Vá em **Suas integrações** (é o menu das aplicações) → botão de **criar
+   aplicação**
+3. **Nome**: `PescaVerticalAPP`
+4. Quando ele perguntar **que tipo de solução** você vai integrar, escolha
+   **pagamentos on-line** — não "pagamentos presenciais"
+5. Quando perguntar **qual produto** você vai usar, marque a opção de
+   **Checkout Pro** e, se aparecer uma pergunta separada sobre **marketplace**
+   ("está integrando para uma plataforma/marketplace?"), responda **sim**
+6. **Redirect URI / URL de redirecionamento** — cole exatamente isto:
+
+   ```
+   https://ykdbdpdepkdtyxtcwwex.supabase.co/functions/v1/mp-oauth
+   ```
+
+7. Salve
+
+> O painel do Mercado Pago muda de tempos em tempos, e os nomes dos botões
+> acompanham. **Não confirmei a redação atual das telas** — se o que você vir
+> estiver com outro nome, procure o que tem o mesmo sentido e me diga o que
+> apareceu que eu ajusto este texto.
+
+**Por que esse endereço de retorno, e não o do aplicativo.** Ao fim do "conectar",
+o Mercado Pago devolve um código que precisa ser **trocado pelo token do guia**, e
+essa troca exige o `client_secret`. O aplicativo não pode fazer isso: ele é
+distribuído para o celular de todo mundo, e qualquer segredo dentro dele é
+segredo de ninguém — quem o extraísse conseguiria falar com o Mercado Pago em
+nome da plataforma. Por isso o retorno vai para um endereço **no servidor**
+(uma função do Supabase, publicada por robô na Fase 4), onde o segredo pode
+morar. O endereço já pode ser cadastrado agora, mesmo antes de a função existir.
+
+O texto tem de ser **idêntico** dos dois lados — o mesmo que o aplicativo envia
+na hora de conectar. Uma barra a mais no fim já faz o Mercado Pago recusar com
+`redirect_uri mismatch`.
+
+### c) Guardar as duas credenciais no GitHub
+
+Aberta a aplicação, o painel mostra **Client ID** e **Client Secret** (o segredo
+costuma ficar escondido atrás de um "mostrar").
+
+1. Abra <https://github.com/fabinhotinoco/zirix/settings/secrets/actions>
+2. **New repository secret** → **Name**: `MP_CLIENT_ID` → cole o Client ID →
+   **Add secret**
+3. **New repository secret** de novo → **Name**: `MP_CLIENT_SECRET` → cole o
+   Client Secret → **Add secret**
+
+⚠️ **O `client_secret` é senha, e este repositório é público.** Ele vai em um
+lugar só: o campo **Secret** do GitHub. Não cole em mensagem, e-mail ou chat —
+**inclusive para mim** — nem em campo de formulário de robô, porque o que se
+digita ali fica visível no registro público da execução. Se vazar por engano,
+o próprio painel do Mercado Pago tem a opção de **gerar um novo** `client_secret`;
+o antigo para de valer na hora.
+
+O `client_id` não é segredo (ele viaja no link de conectar, à vista), mas guardar
+os dois juntos evita ter de procurar depois.
+
+### d) Credenciais de teste (opcional, mas recomendado)
+
+Dentro da mesma aplicação há uma área de **credenciais de teste** e a criação de
+**contas de teste** (uma "vendedora", que faz o papel do guia, e uma
+"compradora"). É com elas que dá para conferir o split e o estorno parcial sem
+dinheiro real — em especial o caso do **guia sem saldo**, que é o único ponto do
+desenho de cancelamento que ainda não foi confirmado na prática.
+
+Se você criar as contas de teste, me avise: eu monto o robô que roda essa
+conferência antes de qualquer centavo real entrar.
 
 ---
 

@@ -476,7 +476,10 @@ membros Diamond · configurações e textos globais · exportação CSV.
 
 **Fase 0 — Contas e credenciais (você providencia):** **aplicação Marketplace criada dentro da sua
 conta Mercado Pago existente** (client_id/client_secret para o OAuth dos guias — só os guias conectam
-conta, a coletora é a sua), Twilio ou Zenvia, Resend + domínio, Apple Developer (US$ 99/ano), Google
+conta, a coletora é a sua; passo a passo na Preparação 5 do `SEM-TERMINAL.md`, credenciais guardadas
+como `MP_CLIENT_ID` e `MP_CLIENT_SECRET`, e o retorno do OAuth apontando para
+`…/functions/v1/mp-oauth`, no servidor, porque a troca do código pelo token exige o `client_secret` e
+o aplicativo é distribuído a todo mundo), Twilio ou Zenvia, Resend + domínio, Apple Developer (US$ 99/ano), Google
 Play (US$ 25), chave do Google Maps, logo em PNG transparente, **minutas legais revisadas por
 advogado** e os campos entre colchetes preenchidos.
 
