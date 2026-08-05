@@ -706,6 +706,12 @@ configurado, ou seja, dentro do uso não comercial. O gatilho é a primeira
 reserva paga — que é também o primeiro dia com receita. Nessa data, US$ 29/mês
 equivalem a cerca de uma pescaria e meia de comissão.
 
+**E-mail enviado ao Open-Meteo em 05/08/2026** (info@open-meteo.com), perguntando
+se há condição para projeto comercial pequeno, confirmando o plano adequado ao
+volume real (24 a 150 chamadas/dia, por causa do cache) e qual atribuição eles
+preferem. **Aguardando resposta.** Independentemente dela, o plano é assinar no
+mês da primeira reserva paga.
+
 **Alternativas gratuitas avaliadas e descartadas:** TideCheck (50 chamadas/dia),
 StormGlass (10/dia), WorldTides (pago), NOAA CO-OPS (só estações dos EUA). As
 tábuas da Marinha do Brasil não têm API pública.

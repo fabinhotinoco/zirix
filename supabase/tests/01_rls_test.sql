@@ -2096,4 +2096,218 @@ begin
 end $$;
 rollback;
 
+-- =============================================================================
+do $$ begin raise notice '--- 25. Registro de pagamento ---'; end $$;
+-- =============================================================================
+
+-- Massa: uma reserva pendente do guia A, de R$ 1.000, sinal de R$ 300.
+-- Comissão 10% = R$ 100, rateada em R$ 30 no sinal e R$ 70 na quitação.
+begin;
+set role postgres;
+insert into public.bookings (
+  id, user_id, guide_id, boat_id, data, qtd_pescadores,
+  preco_barco_centavos, preco_passageiro_centavos, valor_total_centavos,
+  comissao_percentual, comissao_centavos, repasse_guia_centavos,
+  sinal_centavos, saldo_centavos, status, status_pagamento
+) values (
+  '30000000-0000-0000-0000-0000000000ff',
+  '00000000-0000-0000-0000-0000000000c1',
+  '10000000-0000-0000-0000-00000000000a',
+  '20000000-0000-0000-0000-00000000000a',
+  current_date + 40, 2, 70000, 15000, 100000,
+  10, 10000, 90000, 30000, 70000, 'pendente', 'aguardando_sinal'
+);
+
+do $$
+declare
+  r public.bookings;
+  p public.payments;
+  n integer;
+begin
+  -- --- o sinal confirma a reserva e gera o código -------------------------
+  p := public.registrar_pagamento(
+    '30000000-0000-0000-0000-0000000000ff', 'sinal', 'MP-1', 'pix',
+    30000, 3000, 'aprovado');
+
+  select * into r from public.bookings where id = '30000000-0000-0000-0000-0000000000ff';
+  if r.status <> 'confirmada' or r.status_pagamento <> 'sinal_pago' then
+    raise exception 'FALHA: o sinal não confirmou a reserva (% / %)', r.status, r.status_pagamento;
+  end if;
+  if r.codigo is null or r.codigo !~ '^PV-\d{4}-\d{4}$' then
+    raise exception 'FALHA: código ausente ou fora do formato: %', coalesce(r.codigo, 'nulo');
+  end if;
+  if public.pago_da_reserva(r) <> 30000 then
+    raise exception 'FALHA: pago não bate: %', public.pago_da_reserva(r);
+  end if;
+  raise notice 'ok  o sinal confirma a reserva e dá número a ela';
+
+  -- --- idempotência: o mesmo aviso duas vezes ------------------------------
+  -- O Mercado Pago reenvia quando não recebe 200 rápido. Sem trava, a entrada
+  -- de dinheiro viraria dois lançamentos e a comissão apareceria em dobro.
+  perform public.registrar_pagamento(
+    '30000000-0000-0000-0000-0000000000ff', 'sinal', 'MP-1', 'pix',
+    30000, 3000, 'aprovado');
+  perform public.registrar_pagamento(
+    '30000000-0000-0000-0000-0000000000ff', 'sinal', 'MP-1', 'pix',
+    30000, 3000, 'aprovado');
+
+  select count(*) into n from public.payments where booking_id = '30000000-0000-0000-0000-0000000000ff';
+  if n <> 1 then raise exception 'FALHA: % pagamentos para o mesmo aviso', n; end if;
+
+  select count(*) into n from public.ledger_entries where booking_id = '30000000-0000-0000-0000-0000000000ff';
+  if n <> 1 then raise exception 'FALHA: % lançamentos no extrato para uma entrada', n; end if;
+
+  select * into r from public.bookings where id = '30000000-0000-0000-0000-0000000000ff';
+  if public.pago_da_reserva(r) <> 30000 then
+    raise exception 'FALHA: o reenvio dobrou o valor pago: %', public.pago_da_reserva(r);
+  end if;
+  raise notice 'ok  o mesmo aviso três vezes não vira dinheiro em dobro';
+
+  -- --- a quitação fecha a conta -------------------------------------------
+  perform public.registrar_pagamento(
+    '30000000-0000-0000-0000-0000000000ff', 'saldo', 'MP-2', 'pix',
+    70000, 7000, 'aprovado');
+
+  select * into r from public.bookings where id = '30000000-0000-0000-0000-0000000000ff';
+  if r.status_pagamento <> 'quitada' or r.quitada_em is null then
+    raise exception 'FALHA: a quitação não fechou a conta';
+  end if;
+  if public.pago_da_reserva(r) <> 100000 then
+    raise exception 'FALHA: pago total não bate: %', public.pago_da_reserva(r);
+  end if;
+
+  -- A soma das comissões dos pagamentos tem de bater EXATAMENTE com a da
+  -- reserva. Um centavo perdido por reserva faz o extrato divergir do Mercado
+  -- Pago com o tempo, e ninguém descobre de onde veio.
+  select sum(comissao_centavos) into n from public.ledger_entries
+   where booking_id = '30000000-0000-0000-0000-0000000000ff';
+  if n <> r.comissao_centavos then
+    raise exception 'FALHA: extrato soma % e a reserva diz %', n, r.comissao_centavos;
+  end if;
+  raise notice 'ok  a quitação fecha a conta e a comissão bate ao centavo';
+end $$;
+rollback;
+
+-- --- valor que não bate é recusado ------------------------------------------
+begin;
+set role postgres;
+insert into public.bookings (
+  id, user_id, guide_id, boat_id, data, qtd_pescadores,
+  preco_barco_centavos, preco_passageiro_centavos, valor_total_centavos,
+  comissao_percentual, comissao_centavos, repasse_guia_centavos,
+  sinal_centavos, saldo_centavos, status, status_pagamento
+) values (
+  '30000000-0000-0000-0000-0000000000fe',
+  '00000000-0000-0000-0000-0000000000c1',
+  '10000000-0000-0000-0000-00000000000a',
+  '20000000-0000-0000-0000-00000000000a',
+  current_date + 41, 2, 70000, 15000, 100000,
+  10, 10000, 90000, 30000, 70000, 'pendente', 'aguardando_sinal'
+);
+do $$
+declare r public.bookings;
+begin
+  -- Confirmar uma pescaria pelo valor errado é pior que não confirmar: o
+  -- cliente embarca achando que pagou, e a diferença aparece semanas depois.
+  begin
+    perform public.registrar_pagamento(
+      '30000000-0000-0000-0000-0000000000fe', 'sinal', 'MP-X', 'pix',
+      100, 10, 'aprovado');
+    raise exception 'FALHA: aceitou R$ 1,00 como sinal de R$ 300,00';
+  exception when check_violation then null;
+  end;
+
+  select * into r from public.bookings where id = '30000000-0000-0000-0000-0000000000fe';
+  if r.status_pagamento <> 'aguardando_sinal' then
+    raise exception 'FALHA: a reserva avançou apesar da recusa';
+  end if;
+  raise notice 'ok  valor que não bate com a reserva é recusado';
+
+  -- Pagamento sem identificador do provedor não tem como ser idempotente.
+  begin
+    perform public.registrar_pagamento(
+      '30000000-0000-0000-0000-0000000000fe', 'sinal', '', 'pix', 30000, 3000, 'aprovado');
+    raise exception 'FALHA: aceitou pagamento sem identificador';
+  exception when check_violation then null;
+  end;
+  raise notice 'ok  pagamento sem identificador do provedor é recusado';
+end $$;
+rollback;
+
+-- --- pagamento não aprovado não confirma nada -------------------------------
+begin;
+set role postgres;
+insert into public.bookings (
+  id, user_id, guide_id, boat_id, data, qtd_pescadores,
+  preco_barco_centavos, preco_passageiro_centavos, valor_total_centavos,
+  comissao_percentual, comissao_centavos, repasse_guia_centavos,
+  sinal_centavos, saldo_centavos, status, status_pagamento
+) values (
+  '30000000-0000-0000-0000-0000000000fd',
+  '00000000-0000-0000-0000-0000000000c1',
+  '10000000-0000-0000-0000-00000000000a',
+  '20000000-0000-0000-0000-00000000000a',
+  current_date + 42, 2, 70000, 15000, 100000,
+  10, 10000, 90000, 30000, 70000, 'pendente', 'aguardando_sinal'
+);
+do $$
+declare r public.bookings; n integer;
+begin
+  -- Pix esperando confirmação: fica registrado para o suporte enxergar, mas
+  -- não confirma a pescaria nem lança comissão.
+  perform public.registrar_pagamento(
+    '30000000-0000-0000-0000-0000000000fd', 'sinal', 'MP-P', 'pix',
+    30000, 3000, 'pendente');
+
+  select * into r from public.bookings where id = '30000000-0000-0000-0000-0000000000fd';
+  if r.status_pagamento <> 'aguardando_sinal' or r.codigo is not null then
+    raise exception 'FALHA: pagamento pendente confirmou a reserva';
+  end if;
+  select count(*) into n from public.ledger_entries where booking_id = r.id;
+  if n <> 0 then raise exception 'FALHA: pendente lançou comissão no extrato'; end if;
+  if public.pago_da_reserva(r) <> 0 then
+    raise exception 'FALHA: pendente contou como pago';
+  end if;
+
+  -- Quando o Pix cai, o MESMO aviso volta como aprovado.
+  perform public.registrar_pagamento(
+    '30000000-0000-0000-0000-0000000000fd', 'sinal', 'MP-P', 'pix',
+    30000, 3000, 'aprovado');
+
+  select * into r from public.bookings where id = r.id;
+  if r.status_pagamento <> 'sinal_pago' then
+    raise exception 'FALHA: a aprovação não avançou a reserva';
+  end if;
+  select count(*) into n from public.payments where booking_id = r.id;
+  if n <> 1 then raise exception 'FALHA: pendente e aprovado viraram % pagamentos', n; end if;
+  raise notice 'ok  pendente não confirma, e vira aprovado sem duplicar';
+end $$;
+rollback;
+
+-- --- estorno sai da conta do que foi pago -----------------------------------
+begin;
+set role postgres;
+do $$
+declare r public.bookings; pago integer;
+begin
+  select * into r from public.bookings where id = '30000000-0000-0000-0000-00000000000a';
+  -- A massa tem R$ 300 de sinal pago nessa reserva.
+  insert into public.payments (booking_id, tipo, provider_payment_id, valor_centavos,
+                               marketplace_fee_centavos, status)
+  values (r.id, 'sinal', 'MP-EST', 30000, 3000, 'aprovado');
+
+  pago := public.pago_da_reserva(r);
+  update public.payments set valor_estornado_centavos = 15000 where provider_payment_id = 'MP-EST';
+
+  -- Sem descontar o estorno, uma reserva devolvida apareceria como paga no
+  -- aviso e na agenda — e o guia embarcaria alguém que recebeu o dinheiro de
+  -- volta.
+  if public.pago_da_reserva(r) <> pago - 15000 then
+    raise exception 'FALHA: o estorno não saiu do valor pago (% vs %)',
+      public.pago_da_reserva(r), pago - 15000;
+  end if;
+  raise notice 'ok  estorno desconta do que a reserva conta como pago';
+end $$;
+rollback;
+
 do $$ begin raise notice ''; raise notice 'TODOS OS TESTES DE RLS PASSARAM'; end $$;
