@@ -241,16 +241,7 @@ const ctx = await navegador.newContext();
 // A tela de condições fala com a Open-Meteo. Interceptar aqui mantém a promessa
 // do roteiro: nenhuma requisição sai desta máquina, e o teste não depende de o
 // serviço estar no ar nem do tempo que estiver fazendo em Niterói.
-await ctx.route(/open-meteo\.com/, async (rota) => {
-  const url = rota.request().url();
-  const corpo = url.includes('marine-api') ? PREVISAO.mar : PREVISAO.tempo;
-  await rota.fulfill({
-    status: 200,
-    contentType: 'application/json',
-    headers: { 'access-control-allow-origin': '*' },
-    body: JSON.stringify(corpo),
-  });
-});
+
 
 // Intercepta QUALQUER host do Supabase: nada sai desta máquina.
 await ctx.route(/supabase\.co/, async (rota) => {
@@ -286,6 +277,18 @@ await ctx.route(/supabase\.co/, async (rota) => {
         'access-control-allow-headers': '*',
         'access-control-expose-headers': 'content-range',
       },
+    });
+  }
+
+  // A tela de condições pede a previsão ao SERVIDOR, não ao Open-Meteo — é o
+  // cache compartilhado. A função devolve as duas respostas cruas embrulhadas.
+  if (p === '/functions/v1/previsao') {
+    return json({
+      dados: { tempo: PREVISAO.tempo, mar: PREVISAO.mar },
+      temDadosDeMar: true,
+      fonte: 'Open-Meteo',
+      buscadoEm: new Date().toISOString(),
+      doCache: false,
     });
   }
 

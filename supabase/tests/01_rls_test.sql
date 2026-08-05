@@ -2027,4 +2027,73 @@ begin
 end $$;
 rollback;
 
+-- =============================================================================
+do $$ begin raise notice '--- 24. Cache de previsão ---'; end $$;
+-- =============================================================================
+
+begin;
+set role postgres;
+insert into public.previsoes (chave, lat, lng, fonte, tem_dados_de_mar, dados)
+values ('-22.926,-43.118', -22.9265, -43.1176, 'Open-Meteo', true,
+        '{"tempo":{"hourly":{"time":[]}},"mar":null}'::jsonb);
+
+select auth.entrar_como('00000000-0000-0000-0000-0000000000c1');
+set local role authenticated;
+do $$
+declare n integer;
+begin
+  -- Ler é liberado: é previsão do tempo de um ponto de operação pública, sem
+  -- dado pessoal nenhum. Esconder não protegeria ninguém.
+  select count(*) into n from public.previsoes;
+  if n < 1 then
+    raise exception 'FALHA: quem está logado não conseguiu ler a previsão';
+  end if;
+
+  -- Escrever, não. Se o aplicativo pudesse gravar aqui, qualquer pessoa logada
+  -- envenenaria a previsão que TODOS os outros veem — inclusive apagando um
+  -- alerta de trovoada de um dia em que ninguém deveria sair.
+  begin
+    update public.previsoes set dados = '{"tempo":null,"mar":null}'::jsonb;
+    raise exception 'FALHA: o aplicativo alterou a previsão de todo mundo';
+  exception when insufficient_privilege then null;
+  end;
+
+  begin
+    insert into public.previsoes (chave, lat, lng, fonte, dados)
+    values ('inventada', 0, 0, 'X', '{}'::jsonb);
+    raise exception 'FALHA: o aplicativo inseriu previsão';
+  exception when insufficient_privilege then null;
+  end;
+
+  begin
+    delete from public.previsoes;
+    raise exception 'FALHA: o aplicativo apagou a previsão';
+  exception when insufficient_privilege then null;
+  end;
+
+  raise notice 'ok  a previsão é lida por todos e escrita só pelo servidor';
+end $$;
+rollback;
+
+-- A limpeza descarta ponto abandonado, e só ele.
+begin;
+set role postgres;
+insert into public.previsoes (chave, lat, lng, fonte, dados, buscado_em) values
+  ('velha', 1, 1, 'X', '{}'::jsonb, now() - interval '30 days'),
+  ('nova',  2, 2, 'X', '{}'::jsonb, now() - interval '2 hours');
+do $$
+declare n integer;
+begin
+  n := public.limpar_previsoes();
+  if n < 1 then raise exception 'FALHA: não descartou a previsão abandonada'; end if;
+  if exists (select 1 from public.previsoes where chave = 'velha') then
+    raise exception 'FALHA: a previsão de 30 dias continuou guardada';
+  end if;
+  if not exists (select 1 from public.previsoes where chave = 'nova') then
+    raise exception 'FALHA: apagou a previsão que ainda está em uso';
+  end if;
+  raise notice 'ok  a limpeza descarta ponto abandonado e preserva o que está em uso';
+end $$;
+rollback;
+
 do $$ begin raise notice ''; raise notice 'TODOS OS TESTES DE RLS PASSARAM'; end $$;

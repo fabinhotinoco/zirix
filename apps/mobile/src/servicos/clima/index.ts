@@ -21,12 +21,12 @@ import { lerODia, type LeituraDoDia } from '@pescavertical/core/pesca/inteligenc
 import type { Local, TipoDeAgua } from '@pescavertical/core/pesca/tipos';
 
 import { chaveDoLocal, guardar, ler, VALIDADE_MS } from './cache';
-import { openMeteo } from './openmeteo';
+import { previsaoDoServidor } from './servidor';
 import type { PrevisaoBruta, ProvedorDeClima } from './provedor';
 
 export const DIAS_DE_PREVISAO = 7;
 
-let provedor: ProvedorDeClima = openMeteo;
+let provedor: ProvedorDeClima = previsaoDoServidor;
 
 /** Troca o provedor. Existe para os testes e para a migração futura. */
 export function usarProvedor(p: ProvedorDeClima): void {

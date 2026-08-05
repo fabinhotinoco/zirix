@@ -155,12 +155,7 @@ const ctx = await navegador.newContext({
   ...(GRAVAR ? { recordVideo: { dir: SAIDA, size: { width: 393, height: 852 } } } : {}),
 });
 
-await ctx.route(/open-meteo\.com/, (r) =>
-  r.fulfill({
-    status: 200, contentType: 'application/json',
-    headers: { 'access-control-allow-origin': '*' },
-    body: JSON.stringify(r.request().url().includes('marine-api') ? PREVISAO.mar : PREVISAO.tempo),
-  }));
+
 
 await ctx.route(/supabase\.co/, async (rota) => {
   const url = new URL(rota.request().url());
@@ -176,6 +171,18 @@ await ctx.route(/supabase\.co/, async (rota) => {
       'access-control-allow-methods': '*', 'access-control-expose-headers': 'content-range',
     } });
   }
+  // A tela de condições pede a previsão ao SERVIDOR, não ao Open-Meteo — é o
+  // cache compartilhado. A função devolve as duas respostas cruas embrulhadas.
+  if (p === '/functions/v1/previsao') {
+    return json({
+      dados: { tempo: PREVISAO.tempo, mar: PREVISAO.mar },
+      temDadosDeMar: true,
+      fonte: 'Open-Meteo',
+      buscadoEm: new Date().toISOString(),
+      doCache: false,
+    });
+  }
+
   if (p.startsWith('/auth/v1/user')) return json(USER);
   if (p.startsWith('/auth/v1/token')) return json(SESSAO);
   if (p === '/rest/v1/profiles') return json(um([PERFIL]));

@@ -44,11 +44,3 @@ export interface ProvedorDeClima {
   /** Busca `dias` dias a partir de hoje. */
   buscar(local: Pick<Local, 'lat' | 'lng'>, dias: number): Promise<PrevisaoBruta>;
 }
-
-/** Km/h para nós. */
-export const emNos = (kmh: number | null | undefined): number | null =>
-  kmh === null || kmh === undefined || Number.isNaN(kmh) ? null : kmh / 1.852;
-
-/** Número que pode não ter vindo, sem virar NaN nem zero. */
-export const num = (v: unknown): number | null =>
-  typeof v === 'number' && Number.isFinite(v) ? v : null;

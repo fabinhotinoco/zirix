@@ -692,12 +692,19 @@ o que a coloca fora dessa faixa. Três caminhos:
 | Hospedar a própria instância | servidor + manutenção | O Open-Meteo é código aberto; some a dependência de terceiro |
 | Cache no servidor + plano menor | US$ 29/mês, com folga enorme | Uma Edge Function busca e guarda; as chamadas passam a escalar por PONTO, não por usuário |
 
-A terceira é a que recomendo, e não só por preço: hoje cada aparelho fala direto
-com o provedor, então dez pescadores olhando o mesmo ponto são dez chamadas do
-mesmo dado. Com cache no servidor, um ponto de pesca custa ~24 chamadas por dia
-independentemente de quantas pessoas o consultem. A camada de provedor já está
-isolada (`apps/mobile/src/servicos/clima/`) justamente para essa troca não
-tocar em tela nenhuma.
+**FEITO: o cache no servidor existe** (migração 0013 + função `previsao`). O
+aplicativo não fala mais direto com o provedor. Um ponto de pesca custa ~24
+chamadas por dia **independentemente de quantas pessoas o consultem** — antes o
+número crescia com os usuários, que é a direção errada.
+
+Com isso, a decisão de licença deixou de ser urgente e ficou barata de mudar:
+quem sabe falar com o Open-Meteo é uma função só, e trocar de provedor não
+encosta em nenhuma tela.
+
+**Onde a plataforma está hoje:** sem assinatura vendida e sem anúncio
+configurado, ou seja, dentro do uso não comercial. O gatilho é a primeira
+reserva paga — que é também o primeiro dia com receita. Nessa data, US$ 29/mês
+equivalem a cerca de uma pescaria e meia de comissão.
 
 **Alternativas gratuitas avaliadas e descartadas:** TideCheck (50 chamadas/dia),
 StormGlass (10/dia), WorldTides (pago), NOAA CO-OPS (só estações dos EUA). As

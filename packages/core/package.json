@@ -18,7 +18,8 @@
     "./pesca/score": "./src/pesca/score.ts",
     "./pesca/especies": "./src/pesca/especies.ts",
     "./pesca/inteligencia": "./src/pesca/inteligencia.ts",
-    "./pesca/coordenadas": "./src/pesca/coordenadas.ts"
+    "./pesca/coordenadas": "./src/pesca/coordenadas.ts",
+    "./pesca/openmeteo": "./src/pesca/openmeteo.ts"
   },
   "scripts": {
     "test": "node --test --experimental-strip-types test/*.test.ts"

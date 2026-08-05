@@ -77,6 +77,12 @@ jobs:
       - name: Publicar a função mp-oauth
         run: supabase functions deploy mp-oauth --project-ref "$PROJETO" --no-verify-jwt
 
+      # ESTA fica COM verificação de JWT (o padrão). Sem isso, o endereço seria
+      # um proxy de previsão de graça para o mundo inteiro, pago pela cota da
+      # plataforma.
+      - name: Publicar a função previsao
+        run: supabase functions deploy previsao --project-ref "$PROJETO"
+
       - name: Conferir que a função responde
         run: |
           URL="https://$PROJETO.supabase.co/functions/v1/mp-oauth"
@@ -96,4 +102,13 @@ jobs:
             exit 1
           fi
           grep -q "Endereço incompleto" /tmp/resposta.html \
-            && echo "✓ a função está no ar e recusa chamada sem código, como deve"
+            && echo "✓ mp-oauth está no ar e recusa chamada sem código, como deve"
+
+          echo "→ conferindo que previsao EXIGE login"
+          PREV=$(curl -sS -o /dev/null -w '%{http_code}' "https://$PROJETO.supabase.co/functions/v1/previsao?lat=-22.9&lng=-43.1")
+          echo "  HTTP $PREV"
+          if [ "$PREV" != "401" ]; then
+            echo "::error::A função previsao respondeu $PREV sem login. Ela precisa exigir JWT, senão vira proxy grátis."
+            exit 1
+          fi
+          echo "✓ previsao exige login, como deve"

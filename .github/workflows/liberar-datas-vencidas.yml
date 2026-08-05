@@ -47,6 +47,9 @@ jobs:
           C=$(psql "$URL" -tAc "select public.limpar_conexoes_mp();")
           echo "Segredos de conexão descartados: ${C:-0}"
 
+          P=$(psql "$URL" -tAc "select public.limpar_previsoes();")
+          echo "Previsões de pontos abandonados descartadas: ${P:-0}"
+
           psql "$URL" -c "
             select status, count(*) as reservas
             from public.bookings
