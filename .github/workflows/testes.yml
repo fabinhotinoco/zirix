@@ -100,6 +100,22 @@ jobs:
       - name: Empacotar o JavaScript (Android)
         run: npx expo export --platform android --output-dir /tmp/bundle-android
 
+  funcoes:
+    name: Funções do servidor (tipos)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      # As Edge Functions só são compiladas na hora de publicar. Sem este passo,
+      # um erro de digitação viraria um robô 13 vermelho depois de já ter
+      # mexido nos segredos do Supabase — e o guia veria a função velha no ar
+      # sem ninguém saber por quê.
+      - name: Conferir os tipos das funções
+        run: deno check supabase/functions/*/index.ts
+
   telas:
     name: Telas (navegador de verdade, banco simulado)
     runs-on: ubuntu-latest

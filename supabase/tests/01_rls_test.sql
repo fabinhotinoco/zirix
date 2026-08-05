@@ -1767,4 +1767,264 @@ begin
 end $$;
 rollback;
 
+-- =============================================================================
+do $$ begin raise notice '--- 23. Conexão com o Mercado Pago ---'; end $$;
+-- =============================================================================
+
+-- --- ninguém se declara conectado -------------------------------------------
+begin;
+select auth.entrar_como('00000000-0000-0000-0000-0000000000b2');  -- guia B, sem conta
+set local role authenticated;
+do $$
+begin
+  -- O defeito que motivou a migração 0012: `grant update` em `guides` é de
+  -- tabela inteira, e a política deixa o guia editar a própria linha. Sem a
+  -- trigger, este UPDATE passava — e abria a porta da agenda (0005) sem
+  -- caminho de recebimento nenhum: o cliente reservava e não havia como pagar.
+  begin
+    update public.guides set mp_conectado_em = now()
+     where id = '10000000-0000-0000-0000-00000000000b';
+    raise exception 'FALHA: o guia se declarou conectado sozinho';
+  exception when insufficient_privilege then null;
+  end;
+
+  begin
+    update public.guides set mp_access_token = 'token-inventado'
+     where id = '10000000-0000-0000-0000-00000000000b';
+    raise exception 'FALHA: o guia gravou o próprio token';
+  exception when insufficient_privilege then null;
+  end;
+  raise notice 'ok  guia não abre a própria porta de recebimento';
+end $$;
+rollback;
+
+-- Nem o master. Ele decide status e comissão, mas não sabe token de ninguém —
+-- e marcar "conectado" na mão abriria a agenda do mesmo jeito.
+begin;
+select auth.entrar_como('00000000-0000-0000-0000-0000000000aa');
+set local role authenticated;
+do $$
+declare n integer;
+begin
+  begin
+    update public.guides set mp_conectado_em = now()
+     where id = '10000000-0000-0000-0000-00000000000b';
+    get diagnostics n = row_count;
+    -- Sem esta conferência, um `update` que não pega linha nenhuma — por RLS,
+    -- por id errado — passa por "o banco barrou". Foi o que aconteceu na
+    -- primeira versão deste teste, com o uuid do master trocado.
+    if n = 0 then
+      raise exception 'FALHA: o update não alcançou linha nenhuma; o teste não provou nada';
+    end if;
+    raise exception 'FALHA: o master marcou a conexão na mão';
+  exception when insufficient_privilege then null;
+  end;
+  raise notice 'ok  nem o master marca conexão de pagamento à mão';
+end $$;
+rollback;
+
+-- --- o caminho legítimo -----------------------------------------------------
+begin;
+select auth.entrar_como('00000000-0000-0000-0000-0000000000b2');
+set local role authenticated;
+do $$
+declare
+  v_state text;
+  v_guia  uuid;
+  v_token text;
+begin
+  v_state := public.iniciar_conexao_mp();
+
+  if length(v_state) < 32 then
+    raise exception 'FALHA: o segredo de conexão é curto demais para não ser adivinhado';
+  end if;
+
+  -- Daqui em diante quem fala é a função do servidor, com service_role.
+  set local role postgres;
+  v_guia := public.concluir_conexao_mp(v_state, 'MP-USER-9', 'token-do-ze', 'refresh-do-ze', 'chave');
+
+  if v_guia <> '10000000-0000-0000-0000-00000000000b' then
+    raise exception 'FALHA: a conexão foi parar no guia errado';
+  end if;
+
+  select mp_access_token into v_token from public.guides where id = v_guia;
+  if v_token = 'token-do-ze' then
+    raise exception 'FALHA: o token do guia está em texto puro no banco';
+  end if;
+
+  if public.token_mp_do_guia(v_guia, 'chave') <> 'token-do-ze' then
+    raise exception 'FALHA: o token cifrado não volta ao original';
+  end if;
+
+  -- Cifra sem chave certa não é cifra.
+  begin
+    perform public.token_mp_do_guia(v_guia, 'chave-errada');
+    raise exception 'FALHA: decifrou com a chave errada';
+  exception when others then
+    if sqlerrm like 'FALHA:%' then raise; end if;
+  end;
+
+  raise notice 'ok  conecta o guia certo e guarda o token cifrado';
+end $$;
+rollback;
+
+-- --- o segredo é de uso único ----------------------------------------------
+begin;
+select auth.entrar_como('00000000-0000-0000-0000-0000000000b2');
+set local role authenticated;
+do $$
+declare v_state text;
+begin
+  v_state := public.iniciar_conexao_mp();
+  set local role postgres;
+  perform public.concluir_conexao_mp(v_state, 'MP-1', 't', 'r', 'k');
+
+  -- Sem isto, quem interceptasse o endereço de retorno reusaria o mesmo código
+  -- para pendurar OUTRA conta do Mercado Pago no mesmo guia.
+  begin
+    perform public.concluir_conexao_mp(v_state, 'MP-INVASOR', 't2', 'r2', 'k');
+    raise exception 'FALHA: o mesmo segredo serviu duas vezes';
+  exception when check_violation then null;
+  end;
+  raise notice 'ok  a autorização não serve duas vezes';
+end $$;
+rollback;
+
+-- --- segredo vencido e segredo inventado ------------------------------------
+begin;
+set role postgres;
+do $$
+begin
+  begin
+    perform public.concluir_conexao_mp('segredo-que-nunca-existiu', 'MP-1', 't', 'r', 'k');
+    raise exception 'FALHA: aceitou um segredo inventado';
+  exception when check_violation then null;
+  end;
+
+  insert into public.mp_conexoes (state, guide_id, expira_em)
+  values ('vencido', '10000000-0000-0000-0000-00000000000b', now() - interval '1 minute');
+  begin
+    perform public.concluir_conexao_mp('vencido', 'MP-1', 't', 'r', 'k');
+    raise exception 'FALHA: aceitou um segredo vencido';
+  exception when check_violation then null;
+  end;
+  raise notice 'ok  segredo inventado e segredo vencido são recusados';
+end $$;
+rollback;
+
+-- --- a marca de "quem grava é a plataforma" não sobra depois -----------------
+begin;
+select auth.entrar_como('00000000-0000-0000-0000-0000000000b2');
+set local role authenticated;
+do $$
+declare v_state text;
+begin
+  v_state := public.iniciar_conexao_mp();
+  set local role postgres;
+  perform public.concluir_conexao_mp(v_state, 'MP-1', 't', 'r', 'k');
+
+  -- A permissão vale para UM update, dentro da função. Se sobrasse ligada, o
+  -- guia gravaria o que quisesse logo em seguida, na mesma transação.
+  set local role authenticated;
+  begin
+    update public.guides set mp_conectado_em = null
+     where id = '10000000-0000-0000-0000-00000000000b';
+    raise exception 'FALHA: a permissão da plataforma continuou ligada';
+  exception when insufficient_privilege then null;
+  end;
+  raise notice 'ok  a permissão de gravar não sobrevive à função';
+end $$;
+rollback;
+
+-- --- quem pode pedir para conectar ------------------------------------------
+begin;
+select auth.entrar_como('00000000-0000-0000-0000-0000000000c1');  -- cliente comum
+set local role authenticated;
+do $$
+begin
+  begin
+    perform public.iniciar_conexao_mp();
+    raise exception 'FALHA: um cliente pediu conexão de recebimento';
+  exception when insufficient_privilege then null;
+  end;
+  raise notice 'ok  só guia cadastrado pede conexão de recebimento';
+end $$;
+rollback;
+
+-- Guia ainda em análise não conecta: a ordem é cadastrar, ser aprovado, e só
+-- então ligar a conta que vai receber dinheiro.
+begin;
+set role postgres;
+update public.guides set status = 'pendente'
+ where id = '10000000-0000-0000-0000-00000000000b';
+select auth.entrar_como('00000000-0000-0000-0000-0000000000b2');
+set local role authenticated;
+do $$
+begin
+  begin
+    perform public.iniciar_conexao_mp();
+    raise exception 'FALHA: guia pendente conectou conta';
+  exception when check_violation then null;
+  end;
+  raise notice 'ok  guia em análise ainda não conecta conta';
+end $$;
+rollback;
+
+-- --- a tabela de segredos não é legível pelo aplicativo ----------------------
+begin;
+set role postgres;
+insert into public.mp_conexoes (state, guide_id)
+values ('segredo-do-ze', '10000000-0000-0000-0000-00000000000b');
+select auth.entrar_como('00000000-0000-0000-0000-0000000000b1');  -- outro guia
+set local role authenticated;
+do $$
+declare n integer;
+begin
+  -- Ler esta tabela é poder concluir a conexão de outra pessoa.
+  begin
+    select count(*) into n from public.mp_conexoes;
+    if n > 0 then
+      raise exception 'FALHA: o aplicativo enxergou % segredo(s) de conexão', n;
+    end if;
+  exception when insufficient_privilege then null;
+  end;
+  raise notice 'ok  os segredos de conexão não são legíveis pelo aplicativo';
+end $$;
+rollback;
+
+-- --- desconectar fecha a porta de novo --------------------------------------
+begin;
+select auth.entrar_como('00000000-0000-0000-0000-0000000000b1');  -- guia A, conectado
+set local role authenticated;
+do $$
+declare v_data timestamptz;
+begin
+  perform public.desconectar_mp();
+  set local role postgres;
+  select mp_conectado_em into v_data from public.guides
+   where id = '10000000-0000-0000-0000-00000000000a';
+  if v_data is not null then
+    raise exception 'FALHA: continuou conectado depois de desconectar';
+  end if;
+  raise notice 'ok  o guia desfaz a própria conexão e a porta fecha';
+end $$;
+rollback;
+
+-- --- uma conta do Mercado Pago pertence a um guia só ------------------------
+begin;
+set role postgres;
+do $$
+begin
+  -- Sem isto, um guia suspenso continuaria recebendo pelo cadastro do outro.
+  begin
+    update public.guides set mp_user_id = 'MESMA-CONTA'
+     where id in ('10000000-0000-0000-0000-00000000000a',
+                  '10000000-0000-0000-0000-00000000000b');
+    raise exception 'FALHA: dois guias apontaram para a mesma conta';
+  exception when unique_violation then null;
+  end;
+  raise notice 'ok  uma conta do Mercado Pago pertence a um guia só';
+end $$;
+rollback;
+
 do $$ begin raise notice ''; raise notice 'TODOS OS TESTES DE RLS PASSARAM'; end $$;

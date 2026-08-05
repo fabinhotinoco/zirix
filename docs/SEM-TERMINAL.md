@@ -580,6 +580,37 @@ impresso.
 
 ---
 
+## Robô 13 — Publicar as funções do servidor
+
+Publica a função `mp-oauth`, que é quem recebe o guia de volta do Mercado Pago
+e guarda o token dele cifrado.
+
+**Precisa da Preparação 6** (`SUPABASE_ACCESS_TOKEN`) e da Preparação 5
+(`MP_CLIENT_ID` e `MP_CLIENT_SECRET`).
+
+1. Aba **Actions** → **13. Publicar as funções do servidor**
+2. **Run workflow** → escolha a branch → **Run workflow**
+
+Deve terminar com:
+
+```
+✓ a função está no ar e recusa chamada sem código, como deve
+```
+
+**O que ele faz além de publicar.** Leva os segredos do Mercado Pago do cofre do
+GitHub para o cofre do Supabase, e **gera a chave que cifra os tokens dos
+guias** — uma vez só, na primeira publicação. Essa chave não passa por tela, por
+chat nem pelo registro da execução: ninguém precisa vê-la, nem você, nem eu.
+
+> ⚠️ **A chave de cifra não pode ser trocada depois.** Trocá-la torna ilegível
+> todo token já guardado, e cada guia teria de reconectar a conta. Por isso o
+> robô confere se ela já existe antes de gerar. Se algum dia você apagá-la à mão
+> no painel do Supabase, é isso que acontece.
+
+Rodar o robô de novo é seguro: ele republica a função e mantém a chave.
+
+---
+
 ## Se der erro
 
 Clique no ✗ vermelho, depois no passo que falhou. Copie a mensagem e me mande.

@@ -42,6 +42,11 @@ jobs:
           N=$(psql "$URL" -tAc "select public.expirar_reservas();")
           echo "Reservas expiradas nesta passagem: ${N:-0}"
 
+          # Segredo de conexão do Mercado Pago que venceu sem uso não serve
+          # para nada e não deve ficar guardado: é senha de uso único parada.
+          C=$(psql "$URL" -tAc "select public.limpar_conexoes_mp();")
+          echo "Segredos de conexão descartados: ${C:-0}"
+
           psql "$URL" -c "
             select status, count(*) as reservas
             from public.bookings

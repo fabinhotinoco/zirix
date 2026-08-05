@@ -1,0 +1,98 @@
+name: 13. Publicar as funções do servidor
+
+# Publica as Edge Functions do Supabase e leva os segredos que elas precisam
+# do cofre do GitHub para o cofre do Supabase.
+#
+# Nenhum segredo aparece no registro, que é público. O CLI do Supabase imprime
+# apenas o nome e um resumo (digest) de cada segredo, nunca o valor.
+on:
+  workflow_dispatch:
+
+jobs:
+  publicar:
+    name: Publicar mp-oauth
+    runs-on: ubuntu-latest
+    env:
+      PROJETO: ykdbdpdepkdtyxtcwwex
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Conferir se o acesso ao Supabase foi guardado
+        run: |
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo "::error::Falta o segredo SUPABASE_ACCESS_TOKEN."
+            echo "Crie em https://supabase.com/dashboard/account/tokens e guarde em"
+            echo "https://github.com/fabinhotinoco/zirix/settings/secrets/actions"
+            echo "O passo a passo está na Preparação 6 de docs/SEM-TERMINAL.md."
+            exit 1
+          fi
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # -----------------------------------------------------------------------
+      # A chave que cifra os tokens dos guias.
+      #
+      # É gerada AQUI, uma vez, e nunca mais. Não passa por tela, por chat nem
+      # por registro de execução — ninguém precisa vê-la, nem eu, nem você.
+      #
+      # E não pode ser regerada: trocá-la torna ilegível todo token já guardado,
+      # e cada guia teria de reconectar a conta. Por isso o passo confere antes
+      # se ela já existe, em vez de simplesmente criar.
+      # -----------------------------------------------------------------------
+      - name: Garantir a chave de cifra dos tokens
+        run: |
+          if supabase secrets list --project-ref "$PROJETO" | grep -q '^ *MP_TOKEN_KEY '; then
+            echo "✓ chave de cifra já existe — mantida como está"
+          else
+            echo "→ primeira publicação: gerando a chave de cifra"
+            CHAVE=$(openssl rand -base64 48 | tr -d '\n')
+            echo "::add-mask::$CHAVE"
+            supabase secrets set --project-ref "$PROJETO" "MP_TOKEN_KEY=$CHAVE"
+            echo "✓ chave gerada e guardada no cofre do Supabase"
+          fi
+
+      - name: Levar os segredos do Mercado Pago para o Supabase
+        env:
+          MP_CLIENT_ID: ${{ secrets.MP_CLIENT_ID }}
+          MP_CLIENT_SECRET: ${{ secrets.MP_CLIENT_SECRET }}
+        run: |
+          if [ -z "$MP_CLIENT_ID" ] || [ -z "$MP_CLIENT_SECRET" ]; then
+            echo "::error::Faltam MP_CLIENT_ID e/ou MP_CLIENT_SECRET. Veja a Preparação 5."
+            exit 1
+          fi
+          supabase secrets set --project-ref "$PROJETO" \
+            "MP_CLIENT_ID=$MP_CLIENT_ID" \
+            "MP_CLIENT_SECRET=$MP_CLIENT_SECRET" \
+            "MP_REDIRECT_URI=https://$PROJETO.supabase.co/functions/v1/mp-oauth"
+
+      # --no-verify-jwt porque quem chega nesta função é o navegador do guia
+      # voltando do Mercado Pago, sem cabeçalho de autorização. Sem esta opção,
+      # o Supabase responde 401 antes de a função rodar, e o guia vê um erro
+      # que não tem nada a ver com o que aconteceu. Quem verifica a identidade
+      # é o `state`, dentro da função.
+      - name: Publicar a função mp-oauth
+        run: supabase functions deploy mp-oauth --project-ref "$PROJETO" --no-verify-jwt
+
+      - name: Conferir que a função responde
+        run: |
+          URL="https://$PROJETO.supabase.co/functions/v1/mp-oauth"
+          echo "→ chamando $URL sem parâmetros (deve recusar com 400)"
+          CODIGO=$(curl -sS -o /tmp/resposta.html -w '%{http_code}' "$URL")
+          echo "  HTTP $CODIGO"
+          if [ "$CODIGO" = "401" ]; then
+            echo "::error::A função exigiu autorização. Ela precisa ser publicada com --no-verify-jwt."
+            exit 1
+          fi
+          if [ "$CODIGO" != "400" ]; then
+            echo "::error::Esperava 400 (endereço incompleto) e veio $CODIGO."
+            exit 1
+          fi
+          if grep -q "Configuração incompleta" /tmp/resposta.html; then
+            echo "::error::A função subiu, mas está sem algum segredo. Veja o registro dela no painel do Supabase."
+            exit 1
+          fi
+          grep -q "Endereço incompleto" /tmp/resposta.html \
+            && echo "✓ a função está no ar e recusa chamada sem código, como deve"
