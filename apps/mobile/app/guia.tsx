@@ -23,6 +23,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/lib/auth';
 import { mensagemDeErro } from '@/lib/erros';
+import {
+  escreverCoordenada,
+  lerCoordenada,
+  pareceForaDoBrasil,
+} from '@pescavertical/core/pesca/coordenadas';
 import { comissaoPadrao, meuGuia, salvarDadosDoGuia, type Guia } from '@/lib/guias';
 import {
   conectarMercadoPago,
@@ -57,6 +62,7 @@ export default function PainelGuia() {
   const [documento, setDocumento] = useState('');
   const [cidade, setCidade] = useState('');
   const [bio, setBio] = useState('');
+  const [ponto, setPonto] = useState('');
 
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
@@ -79,6 +85,11 @@ export default function PainelGuia() {
         setDocumento(g.documento ?? '');
         setCidade(g.cidade ?? '');
         setBio(g.bio ?? '');
+        setPonto(
+          g.local_operacao_lat !== null && g.local_operacao_lng !== null
+            ? escreverCoordenada({ lat: g.local_operacao_lat, lng: g.local_operacao_lng })
+            : '',
+        );
       }
     } catch (e) {
       setErro(mensagemDeErro(e, 'Não foi possível carregar sua operação.'));
@@ -137,6 +148,10 @@ export default function PainelGuia() {
         documento: documento.trim() || null,
         cidade: cidade.trim() || null,
         bio: bio.trim() || null,
+        // Campo vazio apaga o ponto; campo ilegível NÃO é salvo, e o botão nem
+        // chega aqui — a tela já barrou antes.
+        local_operacao_lat: ponto.trim() === '' ? null : (coordenada?.lat ?? null),
+        local_operacao_lng: ponto.trim() === '' ? null : (coordenada?.lng ?? null),
       });
       setSalvo(true);
     } catch (e) {
@@ -145,6 +160,9 @@ export default function PainelGuia() {
       setSalvando(false);
     }
   }
+
+  const coordenada = useMemo(() => lerCoordenada(ponto), [ponto]);
+  const pontoIlegivel = ponto.trim() !== '' && coordenada === null;
 
   const comissaoTexto =
     guia?.comissao_percentual != null
@@ -276,6 +294,32 @@ export default function PainelGuia() {
               autoCapitalize="words"
             />
             <Campo
+              rotulo="Ponto de saída (para a previsão do tempo)"
+              value={ponto}
+              onChangeText={setPonto}
+              placeholder="Cole do Google Maps: -22.9265, -43.1176"
+              autoCapitalize="none"
+            />
+            {pontoIlegivel ? (
+              <Text style={estilos.avisoCampo}>
+                Não consegui ler esta coordenada. Abra o Google Maps, segure o dedo no
+                ponto onde você larga o barco e copie o que aparecer — pode colar o
+                endereço inteiro do mapa.
+              </Text>
+            ) : coordenada ? (
+              <Text style={pareceForaDoBrasil(coordenada) ? estilos.avisoCampo : estilos.okCampo}>
+                {pareceForaDoBrasil(coordenada)
+                  ? 'Esse ponto cai fora do Brasil. Confira se a latitude e a longitude não estão trocadas.'
+                  : `Ponto reconhecido: ${escreverCoordenada(coordenada)}`}
+              </Text>
+            ) : (
+              <Text style={estilos.dicaCampo}>
+                Sem este ponto, sua operação não aparece na aba Condições de pesca — é
+                daqui que sai a previsão de vento, mar e maré do seu lugar.
+              </Text>
+            )}
+
+            <Campo
               rotulo="Sobre a operação"
               value={bio}
               onChangeText={setBio}
@@ -288,7 +332,7 @@ export default function PainelGuia() {
               titulo="Salvar"
               onPress={salvar}
               carregando={salvando}
-              desabilitado={nomeOperacao.trim().length < 3}
+              desabilitado={nomeOperacao.trim().length < 3 || pontoIlegivel}
             />
 
             {salvo && <Text style={estilos.ok}>Dados salvos.</Text>}
@@ -327,6 +371,9 @@ const criarEstilos = (cores: Cores) =>
     nota: { fontSize: 12, color: cores.textoSuave, marginTop: 8, lineHeight: 17 },
     desconectar: { color: cores.textoSuave, fontWeight: '600', marginTop: 14 },
     ok: { color: cores.acento, fontWeight: '600', marginTop: 12, textAlign: 'center' },
+    dicaCampo: { color: cores.textoSuave, fontSize: 12, lineHeight: 17, marginTop: -10, marginBottom: 14 },
+    okCampo: { color: cores.acento, fontSize: 12, fontWeight: '600', marginTop: -10, marginBottom: 14 },
+    avisoCampo: { color: cores.aviso, fontSize: 12, lineHeight: 17, marginTop: -10, marginBottom: 14 },
     voltar: { marginTop: 28, alignItems: 'center' },
     voltarTexto: { color: cores.acento, fontWeight: '600' },
   });

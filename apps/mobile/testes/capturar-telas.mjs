@@ -146,7 +146,14 @@ const PREVISAO = previsao();
 // --- navegador ---------------------------------------------------------------
 const navegador = await chromium.launch(CHROMIUM ? { executablePath: CHROMIUM } : {});
 // iPhone 14 Pro em pé.
-const ctx = await navegador.newContext({ viewport: { width: 393, height: 852 }, deviceScaleFactor: 2 });
+const GRAVAR = process.env.GRAVAR === '1';
+const ctx = await navegador.newContext({
+  viewport: { width: 393, height: 852 },
+  // Sem retina ao gravar: o vídeo sai com o dobro da resolução e a compressão
+  // do WebM cresce sem que se veja diferença numa animação.
+  deviceScaleFactor: GRAVAR ? 1 : 2,
+  ...(GRAVAR ? { recordVideo: { dir: SAIDA, size: { width: 393, height: 852 } } } : {}),
+});
 
 await ctx.route(/open-meteo\.com/, (r) =>
   r.fulfill({
@@ -242,6 +249,26 @@ async function definirModo(modo) {
 }
 
 await entrar();
+
+// Gravando: percorre as telas devagar, para o movimento aparecer no vídeo.
+if (GRAVAR) {
+  await definirModo('noite');
+  for (const rota of ['/inicio', '/condicoes', '/guia', '/calendario', '/condicoes']) {
+    await pagina.goto(`http://localhost:${PORTA}${rota}`);
+    await pagina.waitForTimeout(rota === '/condicoes' ? 5200 : 3200);
+    if (rota === '/condicoes') {
+      for (let i = 0; i < 3; i += 1) {
+        await pagina.mouse.wheel(0, 620);
+        await pagina.waitForTimeout(900);
+      }
+    }
+  }
+  await ctx.close();
+  await navegador.close();
+  servidor.close();
+  console.log(`\nVídeo em ${SAIDA}`);
+  process.exit(0);
+}
 
 for (const modo of ['noite', 'dia']) {
   await definirModo(modo);

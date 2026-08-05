@@ -22,12 +22,36 @@ import {
 } from 'react-native';
 import type { ReactNode } from 'react';
 
+import { Ondas } from './movimento';
 import { useTema, type Cores } from './tema';
 
-export function Titulo({ children }: { children: ReactNode }) {
+/**
+ * Título de tela, com a faixa de água por baixo.
+ *
+ * A onda mora aqui, e não em cada tela, para que a assinatura visual seja a
+ * mesma em todo lugar sem ninguém precisar lembrar de colocá-la — e para que
+ * mudá-la um dia seja mexer num arquivo só.
+ *
+ * `agitacao` existe para a tela de condições passar a ondulação de verdade: a
+ * água na tela fica mexida quando a água lá fora está.
+ */
+export function Titulo({
+  children,
+  agitacao,
+  semOnda = false,
+}: {
+  children: ReactNode;
+  agitacao?: number;
+  semOnda?: boolean;
+}) {
   const { cores } = useTema();
   const estilos = useMemo(() => criarEstilos(cores), [cores]);
-  return <Text style={estilos.titulo}>{children}</Text>;
+  return (
+    <View style={estilos.cabecalho}>
+      <Text style={estilos.titulo}>{children}</Text>
+      {!semOnda && <Ondas altura={26} agitacao={agitacao ?? 0.3} estilo={estilos.onda} />}
+    </View>
+  );
 }
 
 export function Subtitulo({ children }: { children: ReactNode }) {
@@ -117,6 +141,8 @@ export function Erro({ mensagem }: { mensagem: string | null }) {
 
 export const criarEstilos = (cores: Cores) =>
   StyleSheet.create({
+    cabecalho: { marginBottom: 4 },
+    onda: { marginTop: -6, marginBottom: 10, opacity: 0.9 },
     titulo: {
       fontSize: 28,
       fontWeight: '700',

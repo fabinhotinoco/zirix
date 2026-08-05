@@ -20,6 +20,8 @@ export interface Guia {
   status: StatusGuia;
   /** Nulo significa "usa o padrão da plataforma", não zero. */
   comissao_percentual: number | null;
+  local_operacao_lat: number | null;
+  local_operacao_lng: number | null;
   mp_conectado_em: string | null;
   aprovado_em: string | null;
   criado_em: string;
@@ -27,7 +29,8 @@ export interface Guia {
 
 const COLUNAS =
   'id, user_id, nome_operacao, documento, cidade, bio, status, ' +
-  'comissao_percentual, mp_conectado_em, aprovado_em, criado_em';
+  'comissao_percentual, local_operacao_lat, local_operacao_lng, ' +
+  'mp_conectado_em, aprovado_em, criado_em';
 
 /** O guia do usuário logado, ou null se ele não for guia. */
 export async function meuGuia(userId: string): Promise<Guia | null> {
@@ -58,7 +61,21 @@ export async function todosOsGuias(): Promise<Guia[]> {
 /** Dados de apresentação — o que o próprio guia pode editar. */
 export async function salvarDadosDoGuia(
   id: string,
-  dados: { nome_operacao: string; documento: string | null; cidade: string | null; bio: string | null },
+  dados: {
+    nome_operacao: string;
+    documento: string | null;
+    cidade: string | null;
+    bio: string | null;
+    /**
+     * Onde a operação larga o barco.
+     *
+     * É daqui que a aba de condições tira o ponto da previsão. Sem coordenada,
+     * a operação simplesmente não aparece naquela tela — melhor ficar de fora
+     * que mostrar o tempo de outro lugar.
+     */
+    local_operacao_lat?: number | null;
+    local_operacao_lng?: number | null;
+  },
 ): Promise<void> {
   const { error } = await supabase.from('guides').update(dados).eq('id', id);
   if (error) throw new Error(error.message);

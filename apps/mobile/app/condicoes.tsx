@@ -30,6 +30,7 @@ import { mensagemDeErro } from '@/lib/erros';
 import { pontosDePesca, type PontoDePesca } from '@/lib/locais';
 import { condicoesDoLocal, type Condicoes } from '@/servicos/clima';
 import { Erro, Subtitulo, Titulo } from '@/ui/componentes';
+import { BarraViva, ColunaViva, NumeroVivo, Respirar, Surgir } from '@/ui/movimento';
 import { Vitrine } from '@/ui/vitrine';
 import { useTema, type Cores } from '@/ui/tema';
 
@@ -38,6 +39,9 @@ const hhmm = (d: Date | null | undefined) =>
 
 const diaCurto = (d: Date) =>
   d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });
+
+/** Posição da hora dentro da faixa visível, para escalonar a entrada. */
+const indiceDaHora = (d: Date) => Math.max(0, d.getHours() - 4);
 
 const numero = (v: number | null | undefined, casas = 0, sufixo = '') =>
   v === null || v === undefined ? '—' : `${dec(v, casas)}${sufixo}`;
@@ -120,7 +124,11 @@ export default function CondicoesDePesca() {
         />
       }
     >
-      <Titulo>Condições de pesca</Titulo>
+      {/* A água do cabeçalho fica mexida quando o mar está mexido. Ondulação
+          de 0,5 m é calmaria; 2,5 m já é dia de não sair. */}
+      <Titulo agitacao={hoje?.agora?.ondaM != null ? Math.min(1, hoje.agora.ondaM / 2.5) : 0.3}>
+        Condições de pesca
+      </Titulo>
 
       {/* --- escolha do ponto --- */}
       {pontos.length > 1 && (
@@ -189,27 +197,33 @@ export default function CondicoesDePesca() {
           )}
 
           {/* --- 2. o índice --- */}
+          {/* Respira só quando dá para sair. Num dia de perigo, pulsação seria
+              exatamente o sinal errado. */}
+          <Respirar ativo={hoje.indice.nota >= 40}>
           <View style={[estilos.cartaoIndice, { borderColor: corDaNota(hoje.indice.nota, cores) }]}>
             <Text style={[estilos.indiceRotulo, { color: corDaNota(hoje.indice.nota, cores) }]}>
               {hoje.indice.rotulo}
             </Text>
-            <Text style={estilos.indiceNota}>
-              {hoje.indice.nota}
+            <View style={estilos.linhaNota}>
+              <NumeroVivo valor={hoje.indice.nota} estilo={estilos.indiceNota} />
               <Text style={estilos.indiceDe}> / 100</Text>
-            </Text>
+            </View>
             <Text style={estilos.estrelas}>
               {'★'.repeat(hoje.indice.estrelas)}
               <Text style={estilos.estrelasVazias}>{'☆'.repeat(5 - hoje.indice.estrelas)}</Text>
             </Text>
             <Text style={estilos.atividade}>Atividade dos peixes: {hoje.atividade.rotulo}</Text>
           </View>
+          </Respirar>
 
           {/* --- 3. resumo --- */}
-          <Text style={estilos.resumo}>{hoje.resumo}</Text>
+          <Surgir atraso={120}>
+            <Text style={estilos.resumo}>{hoje.resumo}</Text>
+          </Surgir>
 
           {/* --- o que mais pesa hoje --- */}
           <Secao titulo="O que mais pesa hoje" cores={cores}>
-            {hoje.indice.fatores.slice(0, 4).map((f) => (
+            {hoje.indice.fatores.slice(0, 4).map((f, i) => (
               <View key={f.chave} style={estilos.linhaFator}>
                 <View style={estilos.fatorTopo}>
                   <Text style={estilos.fatorNome}>{f.nome}</Text>
@@ -217,14 +231,12 @@ export default function CondicoesDePesca() {
                     {Math.round(f.nota)}
                   </Text>
                 </View>
-                <View style={estilos.barraFundo}>
-                  <View
-                    style={[
-                      estilos.barra,
-                      { width: `${f.nota}%`, backgroundColor: corDaNota(f.nota, cores) },
-                    ]}
-                  />
-                </View>
+                <BarraViva
+                  fracao={f.nota / 100}
+                  cor={corDaNota(f.nota, cores)}
+                  cores={cores}
+                  atraso={i * 90}
+                />
                 <Text style={estilos.fatorExplicacao}>{f.explicacao}</Text>
               </View>
             ))}
@@ -247,15 +259,11 @@ export default function CondicoesDePesca() {
                     h.instante < hoje.melhorJanela.fim;
                   return (
                     <View key={h.instante.toISOString()} style={estilos.colunaHora}>
-                      <View
-                        style={[
-                          estilos.colunaBarra,
-                          {
-                            height: Math.max(4, h.indice.nota * 0.7),
-                            backgroundColor: corDaNota(h.indice.nota, cores),
-                            opacity: noPico ? 1 : 0.55,
-                          },
-                        ]}
+                      <ColunaViva
+                        altura={Math.max(4, h.indice.nota * 0.7)}
+                        cor={corDaNota(h.indice.nota, cores)}
+                        opacidade={noPico ? 1 : 0.55}
+                        atraso={indiceDaHora(h.instante) * 28}
                       />
                       <Text style={estilos.colunaHoraTexto}>
                         {String(h.instante.getHours()).padStart(2, '0')}
@@ -548,7 +556,8 @@ const criarEstilos = (cores: Cores) =>
       borderWidth: 2, borderRadius: 16, padding: 20, alignItems: 'center', marginBottom: 16,
     },
     indiceRotulo: { fontSize: 17, fontWeight: '800', textAlign: 'center' },
-    indiceNota: { fontSize: 52, fontWeight: '800', color: cores.texto, marginTop: 6 },
+    linhaNota: { flexDirection: 'row', alignItems: 'baseline', marginTop: 6 },
+    indiceNota: { fontSize: 52, fontWeight: '800', color: cores.texto },
     indiceDe: { fontSize: 18, fontWeight: '600', color: cores.textoSuave },
     estrelas: { fontSize: 22, color: cores.acento, letterSpacing: 3, marginTop: 2 },
     estrelasVazias: { color: cores.borda },
