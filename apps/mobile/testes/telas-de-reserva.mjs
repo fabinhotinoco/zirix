@@ -119,6 +119,23 @@ const ANUNCIOS = [
 ];
 let cliqueRegistrado = null;
 
+/**
+ * A operação de quem está logado, quando ele é guia.
+ *
+ * Separada de GUIAS de propósito: a lista pública não traz `status` nem
+ * `mp_conectado_em` — o banco nem entrega essas colunas para quem não é dono
+ * (0001, grant por coluna). O painel do guia lê a própria linha, e é justamente
+ * nessas duas colunas que ele decide o que mostrar.
+ */
+const MEU_GUIA = [{
+  id: 'g-1', user_id: 'u-1', nome_operacao: 'Pesca Vertical',
+  documento: '00000000000', cidade: 'Boa Esperança', bio: 'Tucunaré em Furnas.',
+  status: 'aprovado', comissao_percentual: null,
+  mp_conectado_em: null, aprovado_em: '2026-01-01T00:00:00Z',
+  criado_em: '2026-01-01T00:00:00Z',
+}];
+let conexaoIniciada = false;
+
 const GUIAS_FILTRO = [
   { id: 'g-1', nome_operacao: 'Pesca Vertical', cidade: 'Boa Esperança' },
   { id: 'g-2', nome_operacao: 'Pescaria do Zé', cidade: 'Guapé' },
@@ -160,6 +177,20 @@ await ctx.route(/supabase\.co/, async (rota) => {
   const json = (corpo, status = 200) =>
     rota.fulfill({ status, contentType: 'application/json', body: JSON.stringify(corpo) });
 
+  /**
+   * `.maybeSingle()` e `.single()` pedem UM objeto, não uma lista — o
+   * PostgREST responde assim quando o Accept é `vnd.pgrst.object+json`.
+   *
+   * Devolver lista onde se espera objeto não dá erro: a tela recebe um array,
+   * lê `.status` dele e encontra `undefined`. Aí ela mostra o ramo errado com
+   * ar de normal. Foi exatamente o que aconteceu com o cartão de conexão do
+   * Mercado Pago — apareceu "aguardando aprovação" para um guia aprovado.
+   */
+  const umOuLista = (lista) => {
+    const aceita = rota.request().headers()['accept'] ?? '';
+    return aceita.includes('vnd.pgrst.object') ? (lista[0] ?? null) : lista;
+  };
+
   // A contagem de não lidos manda `Prefer: count=exact`. Cabeçalho fora da
   // lista simples faz o navegador perguntar antes, com um OPTIONS — e um
   // OPTIONS sem resposta de CORS derruba a requisição seguinte com
@@ -181,7 +212,12 @@ await ctx.route(/supabase\.co/, async (rota) => {
   if (p.startsWith('/auth/v1/logout')) return rota.fulfill({ status: 204, body: '' });
 
   if (p === '/rest/v1/profiles') return json([PERFIL]);
-  if (p === '/rest/v1/guides') return json(GUIAS);
+  if (p === '/rest/v1/guides') {
+    // O painel do guia procura a PRÓPRIA operação por user_id, e precisa das
+    // colunas que a lista pública não tem — status e a data da conexão.
+    if (url.searchParams.get('user_id')) return json(umOuLista(MEU_GUIA));
+    return json(GUIAS);
+  }
   if (p === '/rest/v1/boats') {
     const id = url.searchParams.get('id');
     return json(id ? BARCOS.filter((b) => `eq.${b.id}` === id) : BARCOS);
@@ -225,6 +261,15 @@ await ctx.route(/supabase\.co/, async (rota) => {
     cliqueRegistrado = JSON.parse(rota.request().postData() ?? '{}');
     return json(null);
   }
+  if (p === '/rest/v1/rpc/iniciar_conexao_mp') {
+    conexaoIniciada = true;
+    return json('a'.repeat(64));
+  }
+  if (p === '/rest/v1/rpc/desconectar_mp') {
+    MEU_GUIA[0].mp_conectado_em = null;
+    return json(null);
+  }
+  if (p === '/rest/v1/app_settings') return json(umOuLista([{ valor: 10 }]));
   if (p === '/rest/v1/rpc/datas_disponiveis') return json(DIAS);
   if (p === '/rest/v1/rpc/minhas_reservas') return json(RESERVAS);
   if (p === '/rest/v1/rpc/criar_reserva') {
@@ -570,6 +615,58 @@ exigir(await fundoDaTela() === fundoNoite, 'o modo escolhido sobrevive a recarre
 await pagina.goto(`http://localhost:${PORTA}/inicio`);
 await pagina.waitForTimeout(1600);
 exigir(await fundoDaTela() === fundoNoite, 'o modo escolhido vale em todas as telas');
+
+// --- 10. o guia conectando a conta de recebimento ---------------------------
+// É a porta que trava tudo: sem conta conectada o guia não abre data nenhuma
+// (0005_porta_de_entrada_da_agenda.sql). Um botão que some, ou que aparece sem
+// explicar por que é obrigatório, deixa o guia parado sem saber o motivo.
+PERFIL.role = 'guia';
+MEU_GUIA[0].mp_conectado_em = null;
+MEU_GUIA[0].status = 'aprovado';
+await pagina.goto(`http://localhost:${PORTA}/guia`);
+await pagina.waitForTimeout(2200);
+
+let telaGuia = await textoDaTela();
+exigir(telaGuia.includes('Conta de recebimento'), 'o painel do guia mostra a conta de recebimento');
+exigir(/não é possível abrir datas/i.test(telaGuia),
+  'diz por que conectar é obrigatório, não só que é');
+exigir(await pagina.getByRole('button', { name: 'Conectar Mercado Pago' }).isVisible(),
+  'o guia aprovado vê o botão de conectar');
+
+// O clique tem de sair do banco, não de um endereço montado às cegas: é o
+// segredo de uso único que liga esta pessoa à volta do Mercado Pago.
+conexaoIniciada = false;
+await pagina.getByRole('button', { name: 'Conectar Mercado Pago' }).click();
+await pagina.waitForTimeout(1500);
+exigir(conexaoIniciada, 'conectar pede ao banco o segredo de uso único');
+
+// Guia ainda em análise não pode conectar — o banco recusa, e a tela não deve
+// oferecer um botão que só devolveria erro.
+MEU_GUIA[0].status = 'pendente';
+await pagina.goto(`http://localhost:${PORTA}/guia`);
+await pagina.waitForTimeout(2000);
+telaGuia = await textoDaTela();
+exigir(!(await pagina.getByRole('button', { name: 'Conectar Mercado Pago' }).isVisible()),
+  'guia em análise não recebe botão que o banco recusaria');
+exigir(/depois da aprovação/i.test(telaGuia),
+  'e a tela explica que a conexão vem depois da aprovação');
+
+// Já conectado: some o botão, aparece o estado — e o aviso da tarifa, que é
+// dinheiro que o guia não recebe e que também não é comissão da plataforma.
+MEU_GUIA[0].status = 'aprovado';
+MEU_GUIA[0].mp_conectado_em = '2026-08-05T00:00:00Z';
+await pagina.goto(`http://localhost:${PORTA}/guia`);
+await pagina.waitForTimeout(2000);
+telaGuia = await textoDaTela();
+exigir(telaGuia.includes('Mercado Pago conectado'), 'conectado, a tela diz que está conectado');
+exigir(/tarifa de processamento/i.test(telaGuia),
+  'e avisa que a tarifa do Mercado Pago sai da parte do guia');
+exigir(!(await pagina.getByRole('button', { name: 'Conectar Mercado Pago' }).isVisible()),
+  'não oferece conectar de novo o que já está conectado');
+exigir(await pagina.getByText('Desconectar esta conta').isVisible(),
+  'a conta é do guia: ele pode retirá-la');
+
+PERFIL.role = 'cliente';
 
 await navegador.close();
 servidor.close();

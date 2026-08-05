@@ -79,6 +79,7 @@ jobs:
     env:
       EXPO_PUBLIC_SUPABASE_URL: https://exemplo.supabase.co
       EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: chave-de-mentira-so-para-empacotar
+      EXPO_PUBLIC_MP_CLIENT_ID: "0000000000"
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -125,6 +126,7 @@ jobs:
     env:
       EXPO_PUBLIC_SUPABASE_URL: https://exemplo.supabase.co
       EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: chave-de-mentira-so-para-empacotar
+      EXPO_PUBLIC_MP_CLIENT_ID: "0000000000"
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5

@@ -10,7 +10,8 @@
       "env": {
         "APP_ENV": "development",
         "EXPO_PUBLIC_SUPABASE_URL": "https://ykdbdpdepkdtyxtcwwex.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_npV2ODt7TI8PfDGS8RTN9Q_Q9tl6aNm"
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_npV2ODt7TI8PfDGS8RTN9Q_Q9tl6aNm",
+        "EXPO_PUBLIC_MP_CLIENT_ID": "3656945704772537"
       }
     },
     "preview": {
@@ -21,7 +22,8 @@
       "env": {
         "APP_ENV": "preview",
         "EXPO_PUBLIC_SUPABASE_URL": "https://ykdbdpdepkdtyxtcwwex.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_npV2ODt7TI8PfDGS8RTN9Q_Q9tl6aNm"
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_npV2ODt7TI8PfDGS8RTN9Q_Q9tl6aNm",
+        "EXPO_PUBLIC_MP_CLIENT_ID": "3656945704772537"
       }
     },
     "production": {
@@ -29,7 +31,8 @@
       "env": {
         "APP_ENV": "production",
         "EXPO_PUBLIC_SUPABASE_URL": "https://ykdbdpdepkdtyxtcwwex.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_npV2ODt7TI8PfDGS8RTN9Q_Q9tl6aNm"
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_npV2ODt7TI8PfDGS8RTN9Q_Q9tl6aNm",
+        "EXPO_PUBLIC_MP_CLIENT_ID": "3656945704772537"
       }
     },
     "simulador": {
@@ -40,7 +43,8 @@
       "env": {
         "APP_ENV": "simulador",
         "EXPO_PUBLIC_SUPABASE_URL": "https://ykdbdpdepkdtyxtcwwex.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_npV2ODt7TI8PfDGS8RTN9Q_Q9tl6aNm"
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_npV2ODt7TI8PfDGS8RTN9Q_Q9tl6aNm",
+        "EXPO_PUBLIC_MP_CLIENT_ID": "3656945704772537"
       }
     }
   },

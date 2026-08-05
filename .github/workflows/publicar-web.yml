@@ -22,6 +22,7 @@ jobs:
     env:
       EXPO_PUBLIC_SUPABASE_URL: https://ykdbdpdepkdtyxtcwwex.supabase.co
       EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_npV2ODt7TI8PfDGS8RTN9Q_Q9tl6aNm
+      EXPO_PUBLIC_MP_CLIENT_ID: "3656945704772537"
     steps:
       - uses: actions/checkout@v5
 

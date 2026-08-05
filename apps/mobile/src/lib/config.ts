@@ -35,4 +35,17 @@ export const config = {
     ['EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY', process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY],
     ['EXPO_PUBLIC_SUPABASE_ANON_KEY', process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY],
   ]),
+
+  /**
+   * Identificador público da aplicação no Mercado Pago.
+   *
+   * Não é segredo: viaja à vista no endereço que o guia abre para autorizar.
+   * O segredo que faz par com ele mora no servidor, e é por isso que a troca
+   * do código pelo token acontece lá, não aqui.
+   *
+   * Diferente dos dois acima, este NÃO derruba o aplicativo quando falta: só
+   * o guia conectando conta depende dele. Cliente nenhum ficaria sem reservar
+   * porque a configuração de pagamento não foi preenchida.
+   */
+  mpClientId: (process.env.EXPO_PUBLIC_MP_CLIENT_ID ?? '').trim(),
 } as const;

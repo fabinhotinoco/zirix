@@ -34,8 +34,17 @@ const MP_TOKEN_KEY = Deno.env.get('MP_TOKEN_KEY') ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
-/** Endereço do aplicativo instalado, para o botão de voltar. */
-const APP_DEEP_LINK = 'pescaverticalapp://';
+/**
+ * Para onde mandar o guia depois.
+ *
+ * Não pode ser `pescaverticalapp://`: a maioria vai chegar aqui pelo navegador
+ * do celular ou do computador, onde esse endereço não abre nada e o botão fica
+ * morto. O endereço da versão web funciona nos dois casos, e quem está no
+ * aplicativo instalado simplesmente fecha a aba — a tela do guia confere
+ * sozinha ao reaparecer, porque quem sabe da conexão é o banco.
+ */
+const APP_URL = Deno.env.get('APP_URL')
+  ?? 'https://aplicativo-de-agendamento-pesca-vertical.expo.app';
 
 /**
  * Página de resposta.
@@ -64,12 +73,14 @@ function pagina(titulo: string, corpo: string, ok: boolean): Response {
   p { color:#8FA3AD; line-height:1.55; margin:0 0 24px; font-size:15px; }
   a { display:inline-block; background:#22E0C8; color:#00201C; font-weight:700;
       text-decoration:none; padding:14px 28px; border-radius:12px; }
+  .dica { font-size:13px; margin:20px 0 0; }
 </style></head>
 <body><div class="cartao">
   <div class="marca">${ok ? '✓' : '!'}</div>
   <h1>${titulo}</h1>
   <p>${corpo}</p>
-  <a href="${APP_DEEP_LINK}">Voltar ao aplicativo</a>
+  <a href="${APP_URL}">Voltar ao aplicativo</a>
+  <p class="dica">Se você abriu pelo aplicativo instalado, pode fechar esta janela — ele confere sozinho.</p>
 </div></body></html>`;
   return new Response(html, {
     status: ok ? 200 : 400,

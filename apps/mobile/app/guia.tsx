@@ -8,6 +8,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -23,6 +24,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/lib/auth';
 import { mensagemDeErro } from '@/lib/erros';
 import { comissaoPadrao, meuGuia, salvarDadosDoGuia, type Guia } from '@/lib/guias';
+import {
+  conectarMercadoPago,
+  desconectarMercadoPago,
+  faltaConfiguracao,
+} from '@/lib/mercadopago';
 import { Botao, Campo, Erro, Subtitulo, Titulo } from '@/ui/componentes';
 import { useTema, type Cores } from '@/ui/tema';
 
@@ -54,6 +60,7 @@ export default function PainelGuia() {
 
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
+  const [conectando, setConectando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [salvo, setSalvo] = useState(false);
 
@@ -83,6 +90,41 @@ export default function PainelGuia() {
   useEffect(() => {
     void carregar();
   }, [carregar]);
+
+  // O guia autoriza no navegador e volta para cá. Quem sabe se deu certo é o
+  // banco — o navegador pode ter sido fechado à força, trocado de aba ou
+  // mandado para segundo plano. Por isso a tela pergunta de novo ao reaparecer,
+  // em vez de esperar uma resposta que pode nunca chegar.
+  useFocusEffect(
+    useCallback(() => {
+      void carregar();
+    }, [carregar]),
+  );
+
+  async function conectar() {
+    setErro(null);
+    setConectando(true);
+    try {
+      await conectarMercadoPago();
+    } catch (e) {
+      setErro(mensagemDeErro(e, 'Não foi possível abrir a autorização do Mercado Pago.'));
+    } finally {
+      setConectando(false);
+    }
+  }
+
+  async function desconectar() {
+    setErro(null);
+    setConectando(true);
+    try {
+      await desconectarMercadoPago();
+      await carregar();
+    } catch (e) {
+      setErro(mensagemDeErro(e, 'Não foi possível desconectar.'));
+    } finally {
+      setConectando(false);
+    }
+  }
 
   async function salvar() {
     if (!guia) return;
@@ -140,6 +182,67 @@ export default function PainelGuia() {
                     : 'Suspensa'}
               </Text>
               <Text style={estilos.faixaTexto}>{EXPLICACAO[guia.status]}</Text>
+            </View>
+
+            {/* A conta de recebimento vem antes de tudo: sem ela o guia não
+                publica data nenhuma (0005_porta_de_entrada_da_agenda.sql).
+                Fica no topo porque é o que está travando o resto. */}
+            <View
+              style={[
+                estilos.cartao,
+                guia.mp_conectado_em ? estilos.cartaoOk : estilos.cartaoPendente,
+              ]}
+            >
+              <Text style={estilos.rotulo}>Conta de recebimento</Text>
+
+              {guia.mp_conectado_em ? (
+                <>
+                  <Text style={estilos.valor}>Mercado Pago conectado</Text>
+                  <Text style={estilos.nota}>
+                    O valor de cada pescaria cai direto na sua conta, já com a comissão da
+                    plataforma descontada. A tarifa de processamento do Mercado Pago varia
+                    conforme o meio de pagamento que o cliente escolher e também é
+                    descontada do seu valor.
+                  </Text>
+                  <Pressable onPress={desconectar} disabled={conectando}>
+                    <Text style={estilos.desconectar}>
+                      {conectando ? 'Desconectando…' : 'Desconectar esta conta'}
+                    </Text>
+                  </Pressable>
+                </>
+              ) : guia.status !== 'aprovado' ? (
+                <>
+                  <Text style={estilos.valor}>Ainda não conectada</Text>
+                  <Text style={estilos.nota}>
+                    A conexão vem depois da aprovação da sua operação. Assim que ela for
+                    aprovada, o botão aparece aqui.
+                  </Text>
+                </>
+              ) : faltaConfiguracao() ? (
+                <>
+                  <Text style={estilos.valor}>Ainda não conectada</Text>
+                  <Text style={estilos.nota}>{faltaConfiguracao()}</Text>
+                </>
+              ) : (
+                <>
+                  <Text style={estilos.valor}>Ainda não conectada</Text>
+                  <Text style={estilos.nota}>
+                    Enquanto você não conectar, não é possível abrir datas na agenda — uma
+                    reserva sem conta conectada não teria como ser paga. Você vai para uma
+                    página do Mercado Pago, entra na sua conta e autoriza. A plataforma
+                    nunca vê sua senha.
+                  </Text>
+                  <Botao
+                    titulo="Conectar Mercado Pago"
+                    onPress={conectar}
+                    carregando={conectando}
+                  />
+                  <Text style={estilos.nota}>
+                    Já autorizou e ainda aparece como não conectada? Volte a esta tela que
+                    ela confere de novo.
+                  </Text>
+                </>
+              )}
             </View>
 
             <View style={estilos.cartao}>
@@ -217,9 +320,12 @@ const criarEstilos = (cores: Cores) =>
       padding: 14,
       marginBottom: 20,
     },
+    cartaoOk: { borderColor: cores.acento, backgroundColor: cores.acentoSuave },
+    cartaoPendente: { borderColor: cores.aviso },
     rotulo: { fontSize: 12, color: cores.textoSuave },
     valor: { fontSize: 16, color: cores.texto, fontWeight: '600', marginTop: 2 },
     nota: { fontSize: 12, color: cores.textoSuave, marginTop: 8, lineHeight: 17 },
+    desconectar: { color: cores.textoSuave, fontWeight: '600', marginTop: 14 },
     ok: { color: cores.acento, fontWeight: '600', marginTop: 12, textAlign: 'center' },
     voltar: { marginTop: 28, alignItems: 'center' },
     voltarTexto: { color: cores.acento, fontWeight: '600' },

@@ -66,7 +66,8 @@ jobs:
           supabase secrets set --project-ref "$PROJETO" \
             "MP_CLIENT_ID=$MP_CLIENT_ID" \
             "MP_CLIENT_SECRET=$MP_CLIENT_SECRET" \
-            "MP_REDIRECT_URI=https://$PROJETO.supabase.co/functions/v1/mp-oauth"
+            "MP_REDIRECT_URI=https://$PROJETO.supabase.co/functions/v1/mp-oauth" \
+            "APP_URL=https://aplicativo-de-agendamento-pesca-vertical.expo.app"
 
       # --no-verify-jwt porque quem chega nesta função é o navegador do guia
       # voltando do Mercado Pago, sem cabeçalho de autorização. Sem esta opção,
