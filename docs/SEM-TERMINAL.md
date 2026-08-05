@@ -213,28 +213,45 @@ Duas conferências na conta antes de seguir:
 
 ### b) Criar a aplicação
 
-1. Entre em <https://www.mercadopago.com.br/developers/panel> com o e-mail
-   `fabio@zirix.com.br`
-2. Vá em **Suas integrações** (é o menu das aplicações) → botão de **criar
-   aplicação**
-3. **Nome**: `PescaVerticalAPP`
-4. Quando ele perguntar **que tipo de solução** você vai integrar, escolha
-   **pagamentos on-line** — não "pagamentos presenciais"
-5. Quando perguntar **qual produto** você vai usar, marque a opção de
-   **Checkout Pro** e, se aparecer uma pergunta separada sobre **marketplace**
-   ("está integrando para uma plataforma/marketplace?"), responda **sim**
-6. **Redirect URI / URL de redirecionamento** — cole exatamente isto:
+Entre em <https://www.mercadopago.com.br/developers/panel> com o e-mail
+`fabio@zirix.com.br` e vá em **Suas integrações** → **criar aplicação**. São
+quatro telas.
 
-   ```
-   https://ykdbdpdepkdtyxtcwwex.supabase.co/functions/v1/mp-oauth
-   ```
+**Tela 2 de 4 — "Escolha o tipo de pagamento que quer integrar"**
 
-7. Salve
+- **Pagamentos online** (não "Pagamentos presenciais", que é maquininha e QR Code
+  no balcão)
+- **"Como você criou a loja?"** → **Com um desenvolvimento próprio**
+- **"URL da loja (opcional)"** → `https://aplicativo-de-agendamento-pesca-vertical.expo.app`,
+  ou deixe em branco
 
-> O painel do Mercado Pago muda de tempos em tempos, e os nomes dos botões
-> acompanham. **Não confirmei a redação atual das telas** — se o que você vir
-> estiver com outro nome, procure o que tem o mesmo sentido e me diga o que
-> apareceu que eu ajusto este texto.
+> ⚠️ **Duas armadilhas nessa tela, as duas já custaram um retrabalho aqui.**
+>
+> **"Como você criou a loja?" não pergunta se você é um marketplace.** Ela
+> pergunta se o código é seu ou se você usou uma plataforma pronta — Shopify,
+> Nuvemshop, Wix, VTEX. O nosso é código próprio. Respondendo "Através de uma
+> plataforma", o Mercado Pago passa a oferecer a **instalação de um plugin**
+> daquela plataforma, em vez de entregar o `client_id`/`client_secret` do OAuth,
+> que é exatamente o que precisamos. A pergunta sobre intermediar vendedores, se
+> vier, vem em outra tela — é lá que se responde "sim".
+>
+> **"URL da loja" não é o endereço de retorno do OAuth.** É só o endereço público
+> da loja, informativo. O *Redirect URI* se configura depois, com a aplicação já
+> criada (item **c** abaixo). Pôr o endereço da função aqui não quebra nada, mas
+> também não configura nada — e dá a impressão de que o passo foi feito.
+
+**Telas 3 e 4** — produto a integrar: **Checkout Pro**. Se aparecer pergunta
+sobre **ser marketplace / agregador / intermediar vendedores**, responda **sim**.
+Nome da aplicação: `PescaVerticalAPP`.
+
+### c) Cadastrar o endereço de retorno do OAuth
+
+Com a aplicação criada, abra-a e procure a área de **OAuth** (ou *Credenciais* →
+*URL de redirecionamento* / *Redirect URI*). Cole exatamente isto:
+
+```
+https://ykdbdpdepkdtyxtcwwex.supabase.co/functions/v1/mp-oauth
+```
 
 **Por que esse endereço de retorno, e não o do aplicativo.** Ao fim do "conectar",
 o Mercado Pago devolve um código que precisa ser **trocado pelo token do guia**, e
@@ -249,7 +266,7 @@ O texto tem de ser **idêntico** dos dois lados — o mesmo que o aplicativo env
 na hora de conectar. Uma barra a mais no fim já faz o Mercado Pago recusar com
 `redirect_uri mismatch`.
 
-### c) Guardar as duas credenciais no GitHub
+### d) Guardar as duas credenciais no GitHub
 
 Aberta a aplicação, o painel mostra **Client ID** e **Client Secret** (o segredo
 costuma ficar escondido atrás de um "mostrar").
@@ -270,7 +287,7 @@ o antigo para de valer na hora.
 O `client_id` não é segredo (ele viaja no link de conectar, à vista), mas guardar
 os dois juntos evita ter de procurar depois.
 
-### d) Credenciais de teste (opcional, mas recomendado)
+### e) Credenciais de teste (opcional, mas recomendado)
 
 Dentro da mesma aplicação há uma área de **credenciais de teste** e a criação de
 **contas de teste** (uma "vendedora", que faz o papel do guia, e uma
