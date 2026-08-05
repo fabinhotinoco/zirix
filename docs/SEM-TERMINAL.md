@@ -244,14 +244,30 @@ quatro telas.
 sobre **ser marketplace / agregador / intermediar vendedores**, responda **sim**.
 Nome da aplicação: `PescaVerticalAPP`.
 
-### c) Cadastrar o endereço de retorno do OAuth
+### c) Configurar o OAuth
 
-Com a aplicação criada, abra-a e procure a área de **OAuth** (ou *Credenciais* →
-*URL de redirecionamento* / *Redirect URI*). Cole exatamente isto:
+Com a aplicação criada, abra **Configurações da aplicação** e role até
+**Configuração avançada**.
+
+**"Adicione a URL de redirecionamento se sua integração for feita com OAuth"** —
+cole exatamente isto, sem barra no fim:
 
 ```
 https://ykdbdpdepkdtyxtcwwex.supabase.co/functions/v1/mp-oauth
 ```
+
+**"Utiliza o fluxo de código de atualização com o PKCE?"** → **Não**. O PKCE
+existe para quem **não consegue guardar um segredo** — o aplicativo no celular.
+Como a troca do código pelo token acontece no servidor, com o `client_secret`,
+o PKCE seria proteção redundante e mudaria o formato da chamada.
+
+**Permissões da aplicação** — marque **as três**:
+
+| Permissão | Para quê | Se faltar |
+|---|---|---|
+| `read` | Ler os dados do guia e consultar pagamentos | Não dá para conferir o que foi pago |
+| `write` | **Criar a cobrança em nome do guia** | O guia conecta a conta e nenhum pagamento sai |
+| `offline_access` | Devolve o *refresh token* | O acesso do guia expira e ele tem de reconectar a mão; até reconectar, as reservas dele não geram cobrança |
 
 **Por que esse endereço de retorno, e não o do aplicativo.** Ao fim do "conectar",
 o Mercado Pago devolve um código que precisa ser **trocado pelo token do guia**, e
