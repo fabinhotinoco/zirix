@@ -668,3 +668,47 @@ das Edge Functions `criar-reserva` e `mercadopago-webhook` (Deno test), testes d
 comissão, e testes SQL das políticas RLS rodando com JWT de cliente comum, de Diamond, do guia A e do
 guia B — para garantir que nem a coordenada nem os dados de um guia escapem. A UI fica com verificação
 manual, para não inflar o tempo da primeira versão.
+
+---
+
+## Condições de Pesca — licença dos dados (DECISÃO PENDENTE)
+
+A aba de condições usa **Open-Meteo** para meteorologia, ondulação, corrente,
+temperatura da água e nível do mar. Foi a escolha porque é o único serviço
+gratuito e sem chave que entrega, no mesmo lugar, as três coisas de que a tela
+precisa — e principalmente o **nível do mar hora a hora**, de onde a maré é
+extraída sem precisar de uma segunda API paga.
+
+Sol, lua e maré são calculados no próprio aparelho, sem rede: astronomia não é
+previsão, e a tela precisa funcionar dentro do barco, onde não há sinal.
+
+**O ponto a resolver antes do primeiro cliente pagante:** o uso sem chave do
+Open-Meteo é liberado para uso **não comercial**. A plataforma cobra comissão,
+o que a coloca fora dessa faixa. Três caminhos:
+
+| Caminho | Custo | O que muda |
+|---|---|---|
+| Plano comercial do Open-Meteo | US$ 29/mês (1 milhão de chamadas) | Uma chave a guardar; nada no código |
+| Hospedar a própria instância | servidor + manutenção | O Open-Meteo é código aberto; some a dependência de terceiro |
+| Cache no servidor + plano menor | US$ 29/mês, com folga enorme | Uma Edge Function busca e guarda; as chamadas passam a escalar por PONTO, não por usuário |
+
+A terceira é a que recomendo, e não só por preço: hoje cada aparelho fala direto
+com o provedor, então dez pescadores olhando o mesmo ponto são dez chamadas do
+mesmo dado. Com cache no servidor, um ponto de pesca custa ~24 chamadas por dia
+independentemente de quantas pessoas o consultem. A camada de provedor já está
+isolada (`apps/mobile/src/servicos/clima/`) justamente para essa troca não
+tocar em tela nenhuma.
+
+**Alternativas gratuitas avaliadas e descartadas:** TideCheck (50 chamadas/dia),
+StormGlass (10/dia), WorldTides (pago), NOAA CO-OPS (só estações dos EUA). As
+tábuas da Marinha do Brasil não têm API pública.
+
+### O que ficou de fora desta primeira versão
+
+**Radar e mapa interativo** (chuva, vento, nuvens, correntes sobre mapa) exigem
+`react-native-maps` ou camadas de tiles com chave própria, mais uma compilação
+nova na Expo. É a próxima peça natural da aba, e foi separada de propósito para
+não atrasar o que já decide a saída.
+
+**Salinidade** não é publicada por nenhum provedor gratuito com resolução útil
+na costa. Preferi não mostrar o campo a mostrar um valor inventado.

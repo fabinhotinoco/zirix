@@ -9,7 +9,8 @@
       "@pescavertical/core/*": [
         "../../packages/core/src/*"
       ]
-    }
+    },
+    "allowImportingTsExtensions": true
   },
   "include": [
     "**/*.ts",

@@ -49,7 +49,13 @@ const SESSAO = {
   expires_at: Math.floor(Date.now() / 1000) + 3600, refresh_token: 'fake', user: USER,
 };
 
-const GUIAS = [{ id: 'g-1', nome_operacao: 'Pesca Vertical', cidade: 'Boa Esperança', bio: 'Tucunaré em Furnas.', foto_url: null }];
+const GUIAS = [{
+  id: 'g-1', nome_operacao: 'Pesca Vertical', cidade: 'Boa Esperança',
+  bio: 'Tucunaré em Furnas.', foto_url: null, user_id: 'u-1', status: 'aprovado',
+  // Jurujuba, Niterói: ponto de costeira e oceânica. É daqui que a tela de
+  // condições descobre onde buscar a previsão.
+  local_operacao_lat: -22.9265, local_operacao_lng: -43.1176,
+}];
 const BARCOS = [{ id: 'b-1', nome: 'Tucunaré I', modelo: 'Fibrafort 190', capacidade_min: 1, capacidade_max: 4, equipamentos: 'Sonar, coletes' }];
 const DIAS = [{ data: '2026-12-20', hora_saida: '05:00:00', preco_barco_centavos: 60000, preco_passageiro_centavos: 15000, observacao: 'Ponto: rampa do clube' }];
 const DOCS = [
@@ -165,10 +171,86 @@ const AGENDA = [
   },
 ];
 
+/**
+ * Previsão simulada, com 7 dias de hora em hora.
+ *
+ * Vale a pena gerar em vez de fixar um JSON copiado: a tela mostra "hoje", e
+ * massa com data fixa passa hoje e falha na semana que vem — exatamente o tipo
+ * de teste que quebra sem ninguém ter mexido em nada.
+ *
+ * As condições são deliberadamente BOAS, com maré semidiurna de verdade, para
+ * que as asserções possam exigir que a tela mostre número e não travessão.
+ */
+function previsaoDeTeste() {
+  const inicio = new Date();
+  inicio.setHours(0, 0, 0, 0);
+  const horas = 24 * 7;
+
+  const time = [];
+  const emH = (f) => Array.from({ length: horas }, (_, h) => f(h));
+  const local = (h) => {
+    const d = new Date(inicio.getTime() + h * 3_600_000);
+    const p = (v) => String(v).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:00`;
+  };
+  for (let h = 0; h < horas; h += 1) time.push(local(h));
+
+  return {
+    tempo: {
+      hourly: {
+        time,
+        temperature_2m: emH((h) => 22 + 4 * Math.sin(((h % 24) - 9) / 24 * 2 * Math.PI)),
+        apparent_temperature: emH(() => 24),
+        relative_humidity_2m: emH(() => 70),
+        pressure_msl: emH(() => 1017),
+        surface_pressure: emH(() => 1015),
+        wind_speed_10m: emH(() => 8),
+        wind_gusts_10m: emH(() => 12),
+        wind_direction_10m: emH(() => 45),
+        cloud_cover: emH(() => 45),
+        uv_index: emH((h) => ((h % 24) > 9 && (h % 24) < 16 ? 7 : 1)),
+        visibility: emH(() => 20000),
+        precipitation_probability: emH(() => 10),
+        precipitation: emH(() => 0),
+        weather_code: emH(() => 2),
+      },
+    },
+    mar: {
+      hourly: {
+        time,
+        wave_height: emH(() => 0.6),
+        wave_period: emH(() => 9),
+        wave_direction: emH(() => 135),
+        sea_surface_temperature: emH(() => 23),
+        // Maré semidiurna: 12h25 de período, ~1,2 m de amplitude.
+        sea_level_height_msl: emH((h) => 0.6 * Math.sin(((h - 3) / 12.42) * 2 * Math.PI + Math.PI / 2)),
+        ocean_current_velocity: emH(() => 0.6),
+        ocean_current_direction: emH(() => 200),
+      },
+    },
+  };
+}
+
+const PREVISAO = previsaoDeTeste();
+
 const navegador = await chromium.launch(
   CHROMIUM ? { executablePath: CHROMIUM } : {},
 );
 const ctx = await navegador.newContext();
+
+// A tela de condições fala com a Open-Meteo. Interceptar aqui mantém a promessa
+// do roteiro: nenhuma requisição sai desta máquina, e o teste não depende de o
+// serviço estar no ar nem do tempo que estiver fazendo em Niterói.
+await ctx.route(/open-meteo\.com/, async (rota) => {
+  const url = rota.request().url();
+  const corpo = url.includes('marine-api') ? PREVISAO.mar : PREVISAO.tempo;
+  await rota.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    headers: { 'access-control-allow-origin': '*' },
+    body: JSON.stringify(corpo),
+  });
+});
 
 // Intercepta QUALQUER host do Supabase: nada sai desta máquina.
 await ctx.route(/supabase\.co/, async (rota) => {
@@ -667,6 +749,53 @@ exigir(await pagina.getByText('Desconectar esta conta').isVisible(),
   'a conta é do guia: ele pode retirá-la');
 
 PERFIL.role = 'cliente';
+
+// --- 11. condições de pesca -------------------------------------------------
+// A tela que responde "vale a pena sair?". O que se verifica aqui é que os
+// números chegam à tela e que a ordem de leitura está certa — alerta antes da
+// nota, nota antes do detalhe.
+await pagina.goto(`http://localhost:${PORTA}/condicoes`);
+await pagina.waitForTimeout(3500);
+
+let telaCond = await textoDaTela();
+exigir(/condições de pesca/i.test(telaCond), 'a aba de condições abre');
+exigir(/\d+\s*\/\s*100/.test(telaCond), 'mostra o índice sobre 100');
+exigir(/★/.test(telaCond), 'mostra as estrelas do índice');
+exigir(/atividade dos peixes/i.test(telaCond), 'mostra a atividade dos peixes');
+
+// O resumo precisa citar dado real. Frase genérica seria pior que resumo
+// nenhum: ensina o pescador a ignorar a tela.
+exigir(/1017 hPa/.test(telaCond), 'o resumo cita a pressão de verdade');
+exigir(/nós/.test(telaCond), 'o resumo cita o vento');
+
+// Seções que só existem no mar — o ponto de teste é Jurujuba.
+exigir(/preamar|baixa-mar/i.test(telaCond), 'em ponto de mar, mostra a tábua de maré');
+exigir(/altura das ondas/i.test(telaCond), 'em ponto de mar, mostra a seção de ondas');
+exigir(/temperatura da água/i.test(telaCond), 'mostra a temperatura da água');
+
+// Astronomia, que é calculada no aparelho e não depende de provedor.
+exigir(/nascer/i.test(telaCond) && /hora dourada/i.test(telaCond),
+  'mostra sol, com a hora dourada');
+exigir(/iluminada/.test(telaCond), 'mostra a fase da lua com o percentual iluminado');
+
+// Espécies do lugar certo. Não se exige uma espécie em particular: a ordem
+// muda com a maré, e robalo cai na estofa justamente porque depende de água
+// correndo — travar o teste numa espécie transformaria comportamento correto
+// em falha. O que precisa valer é que as espécies são as DAQUELA água.
+const doMar = ['robalo', 'anchova', 'olhete', 'garoupa', 'corvina', 'albacora', 'xaréu', 'dourado-do-mar'];
+exigir(doMar.filter((e) => telaCond.toLowerCase().includes(e)).length >= 4,
+  'lista espécies de água salgada');
+for (const doceApenas of ['tucunaré', 'traíra', 'tilápia', 'pintado']) {
+  exigir(!telaCond.toLowerCase().includes(doceApenas),
+    `não oferece ${doceApenas} em ponto de mar`);
+}
+
+exigir(/recomendação do dia/i.test(telaCond), 'fecha com a recomendação do dia');
+exigir(/hoje/i.test(telaCond), 'a faixa de próximos dias começa em "Hoje"');
+
+// A fonte precisa aparecer: é exigência da licença dos dados e é honestidade
+// com quem lê um número que veio de um modelo.
+exigir(/open-meteo/i.test(telaCond), 'credita a fonte da previsão');
 
 await navegador.close();
 servidor.close();

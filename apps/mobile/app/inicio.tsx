@@ -121,6 +121,15 @@ export default function Inicio() {
         />
       )}
 
+      {/* Logo abaixo da ação principal, para os três papéis: é a tela que se
+          abre na véspera e na manhã da saída, e a pergunta que ela responde —
+          vale a pena sair? — vem antes de qualquer outra. */}
+      <Acao
+        para="/condicoes"
+        titulo="Condições de pesca"
+        nota="Vento, mar, maré, lua e o índice do dia"
+      />
+
       <Acao
         para="/avisos"
         titulo="Avisos"
