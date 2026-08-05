@@ -624,6 +624,16 @@ Os erros mais comuns:
 | `Este banco já tem as tabelas` | O robô 1 já rodou antes. Não precisa rodar de novo |
 | `password authentication failed` | A senha dentro do endereço de conexão está errada |
 | `Network is unreachable` | Você copiou a conexão direta (IPv6). Troque pela aba **Session pooler** |
+| `function public.XXX() does not exist` | O banco está atrás do código. **Rode o robô 5** e repita o que falhou |
+
+> **A ordem que evita o erro acima.** Quando uma versão nova traz funções novas
+> no banco, o **robô 5 tem de rodar antes** — dos robôs que usam essas funções e
+> do robô 3, que publica o aplicativo. Já aconteceu: o robô 9 quebrou sozinho no
+> horário dele porque procurava uma função que só existia no código, e o
+> aplicativo publicado teria falhado na hora de conectar o Mercado Pago pelo
+> mesmo motivo.
+>
+> Regra prática: **robô 5 primeiro, robô 3 depois.**
 | `password authentication failed for user "postgres"` | No pooler o usuário precisa ser `postgres.SEUPROJETO`. Copie a linha inteira da aba Session pooler, sem editar o usuário |
 | `A porta 6543 é o pooler em modo transação` | Troque apenas o `6543` por `5432` no segredo. O resto do endereço é igual |
 | `Token has expired or is invalid` sempre, mesmo com o código recém-chegado | Peça um código novo e use **o mais recente**: cada pedido invalida o anterior. Se o modelo de e-mail ainda tiver o link junto, qualquer varredura de segurança que abra o link consome o código antes de você |
