@@ -89,6 +89,13 @@ jobs:
       - name: Publicar a função cobrar
         run: supabase functions deploy cobrar --project-ref "$PROJETO"
 
+      # SEM verificação de JWT: quem chama é o Mercado Pago, que não tem como
+      # carregar um token nosso. O que protege este endereço não é login — é a
+      # função não acreditar no corpo do aviso: ela lê o pagamento de volta da
+      # API com o token do guia, e um aviso forjado não encontra nada lá.
+      - name: Publicar a função mp-webhook
+        run: supabase functions deploy mp-webhook --project-ref "$PROJETO" --no-verify-jwt
+
       - name: Conferir que a função responde
         run: |
           URL="https://$PROJETO.supabase.co/functions/v1/mp-oauth"
@@ -129,3 +136,21 @@ jobs:
             exit 1
           fi
           echo "✓ cobrar exige login, como deve"
+
+          echo "→ conferindo que mp-webhook aceita chamada SEM login"
+          # Aviso de tipo que não é pagamento: a função devolve 200 e ignora.
+          # Se vier 401, ela subiu com verificação de JWT e o Mercado Pago
+          # nunca conseguiria avisar — o dinheiro entraria e ninguém saberia.
+          WH=$(curl -sS -o /dev/null -w '%{http_code}' -X POST \
+            -H 'content-type: application/json' -d '{"type":"merchant_order"}' \
+            "https://$PROJETO.supabase.co/functions/v1/mp-webhook")
+          echo "  HTTP $WH"
+          if [ "$WH" = "401" ]; then
+            echo "::error::mp-webhook exigiu login. Precisa ser publicada com --no-verify-jwt."
+            exit 1
+          fi
+          if [ "$WH" != "200" ]; then
+            echo "::error::mp-webhook respondeu $WH para um aviso que devia ignorar."
+            exit 1
+          fi
+          echo "✓ mp-webhook aceita o aviso do Mercado Pago"

@@ -2526,4 +2526,109 @@ begin
 end $$;
 rollback;
 
+-- =============================================================================
+do $$ begin raise notice '--- 27. Estorno ---'; end $$;
+-- =============================================================================
+
+begin;
+set role postgres;
+insert into public.bookings (
+  id, user_id, guide_id, boat_id, data, qtd_pescadores,
+  preco_barco_centavos, preco_passageiro_centavos, valor_total_centavos,
+  comissao_percentual, comissao_centavos, repasse_guia_centavos,
+  sinal_centavos, saldo_centavos, status, status_pagamento
+) values (
+  '30000000-0000-0000-0000-0000000000e0',
+  '00000000-0000-0000-0000-0000000000c1',
+  '10000000-0000-0000-0000-00000000000a',
+  '20000000-0000-0000-0000-00000000000a',
+  current_date + 60, 2, 70000, 15000, 100000,
+  10, 10000, 90000, 30000, 70000, 'pendente', 'aguardando_sinal'
+);
+
+do $$
+declare
+  p public.payments;
+  n integer;
+  soma integer;
+begin
+  perform public.registrar_pagamento(
+    '30000000-0000-0000-0000-0000000000e0', 'sinal', 'MP-E1', 'pix',
+    30000, 3000, 'aprovado');
+
+  -- --- devolução parcial: metade -------------------------------------------
+  p := public.registrar_estorno('MP-E1', 15000);
+  if p.valor_estornado_centavos <> 15000 then
+    raise exception 'FALHA: estorno parcial gravou %', p.valor_estornado_centavos;
+  end if;
+  if p.status <> 'aprovado' then
+    raise exception 'FALHA: devolução parcial marcou o pagamento como estornado';
+  end if;
+
+  -- Devolver metade e ficar com a comissão inteira seria cobrar intermediação
+  -- de um serviço que não aconteceu.
+  select comissao_centavos into n from public.ledger_entries
+   where payment_id = p.id and tipo = 'estorno';
+  if n <> -1500 then
+    raise exception 'FALHA: comissão revertida veio % e devia ser -1500', n;
+  end if;
+  raise notice 'ok  devolução parcial reverte metade da comissão';
+
+  -- --- reenvio do MESMO total não devolve de novo --------------------------
+  -- O Mercado Pago informa quanto do pagamento já foi devolvido NO TOTAL, e
+  -- reenvia esse número. Somar a cada aviso devolveria o dobro.
+  perform public.registrar_estorno('MP-E1', 15000);
+  perform public.registrar_estorno('MP-E1', 15000);
+
+  select count(*) into n from public.ledger_entries
+   where payment_id = p.id and tipo = 'estorno';
+  if n <> 1 then raise exception 'FALHA: % lançamentos de estorno para um evento', n; end if;
+  raise notice 'ok  o mesmo total reenviado não devolve duas vezes';
+
+  -- --- devolução do resto ---------------------------------------------------
+  p := public.registrar_estorno('MP-E1', 30000);
+  if p.status <> 'estornado' then
+    raise exception 'FALHA: devolução integral não marcou o pagamento (%)', p.status;
+  end if;
+
+  select count(*) into n from public.ledger_entries
+   where payment_id = p.id and tipo = 'estorno';
+  if n <> 2 then raise exception 'FALHA: esperava dois lançamentos, veio %', n; end if;
+
+  -- Devolvido tudo, a comissão daquela cobrança tem de ter voltado inteira:
+  -- sem serviço prestado, não há intermediação a remunerar.
+  select sum(comissao_centavos) into soma from public.ledger_entries
+   where payment_id = p.id;
+  if soma <> 0 then
+    raise exception 'FALHA: comissão líquida devia zerar e ficou em %', soma;
+  end if;
+  raise notice 'ok  devolução integral zera a comissão daquela cobrança';
+end $$;
+rollback;
+
+-- --- o que o estorno recusa -------------------------------------------------
+begin;
+set role postgres;
+do $$
+begin
+  begin
+    perform public.registrar_estorno('MP-QUE-NAO-EXISTE', 100);
+    raise exception 'FALHA: estornou pagamento inexistente';
+  exception when check_violation then null;
+  end;
+
+  insert into public.payments (booking_id, tipo, provider_payment_id, valor_centavos,
+                               marketplace_fee_centavos, status)
+  values ('30000000-0000-0000-0000-00000000000a', 'sinal', 'MP-E2', 30000, 3000, 'aprovado');
+
+  -- Devolver mais do que entrou não é estorno, é defeito.
+  begin
+    perform public.registrar_estorno('MP-E2', 45000);
+    raise exception 'FALHA: devolveu mais do que o pagamento';
+  exception when check_violation then null;
+  end;
+  raise notice 'ok  recusa estorno de pagamento inexistente e acima do valor';
+end $$;
+rollback;
+
 do $$ begin raise notice ''; raise notice 'TODOS OS TESTES DE RLS PASSARAM'; end $$;
