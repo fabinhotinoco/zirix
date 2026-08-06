@@ -1,0 +1,78 @@
+name: 14. Descobrir quem é quem (e-mail mascarado)
+
+# Responde "qual conta é o guia Rodrigo?" sem expor e-mail de ninguém.
+#
+# ⚠️ ESTE REGISTRO É PÚBLICO. O repositório é aberto, e qualquer pessoa lê o
+# resultado de qualquer execução. Por isso o e-mail sai MASCARADO: as duas
+# primeiras letras, a última, e o domínio. É o suficiente para você reconhecer
+# qual dos seus endereços é, e insuficiente para servir a um estranho.
+#
+# Se precisar do endereço inteiro, ele está no painel do Supabase, em
+# Authentication → Users — que é privado.
+#
+# Só lê. Não altera nada.
+on:
+  workflow_dispatch:
+
+jobs:
+  listar:
+    name: Contas cadastradas
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Conferir o endereço de conexão
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: tools/checar-conexao.sh
+
+      - name: Quem é quem
+        env:
+          URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          psql "$URL" -c "
+            select
+              p.nome,
+              p.role as papel,
+              -- Máscara: 2 primeiras letras + a última do nome do endereço.
+              -- 'rodrigo@gmail.com' vira 'ro***o@gmail.com'.
+              case
+                when position('@' in u.email) < 4 then '***' || substring(u.email from position('@' in u.email))
+                else substring(u.email from 1 for 2)
+                     || '***'
+                     || substring(u.email from position('@' in u.email) - 1)
+              end as email_mascarado,
+              to_char(p.criado_em, 'DD/MM/YYYY') as entrou_em
+            from public.profiles p
+            join auth.users u on u.id = p.id
+            order by p.role, p.nome;"
+
+      - name: Operações e a conta de cada uma
+        env:
+          URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          # Cruza o guia com a conta dele: é isso que a lista do painel do
+          # Supabase não consegue dizer sozinha.
+          psql "$URL" -c "
+            select
+              g.nome_operacao,
+              g.cidade,
+              g.status,
+              p.nome as responsavel,
+              case
+                when position('@' in u.email) < 4 then '***' || substring(u.email from position('@' in u.email))
+                else substring(u.email from 1 for 2)
+                     || '***'
+                     || substring(u.email from position('@' in u.email) - 1)
+              end as email_mascarado,
+              case when g.mp_conectado_em is null then 'não' else 'sim' end as mp_conectado,
+              case when g.local_operacao_lat is null then 'não' else 'sim' end as ponto_cadastrado
+            from public.guides g
+            join public.profiles p on p.id = g.user_id
+            join auth.users u on u.id = g.user_id
+            order by g.nome_operacao;"
+
+      - name: Lembrete
+        run: |
+          echo "O e-mail acima está mascarado de propósito: este registro é público."
+          echo "O endereço inteiro está no painel do Supabase, em Authentication → Users."

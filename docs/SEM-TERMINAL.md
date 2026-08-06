@@ -611,6 +611,27 @@ Rodar o robô de novo é seguro: ele republica a função e mantém a chave.
 
 ---
 
+## Robô 14 — Descobrir quem é quem
+
+Responde "qual conta é o guia Rodrigo?" cruzando o nome da operação com a conta
+que a criou — coisa que a lista do painel do Supabase não faz sozinha.
+
+1. Aba **Actions** → **14. Descobrir quem é quem (e-mail mascarado)**
+2. **Run workflow** → escolha a branch → **Run workflow**
+
+Mostra também se cada guia já conectou o Mercado Pago e se cadastrou o ponto de
+saída.
+
+⚠️ **O e-mail sai mascarado de propósito**: `ro***s@gmail.com`. Este repositório
+é público, e o registro de execução de qualquer robô também — endereço inteiro
+ali seria dado pessoal exposto na internet. A máscara mostra o bastante para
+você reconhecer qual dos seus endereços é.
+
+**Se precisar do endereço completo**, ele está no painel do Supabase, em
+**Authentication** → **Users**, que é privado.
+
+---
+
 ## Se der erro
 
 Clique no ✗ vermelho, depois no passo que falhou. Copie a mensagem e me mande.
