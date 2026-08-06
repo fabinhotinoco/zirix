@@ -5,11 +5,17 @@
  * cliente perde o acesso ao barco assim que o guia o desativa, e a reserva
  * dele não pode virar uma linha sem nome por causa disso.
  *
- * O pagamento ainda não existe — entra na próxima fase. Enquanto isso a tela
- * diz o que está pendente sem prometer um botão que não funcionaria.
+ * QUEM CONFIRMA O PAGAMENTO NÃO É ESTA TELA. É o webhook do Mercado Pago, no
+ * servidor, que pode chegar com o aplicativo fechado. Por isso, enquanto houver
+ * reserva esperando pagamento, a tela simplesmente **pergunta ao banco de novo**
+ * de tempos em tempos — em vez de acreditar no que o navegador devolveu.
+ *
+ * A releitura tem fim (poucas tentativas, e para quando a reserva confirma). Um
+ * laço eterno bateria no banco a cada poucos segundos pelo resto do dia, para
+ * quem abriu a tela e foi almoçar.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -46,21 +52,48 @@ export default function Reservas() {
   const [erro, setErro] = useState<string | null>(null);
   const [desistindo, setDesistindo] = useState<string | null>(null);
 
-  const carregar = useCallback(async () => {
-    setCarregando(true);
+  // `silencioso` é para a releitura automática: trocar a lista por "Carregando…"
+  // a cada oito segundos faria a tela piscar na cara de quem está só esperando a
+  // confirmação chegar.
+  const carregar = useCallback(async (silencioso = false) => {
+    if (!silencioso) setCarregando(true);
     setErro(null);
     try {
       setReservas(await minhasReservas());
     } catch (e) {
-      setErro(mensagemDeErro(e, 'Não foi possível carregar suas reservas.'));
+      if (!silencioso) setErro(mensagemDeErro(e, 'Não foi possível carregar suas reservas.'));
     } finally {
-      setCarregando(false);
+      if (!silencioso) setCarregando(false);
     }
   }, []);
 
   useEffect(() => {
     void carregar();
   }, [carregar]);
+
+  // ---------------------------------------------------------------------------
+  // Releitura enquanto houver pagamento a caminho.
+  //
+  // Quem volta do Mercado Pago cai aqui, e o webhook pode ainda não ter chegado
+  // — no Pix costuma ser questão de segundos. Sem isto, a pessoa veria "sinal
+  // ainda não pago" logo depois de pagar e concluiria que o dinheiro sumiu.
+  // ---------------------------------------------------------------------------
+  const esperando = reservas.some(
+    (r) =>
+      (r.status === 'pendente' || r.status === 'confirmada')
+      && r.status_pagamento !== 'quitada',
+  );
+  const tentativas = useRef(0);
+
+  useEffect(() => {
+    if (carregando || !esperando) return;
+    if (tentativas.current >= 10) return;
+    const t = setTimeout(() => {
+      tentativas.current += 1;
+      void carregar(true);
+    }, 8000);
+    return () => clearTimeout(t);
+  }, [carregando, esperando, reservas, carregar]);
 
   async function desistir(r: MinhaReserva) {
     setErro(null);
@@ -138,6 +171,22 @@ export default function Reservas() {
           </Text>
         )}
 
+        {/* O botão só aparece onde há o que pagar. Reserva quitada com botão de
+            pagar é convite a pagar duas vezes — e o servidor recusaria, mas com
+            uma mensagem que a pessoa não deveria precisar ler. */}
+        {!encerrada && r.status_pagamento !== 'quitada' && (
+          <Pressable
+            onPress={() => router.push({ pathname: '/pagar', params: { reserva: r.id } })}
+            style={estilos.pagar}
+          >
+            <Text style={estilos.pagarTexto}>
+              {r.status_pagamento === 'aguardando_sinal'
+                ? `Pagar o sinal · ${formatarBRL(r.sinal_centavos)}`
+                : `Quitar o saldo · ${formatarBRL(r.saldo_centavos)}`}
+            </Text>
+          </Pressable>
+        )}
+
         {!encerrada && r.status_pagamento === 'aguardando_sinal' && (
           <Pressable onPress={() => desistir(r)} disabled={desistindo === r.id}>
             <Text style={estilos.desistir}>
@@ -153,8 +202,8 @@ export default function Reservas() {
     <ScrollView contentContainerStyle={[estilos.conteudo, { paddingTop: insets.top + 32 }]}>
       <Titulo>Minhas reservas</Titulo>
       <Subtitulo>
-        O pagamento pelo aplicativo entra na próxima etapa. Por enquanto, combine o sinal
-        com o guia — a reserva já fica registrada aqui.
+        O pagamento é todo pelo aplicativo, por Pix ou cartão. Nada em dinheiro no dia — o
+        que estiver pago aparece aqui, e o guia vê o mesmo.
       </Subtitulo>
 
       <Erro mensagem={erro} />
@@ -178,6 +227,15 @@ export default function Reservas() {
             </>
           )}
         </>
+      )}
+
+      {/* A releitura automática para depois de um tempo. Quem pagou por boleto,
+          ou por Pix que demorou, precisa de um jeito de pedir de novo sem
+          fechar e reabrir o aplicativo. */}
+      {!carregando && esperando && (
+        <Pressable onPress={() => void carregar()} style={estilos.conferir}>
+          <Text style={estilos.conferirTexto}>Já paguei — conferir agora</Text>
+        </Pressable>
       )}
 
       {/* Quem acabou de fechar uma pescaria é quem mais quer equipamento. */}
@@ -220,7 +278,17 @@ const criarEstilos = (cores: Cores) =>
     valores: { marginTop: 12 },
     valorTotal: { fontSize: 20, fontWeight: '700', color: cores.texto },
     desconto: { fontSize: 12, color: cores.acento, marginTop: 2, fontWeight: '600' },
+    pagar: {
+      marginTop: 14,
+      backgroundColor: cores.acento,
+      borderRadius: 12,
+      paddingVertical: 14,
+      alignItems: 'center',
+    },
+    pagarTexto: { color: cores.acentoTexto, fontSize: 15, fontWeight: '700' },
     desistir: { color: cores.erro, fontWeight: '600', marginTop: 14 },
+    conferir: { marginTop: 16, alignItems: 'center' },
+    conferirTexto: { color: cores.acento, fontWeight: '600', fontSize: 14 },
     secao: { fontSize: 15, fontWeight: '700', color: cores.texto, marginTop: 20, marginBottom: 10 },
     vazio: { color: cores.textoSuave, textAlign: 'center', lineHeight: 21 },
     acao: {
