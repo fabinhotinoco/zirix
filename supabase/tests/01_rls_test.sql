@@ -2310,4 +2310,220 @@ begin
 end $$;
 rollback;
 
+-- =============================================================================
+do $$ begin raise notice '--- 26. Preparar cobrança ---'; end $$;
+-- =============================================================================
+
+begin;
+set role postgres;
+
+-- O guia A precisa de token cifrado para a cobrança sair.
+-- `insert` não vale dentro de subconsulta: a inserção vem antes, e só então a
+-- função é chamada com o segredo recém-criado.
+insert into public.mp_conexoes (state, guide_id)
+values ('estado-cobranca', '10000000-0000-0000-0000-00000000000a');
+select public.concluir_conexao_mp('estado-cobranca', 'MP-VENDEDOR', 'TOKEN-DO-GUIA-A', 'refresh', 'chave-de-teste');
+
+-- Reserva de R$ 1.000: sinal 300, saldo 700, comissão 10% = 100.
+-- O rateio dá 30 no sinal e 70 na quitação.
+insert into public.bookings (
+  id, user_id, guide_id, boat_id, data, qtd_pescadores,
+  preco_barco_centavos, preco_passageiro_centavos, valor_total_centavos,
+  comissao_percentual, comissao_centavos, repasse_guia_centavos,
+  sinal_centavos, saldo_centavos, status, status_pagamento
+) values (
+  '30000000-0000-0000-0000-0000000000c0',
+  '00000000-0000-0000-0000-0000000000c1',
+  '10000000-0000-0000-0000-00000000000a',
+  '20000000-0000-0000-0000-00000000000a',
+  current_date + 50, 2, 70000, 15000, 100000,
+  10, 10000, 90000, 30000, 70000, 'pendente', 'aguardando_sinal'
+);
+
+do $$
+declare c record;
+begin
+  select * into c from public.preparar_cobranca(
+    '30000000-0000-0000-0000-0000000000c0', 'sinal',
+    '00000000-0000-0000-0000-0000000000c1', 'chave-de-teste');
+
+  if c.valor_centavos <> 30000 then
+    raise exception 'FALHA: sinal veio %', c.valor_centavos;
+  end if;
+  if c.fee_centavos <> 3000 then
+    raise exception 'FALHA: comissão do sinal veio %', c.fee_centavos;
+  end if;
+  -- O token precisa sair DECIFRADO: é ele que autentica a cobrança em nome do
+  -- guia. Se voltasse cifrado, o Mercado Pago recusaria com "unauthorized" e o
+  -- erro apontaria para o lugar errado.
+  if c.mp_access_token <> 'TOKEN-DO-GUIA-A' then
+    raise exception 'FALHA: token não decifrado (%)', left(c.mp_access_token, 12);
+  end if;
+  if c.referencia_externa <> '30000000-0000-0000-0000-0000000000c0:sinal' then
+    raise exception 'FALHA: referência externa veio %', c.referencia_externa;
+  end if;
+  raise notice 'ok  o sinal sai com valor, comissão e token do guia';
+end $$;
+rollback;
+
+-- --- a soma das comissões fecha com a da reserva ----------------------------
+begin;
+set role postgres;
+-- `insert` não vale dentro de subconsulta: a inserção vem antes, e só então a
+-- função é chamada com o segredo recém-criado.
+insert into public.mp_conexoes (state, guide_id)
+values ('estado-c2', '10000000-0000-0000-0000-00000000000a');
+select public.concluir_conexao_mp('estado-c2', 'MP-V2', 'TOKEN-A', 'r', 'k');
+
+-- Valor que NÃO divide redondo: R$ 999,99 com 7% de comissão e 30% de sinal.
+-- É onde o centavo se perde se a última cobrança não absorver o resto.
+insert into public.bookings (
+  id, user_id, guide_id, boat_id, data, qtd_pescadores,
+  preco_barco_centavos, preco_passageiro_centavos, valor_total_centavos,
+  comissao_percentual, comissao_centavos, repasse_guia_centavos,
+  sinal_centavos, saldo_centavos, status, status_pagamento
+) values (
+  '30000000-0000-0000-0000-0000000000c1',
+  '00000000-0000-0000-0000-0000000000c1',
+  '10000000-0000-0000-0000-00000000000a',
+  '20000000-0000-0000-0000-00000000000a',
+  current_date + 51, 1, 99999, 0, 99999,
+  7, 7000, 92999, 30000, 69999, 'pendente', 'aguardando_sinal'
+);
+
+do $$
+declare
+  c record;
+  fee_sinal integer;
+  fee_saldo integer;
+begin
+  select * into c from public.preparar_cobranca(
+    '30000000-0000-0000-0000-0000000000c1', 'sinal',
+    '00000000-0000-0000-0000-0000000000c1', 'k');
+  fee_sinal := c.fee_centavos;
+
+  -- O sinal é pago; agora o saldo cobra o que falta.
+  perform public.registrar_pagamento(
+    '30000000-0000-0000-0000-0000000000c1', 'sinal', 'MP-R1', 'pix',
+    30000, fee_sinal, 'aprovado');
+
+  select * into c from public.preparar_cobranca(
+    '30000000-0000-0000-0000-0000000000c1', 'saldo',
+    '00000000-0000-0000-0000-0000000000c1', 'k');
+  fee_saldo := c.fee_centavos;
+
+  -- A invariante que sustenta o extrato: a soma das taxas das cobranças bate
+  -- EXATAMENTE com a comissão da reserva. Um centavo perdido por reserva faz o
+  -- extrato divergir do Mercado Pago com o tempo.
+  if fee_sinal + fee_saldo <> 7000 then
+    raise exception 'FALHA: % + % não fecham os 7000 da comissão', fee_sinal, fee_saldo;
+  end if;
+  raise notice 'ok  a soma das comissões fecha ao centavo, mesmo com valor quebrado';
+end $$;
+rollback;
+
+-- --- o que a função recusa --------------------------------------------------
+begin;
+set role postgres;
+-- `insert` não vale dentro de subconsulta: a inserção vem antes, e só então a
+-- função é chamada com o segredo recém-criado.
+insert into public.mp_conexoes (state, guide_id)
+values ('estado-c3', '10000000-0000-0000-0000-00000000000a');
+select public.concluir_conexao_mp('estado-c3', 'MP-V3', 'TOKEN-A', 'r', 'k');
+
+insert into public.bookings (
+  id, user_id, guide_id, boat_id, data, qtd_pescadores,
+  preco_barco_centavos, preco_passageiro_centavos, valor_total_centavos,
+  comissao_percentual, comissao_centavos, repasse_guia_centavos,
+  sinal_centavos, saldo_centavos, status, status_pagamento
+) values (
+  '30000000-0000-0000-0000-0000000000c2',
+  '00000000-0000-0000-0000-0000000000c1',
+  '10000000-0000-0000-0000-00000000000a',
+  '20000000-0000-0000-0000-00000000000a',
+  current_date + 52, 2, 70000, 15000, 100000,
+  10, 10000, 90000, 30000, 70000, 'pendente', 'aguardando_sinal'
+);
+
+do $$
+declare c record;
+begin
+  -- Reserva de outra pessoa. Sem esta trava, quem descobrisse o id de uma
+  -- reserva alheia geraria um link de pagamento para ela.
+  begin
+    select * into c from public.preparar_cobranca(
+      '30000000-0000-0000-0000-0000000000c2', 'sinal',
+      '00000000-0000-0000-0000-0000000000c2', 'k');
+    raise exception 'FALHA: preparou cobrança de reserva alheia';
+  exception when insufficient_privilege then null;
+  end;
+
+  -- Saldo antes do sinal.
+  begin
+    select * into c from public.preparar_cobranca(
+      '30000000-0000-0000-0000-0000000000c2', 'saldo',
+      '00000000-0000-0000-0000-0000000000c1', 'k');
+    raise exception 'FALHA: cobrou saldo antes do sinal';
+  exception when check_violation then null;
+  end;
+
+  -- Sinal de reserva que já teve o sinal pago. É o caso do aplicativo
+  -- desatualizado: sem a trava, o cliente pagaria duas vezes.
+  update public.bookings set status_pagamento = 'sinal_pago', status = 'confirmada'
+   where id = '30000000-0000-0000-0000-0000000000c2';
+  begin
+    select * into c from public.preparar_cobranca(
+      '30000000-0000-0000-0000-0000000000c2', 'sinal',
+      '00000000-0000-0000-0000-0000000000c1', 'k');
+    raise exception 'FALHA: cobrou o sinal duas vezes';
+  exception when check_violation then null;
+  end;
+
+  -- Reserva cancelada não aceita pagamento.
+  update public.bookings set status = 'cancelada'
+   where id = '30000000-0000-0000-0000-0000000000c2';
+  begin
+    select * into c from public.preparar_cobranca(
+      '30000000-0000-0000-0000-0000000000c2', 'saldo',
+      '00000000-0000-0000-0000-0000000000c1', 'k');
+    raise exception 'FALHA: cobrou reserva cancelada';
+  exception when check_violation then null;
+  end;
+
+  raise notice 'ok  recusa reserva alheia, fora de ordem, repetida e cancelada';
+end $$;
+rollback;
+
+-- --- guia que desconectou no meio do caminho --------------------------------
+begin;
+set role postgres;
+insert into public.bookings (
+  id, user_id, guide_id, boat_id, data, qtd_pescadores,
+  preco_barco_centavos, preco_passageiro_centavos, valor_total_centavos,
+  comissao_percentual, comissao_centavos, repasse_guia_centavos,
+  sinal_centavos, saldo_centavos, status, status_pagamento
+) values (
+  '30000000-0000-0000-0000-0000000000c3',
+  '00000000-0000-0000-0000-0000000000c1',
+  '10000000-0000-0000-0000-00000000000b',   -- guia B: nunca conectou
+  '20000000-0000-0000-0000-00000000000b',
+  current_date + 53, 2, 70000, 15000, 100000,
+  10, 10000, 90000, 30000, 70000, 'pendente', 'aguardando_sinal'
+);
+do $$
+declare c record;
+begin
+  -- Sem conta conectada não há para onde o dinheiro ir. Melhor recusar com
+  -- mensagem clara do que gerar uma cobrança que o Mercado Pago rejeita.
+  begin
+    select * into c from public.preparar_cobranca(
+      '30000000-0000-0000-0000-0000000000c3', 'sinal',
+      '00000000-0000-0000-0000-0000000000c1', 'k');
+    raise exception 'FALHA: preparou cobrança de guia sem conta conectada';
+  exception when check_violation then null;
+  end;
+  raise notice 'ok  guia sem conta conectada não gera cobrança';
+end $$;
+rollback;
+
 do $$ begin raise notice ''; raise notice 'TODOS OS TESTES DE RLS PASSARAM'; end $$;

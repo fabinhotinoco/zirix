@@ -83,6 +83,12 @@ jobs:
       - name: Publicar a função previsao
         run: supabase functions deploy previsao --project-ref "$PROJETO"
 
+      # Também com JWT: é o pagador logado quem pede a cobrança, e o id dele sai
+      # do token verificado — nunca de um campo do corpo, que qualquer um
+      # escreveria.
+      - name: Publicar a função cobrar
+        run: supabase functions deploy cobrar --project-ref "$PROJETO"
+
       - name: Conferir que a função responde
         run: |
           URL="https://$PROJETO.supabase.co/functions/v1/mp-oauth"
@@ -112,3 +118,14 @@ jobs:
             exit 1
           fi
           echo "✓ previsao exige login, como deve"
+
+          echo "→ conferindo que cobrar EXIGE login"
+          COB=$(curl -sS -o /dev/null -w '%{http_code}' -X POST \
+            -H 'content-type: application/json' -d '{}' \
+            "https://$PROJETO.supabase.co/functions/v1/cobrar")
+          echo "  HTTP $COB"
+          if [ "$COB" != "401" ]; then
+            echo "::error::A função cobrar respondeu $COB sem login. Ela precisa exigir JWT."
+            exit 1
+          fi
+          echo "✓ cobrar exige login, como deve"
