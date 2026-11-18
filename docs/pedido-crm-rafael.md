@@ -22,6 +22,9 @@ card no funil do ZXCRM com:
 
 - origem = "Podcast – WhatsApp" (ou uma origem configurável por número ou por
   palavra-chave);
+- se a conversa veio de **anúncio de clique para o WhatsApp**, gravar no
+  `metadata` os dados de referência do anúncio que a Meta envia (anúncio,
+  campanha), igual ao que já é feito com os formulários;
 - telefone e nome do contato;
 - a primeira mensagem do cliente nas observações (é nela que vem o código do
   episódio, por exemplo `[EP03-LI]`);
@@ -41,7 +44,15 @@ Quando um lead de formulário da Meta entrar no ZXCRM com campanha começando po
   sem resposta → plantão);
 - o vendedor recebe o aviso no aplicativo ou no celular.
 
-### 3. Leitura para o relatório do podcast
+### 3. Origem do formulário e mensalidade
+
+- Lead de formulário da Meta com campanha começando por `Podcast |` entra com a
+  origem **"Podcast – Formulário"**.
+- Onde fica a **mensalidade** de um negócio? Nos ganhos, os itens trazem
+  equipamento e instalação, mas não a mensalidade. Se não houver campo, vamos
+  usar um item de serviço "Mensalidade" (quantidade = veículos).
+
+### 4. Leitura para o relatório do podcast
 
 - **Endpoints de apoio** na API externa do ZXCRM (item 7 da documentação):
   etapas, vendedores, origens e motivos de perda (`id` e `nome`).
@@ -53,8 +64,11 @@ Quando um lead de formulário da Meta entrar no ZXCRM com campanha começando po
 `POST /external/crm/cards` na API externa do ZXCRM, com **chave separada só
 para escrita**, idempotente pelo telefone (E.164), aceitando `name`,
 `contact_name`, `phone`, `email`, `source_id`, `stage_id`, `owner_id`, `notes`
-e `metadata` livre. Mais um webhook de "conversa nova" na TalkWork. Com isso,
-nós fazemos a ponte no Make.
+e `metadata` livre. Mais, na TalkWork: um **webhook de "conversa nova"** e uma
+**API para enviar modelo de mensagem** e colocar a conversa na fila de um setor.
+Com isso, a ponte fica no Make: conversa nova → `POST` no CRM; lead de
+formulário `Podcast |` (lido do CRM a cada 5 minutos por `updated_since`) →
+modelo de mensagem pela TalkWork.
 
 ## Segurança
 

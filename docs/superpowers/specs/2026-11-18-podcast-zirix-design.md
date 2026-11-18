@@ -37,8 +37,6 @@ que a pessoa viu.
 **Não objetivos (por enquanto)**
 - Audiência de massa ou monetização do podcast em si.
 - Site ou landing page própria.
-- Integração automática de leads no ZXCRM: depende de endpoint de escrita que a
-  API atual não tem (§9.4).
 
 **Anti-objetivos (fracasso mesmo que "funcione")**
 - Episódio que vira propaganda: o convidado não volta e não divulga.
@@ -117,8 +115,9 @@ ambiente (§6).
   depende de onde o receptor está ligado.
 - **Requisito de compra:** transmissores com gravação interna, em número igual
   ao de vozes. Com convidado são **3**, então dois kits de 2 transmissores ou um
-  sistema que aceite 3 ou mais. Faixa: Hollyland Lark M2, DJI Mic Mini, DJI Mic 2
-  (confirmar a gravação interna no modelo escolhido).
+  sistema que aceite 3 ou mais. Escolha: Hollyland Lark Max 2 Combo 4 pessoas;
+  alternativa: DJI Mic 3 (§5.6). Lark M2 e DJI Mic Mini ficam fora porque não
+  gravam dentro do transmissor.
 - Se houver só 2 transmissores numa gravação, quem dividir canal é identificado
   por marcação manual na aprovação dos cortes. É um modo degradado, não o padrão.
 - As câmeras gravam o próprio áudio só para sincronia.
@@ -233,7 +232,7 @@ Opus Clip ficam como plano B, se o fluxo próprio não segurar o semanal.
 | **Spotify for Creators** | Episódio (vídeo e áudio), RSS para Apple Podcasts e Amazon Music | Fabio ou Saulo |
 | **Instagram** (@zirixrastreamento) | Reels (cortes), stories no lançamento, lives no cliente | Fabio ou Saulo |
 | **LinkedIn — perfil pessoal do Fabio** | Corte horizontal de 3 a 5 min e cortes verticais, com texto de opinião | Fabio |
-| **WhatsApp** | Status no lançamento e envio individual para leads em cadência | Vendedores |
+| **WhatsApp** (número comercial, na TalkWork) | Envio individual a leads que já conversaram, em cadência (a API oficial não publica Status) | Vendedores |
 
 **Calendário de publicação de cada episódio (dia D = lançamento):**
 - D: episódio completo no YouTube e no Spotify, 1 corte no Instagram e no
@@ -295,19 +294,27 @@ WhatsApp do lead ──► TalkWork (fila, vendedor, IA fora do horário)
   operadores". Funciona com créditos pré-pagos: hoje a IA está desligada, sem
   forma de pagamento cadastrada.
 
-**Contingência, se a entrega do Rafael atrasar:** a TalkWork continua
-recebendo e distribuindo as conversas na fila (isso não depende do Rafael), mas
-o card do lead de WhatsApp é criado à mão pelo vendedor no primeiro contato, com
-origem e código do episódio. O lançamento não para.
+**Contingência, se a entrega do Rafael atrasar** (o número comercial conectado
+na TalkWork é pré-requisito em qualquer cenário):
+- **Lead de WhatsApp:** a TalkWork recebe e distribui na fila normalmente. O
+  vendedor cria o card no ZXCRM à mão no primeiro contato, com origem e código
+  do episódio.
+- **Lead de formulário:** um cenário do Make lê o ZXCRM a cada 5 minutos
+  (`updated_since`, só cards com campanha `Podcast |`) e avisa o vendedor do
+  segmento no Slack. O vendedor envia o modelo de mensagem pela TalkWork. Nenhum
+  lead fica sem resposta.
+- **Se o número comercial atrasar:** o lançamento espera o número. Não se usa o
+  número dos alertas do ZX ITS (§11).
 
 ### 8.2 Chamados
 
 - **Fim de cada vídeo (5 s, sempre igual):** "Quer um diagnóstico da sua frota?
   Chama no WhatsApp da Zirix."
 - **Isca para quem não está pronto:** um material por tema (checklist,
-  diagnóstico), entregue pelo WhatsApp em troca de até 4 respostas: empresa,
-  cidade/UF, tipo de operação (urbano, intermunicipal, fretamento) e tamanho da
-  frota.
+  diagnóstico), entregue pelo WhatsApp em troca de até 5 respostas: empresa,
+  cidade/UF, tipo de operação (urbano, intermunicipal, fretamento), tamanho da
+  frota e cargo. As mesmas 5 perguntas valem para o formulário da Meta e para a
+  qualificação da IA na TalkWork.
 
 ### 8.3 Rastreio
 
@@ -341,11 +348,11 @@ Sem landing page. Ela só passa a valer se houver anúncio fora da Meta.
 
 | Tipo | Origem | Responsável | Canal | Prazo |
 |---|---|---|---|---|
-| A. Convidado | Gravação | Fabio, com André na visita técnica | WhatsApp pessoal e presencial | 48 h após gravar |
-| B. Quente | Pediu conversa ou diagnóstico | Plantão; se prioridade A, André | WhatsApp, depois ligação ou vídeo | **15 min** em horário comercial |
-| C. Morno | Baixou material | Plantão | WhatsApp | 24 h |
+| A. Convidado | Gravação | Fabio, com André na visita técnica | Presencial e WhatsApp pessoal do Fabio (**exceção intencional**: é relacionamento de diretoria). Card no ZXCRM com origem "Podcast – Convidado", criado pelo Fabio | 48 h após gravar |
+| B. Quente | Pediu conversa ou diagnóstico | Dono do segmento (plantão se sem segmento); se prioridade A, André | WhatsApp, depois ligação ou vídeo | **15 min** em horário comercial |
+| C. Morno | Baixou material | Dono do segmento (plantão se sem segmento) | WhatsApp | 24 h |
 | D. Engajado | Comentou ou seguiu | Fabio | LinkedIn | Sem cadência formal |
-| E. Alvo frio | Lista do Sudeste | Mauricio e Walner, 5 empresas por semana cada | WhatsApp ou e-mail com um corte relevante; convite para o podcast como gancho | Semanal |
+| E. Alvo frio | Lista do Sudeste | Mauricio e Walner, 5 empresas por semana cada | **E-mail, LinkedIn e ligação** com um corte relevante e o convite para o podcast como gancho. **Nada de WhatsApp para quem não autorizou**, para proteger a qualidade do número comercial. Card com origem "Podcast – Prospecção" | Semanal |
 
 ### 9.3 Prioridade para operadoras de ônibus
 
@@ -356,8 +363,11 @@ Sem landing page. Ela só passa a valer se houver anúncio fora da Meta.
 | C | Até 50 ônibus, fora do Sudeste ou sem perfil | Nutrição (novos episódios e materiais) |
 
 Os cortes de faixa são calibração inicial; revisar com o histórico de vendas
-depois de 3 meses. A régua genérica do Make (20 e 5 veículos) segue valendo para
-os outros segmentos.
+depois de 3 meses. **Quem classifica:** a IA da TalkWork, a partir das 5 respostas,
+marca a etiqueta `Prioridade A/B/C` na conversa; em horário comercial, o vendedor
+confirma. A prioridade vai para as observações do card no ZXCRM. A régua
+genérica do Make (20 e 5 veículos) continua só para o formulário do site, que
+não é de ônibus.
 
 **Cadência para lead morno sem resposta:** D0 material e perguntas · D2 corte ·
 D5 LinkedIn · D10 oferta de diagnóstico · D21 encerramento e nutrição.
@@ -365,9 +375,10 @@ D5 LinkedIn · D10 oferta de diagnóstico · D21 encerramento e nutrição.
 ### 9.4 Sistemas
 
 **Como funciona hoje (verificado em 18/11/2026):**
-- **Make, cenário "Lead Zirix — Captação e Roteamento (v1)":** webhook, evita
-  duplicar pelo e-mail, classifica em A/B/C, grava num data store e avisa no
-  Slack.
+- **Make:** "Lead Zirix — Captação e Roteamento (v1)" (formulário do site:
+  webhook, evita duplicar pelo e-mail, classifica em A/B/C, grava num data store
+  e avisa no Slack); snapshots diários de Meta Ads, Instagram, formulários da
+  Meta e cards do CRM (este último alimenta o Cockpit).
 - **ZXCRM** (crm.zirix.com.br, sistema da Zirix criado pelo Rafael, mesma base de
   código da TalkWork): API externa **somente leitura** (`GET /external/crm/cards`,
   autenticação pelo cabeçalho `x-trckd-api-key`), com filtro por `status`,
@@ -392,19 +403,24 @@ D5 LinkedIn · D10 oferta de diagnóstico · D21 encerramento e nutrição.
 1. **TalkWork (Claude configura depois da aprovação; o número precisa estar
    conectado):** cadastrar Mauricio, Walner e André; criar os setores
    Urbano/Consórcio, Intermunicipal/Fretamento e Plantão; criar as etiquetas
-   por episódio; configurar a qualificação de lead (4 perguntas), as respostas
+   por episódio; configurar a qualificação de lead (5 perguntas) e as etiquetas `Prioridade A/B/C`, as respostas
    rápidas e a IA fora do horário; criar e enviar para aprovação da Meta os
    modelos do podcast.
-2. **ZXCRM:** criar as origens "Podcast – Convidado", "Podcast – WhatsApp",
-   "Podcast – Formulário", "Podcast – LinkedIn", "Podcast – Instagram" e
-   "Podcast – Prospecção", e os motivos de perda "Sem frota no perfil", "Já tem
+2. **ZXCRM:** criar 4 origens: "Podcast – Formulário" (lead de formulário com
+   campanha `Podcast |`; mapeamento automático pedido ao Rafael), "Podcast –
+   WhatsApp", "Podcast – Convidado" e "Podcast – Prospecção". O canal (LinkedIn,
+   Instagram, YouTube) é medido pelo código do episódio, não pela origem. Criar também os motivos de perda "Sem frota no perfil", "Já tem
    fornecedor com contrato", "Sem orçamento no ciclo" e "Sem resposta".
 3. **Rafael, prioritário, prazo de 2 semanas** (`docs/pedido-crm-rafael.md`):
-   (a) conversa nova na TalkWork vira card no ZXCRM; (b) lead de formulário
+   (a) conversa nova na TalkWork vira card no ZXCRM (com os dados do anúncio de
+   clique para o WhatsApp, quando houver); (b) lead de formulário
    `Podcast |` no ZXCRM dispara o modelo de mensagem na TalkWork e entra na fila
    do setor; (c) endpoints de apoio de leitura (nomes de etapas, vendedores,
-   origens e motivos). Alternativa: `POST` de card com chave de escrita +
-   webhook de conversa nova, e a ponte fica no Make.
+   origens e motivos). Alternativa: `POST` de card com chave de escrita, webhook de
+   conversa nova e API de envio de modelo na TalkWork; a ponte fica no Make,
+   que nesse caso também lê o ZXCRM a cada 5 minutos para disparar o modelo ao
+   lead de formulário; (d) mapear campanha `Podcast |` para a origem
+   "Podcast – Formulário"; (e) indicar onde fica a mensalidade no negócio.
 4. **Make:** o cenário "Lead Zirix — Captação e Roteamento (v1)" continua para
    os formulários do site. No podcast, o Make só entra se o Rafael optar pela
    alternativa do item 3. Nesse caso, ele passa a aceitar lead sem e-mail (chave
@@ -419,12 +435,15 @@ pelas origens e campanhas do podcast) e da TalkWork:
 
 | Métrica | Fonte |
 |---|---|
-| Leads por episódio e por canal | ZXCRM (`metadata.campaign_name` e código do episódio nas observações) |
-| Tempo até o primeiro contato | TalkWork (chegada da conversa × primeira resposta humana); para formulário, `created_at` do card × primeira mensagem na TalkWork |
+| Leads por episódio e por canal | ZXCRM: origem (Formulário, WhatsApp, Convidado, Prospecção), `metadata.campaign_name` e código do episódio nas observações. O código traz o canal (`[EP03-LI]` = LinkedIn) |
+| Tempo até o primeiro contato | Relatórios da própria TalkWork (painel). Se o Rafael liberar leitura por API (pedido, item 3), entra no relatório automático |
 | Lead → reunião → proposta → ganho | ZXCRM (etapas e status por origem) |
-| **Pipeline em mensalidade recorrente gerado** | ZXCRM (itens e valor por origem) |
-| Alcance e retenção por corte | Instagram, YouTube e LinkedIn (snapshots do Make e painéis nativos) |
-| Custo por conversa (anúncios) | Meta Ads (snapshot do Make) |
+| **Pipeline em mensalidade recorrente gerado** | ZXCRM. Verificado em 18/11/2026: os itens dos negócios ganhos trazem equipamento (`crm_device_type_id`) e instalação (`service_type_id`), mas a **mensalidade não aparece como item**. Convenção nova: incluir o item de serviço "Mensalidade" (quantidade = veículos) em todo negócio do podcast. Se a mensalidade já estiver em outro campo, o Rafael indica. |
+| Alcance e retenção por corte | Instagram (snapshot do Make que já existe), YouTube e LinkedIn (painéis nativos, coleta manual por enquanto) |
+| Custo por conversa (anúncios) | Meta Ads (snapshot do Make que já existe) |
+
+**Quem gera:** o Claude, numa sessão neste ambiente, toda segunda-feira, em
+`relatorios/AAAA-MM-DD.md` no repositório.
 
 **Ritual:** 15 minutos por semana, com Fabio e os vendedores, sobre "leads sem
 contato" e os temas que geraram lead ruim (motivos de perda).
@@ -456,8 +475,9 @@ partir da linha de base real. Meta inventada antes de ter dados vira ruído.
 
 **Segurança (pendências encontradas):**
 - A chave da API do ZXCRM está em texto aberto nos cabeçalhos do cenário
-  "CRM Cards → Snapshot", e a URL do webhook do Slack também está aberta. Pedir
-  a rotação da chave e deixá-la só no cofre (keychain) do Make.
+  "CRM Cards → Snapshot", e a URL do webhook do Slack também está aberta. A chave
+  nova já existe (guardada no ambiente do Claude). Falta colocá-la só no cofre
+  (keychain) do Make, revogar a antiga e gerar uma URL nova de webhook no Slack.
 - Confirmar que o repositório `zirix-cockpit` é privado: ele recebe dados de
   contrato.
 
@@ -465,8 +485,12 @@ partir da linha de base real. Meta inventada antes de ter dados vira ruído.
 na TalkWork é o dos **alertas operacionais do ZX ITS**. O podcast e as vendas
 usam um **número comercial separado**, na mesma conta da Zirix na Meta e na
 mesma TalkWork, escolhido pelo Rafael (guia em `docs/numero-comercial-whatsapp.md`).
-Motivo: a Meta limita números com qualidade baixa, e uma limitação no número dos
-alertas pararia a comunicação operacional com os clientes atuais.
+Motivo: a Meta avalia a qualidade de cada número, e uma limitação no número dos
+alertas pararia a comunicação operacional com os clientes atuais. A separação
+também isola as filas. A Meta vem mudando a forma de contar os limites de envio
+(por número ou pela conta inteira da empresa); confirmar a regra atual na
+implantação, porque, se o limite for da conta, o volume do podcast também conta
+para o teto dos alertas.
 
 **Operação:**
 - **Convidado desmarca:** gravar um "Zirix explica" de reserva por mês.
@@ -501,8 +525,7 @@ prioridade para ônibus · divisão dos vendedores por segmento · plantão ·
 quadros e calendário de publicação · stack de pós-produção · armazenamento
 (Drive, HD, YouTube e Spotify) · lista de compras · câmera A em 4K · gravação
 interna dos transmissores como fonte de áudio · pós-produção disparada numa
-sessão do Claude, com duas aprovações · WhatsApp na TalkWork, com número
-comercial separado · dono por segmento com plantão só para triagem · lapelas
+sessão do Claude, com duas aprovações · dono por segmento com plantão só para triagem · lapelas
 Hollyland Lark Max 2.
 
 ## 14. Fora deste documento (fica para o plano de implantação)
@@ -523,6 +546,8 @@ Hollyland Lark Max 2.
 | Trocar a chave antiga do CRM no cofre do Make e revogá-la | Fabio |
 | Escolher e conectar o número comercial na TalkWork (`docs/numero-comercial-whatsapp.md`), já solicitado | Rafael, com apoio do Claude |
 | Cadastrar a forma de pagamento e os créditos da IA na TalkWork | Fabio |
+| Gerar URL nova do webhook do Slack e atualizar o cenário de captação | Fabio |
+| Incluir o item "Mensalidade" nos negócios do podcast (convenção do §10) | Vendedores |
 | Termos de imagem e de gravação no cliente | `zirix-legal` |
 | Criar o canal do YouTube e a conta no Spotify for Creators | Fabio ou Saulo |
 | Liberar hosts e montar o setup do ambiente para a pós-produção | Claude, com aprovação do Fabio |
