@@ -1,41 +1,18 @@
-# Dependencias
-node_modules/
-.pnp
-.pnp.js
+# Mídia bruta e renderizada não vai para o git (pesada demais).
+# Ela fica em armazenamento próprio (Drive, S3/R2); aqui só roteiros, pautas,
+# metadados, scripts e templates.
+*.mp4
+*.mov
+*.mkv
+*.wav
+*.aif
+*.aiff
+*.mp3
+*.m4a
 
-# Expo
-.expo/
-dist/
-web-build/
-expo-env.d.ts
-.metro-health-check*
-
-# Build nativo (assinatura e credenciais de loja)
-*.jks
-*.p8
-*.p12
-*.key
-*.mobileprovision
-*.orig.*
-
-# Variaveis de ambiente (chaves Supabase e Mercado Pago)
 .env
 .env.*
 !.env.example
-
-# Supabase CLI
-supabase/.temp/
-supabase/.branches/
-
-# TypeScript
-*.tsbuildinfo
-
-# Logs
-npm-debug.*
-yarn-debug.*
-yarn-error.*
-*.log
-
-# Sistema operacional
+node_modules/
 .DS_Store
 Thumbs.db
