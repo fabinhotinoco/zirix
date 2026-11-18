@@ -67,6 +67,22 @@ de produto.
 | Cortes por episódio | 4 a 6 verticais (30 a 90 s) + 1 trecho horizontal de 3 a 5 min para LinkedIn e YouTube |
 | Locais | **Estúdio:** sala de reunião da Zirix · **Externo:** garagens e sedes dos clientes (consórcios do Rio) |
 
+### Calendário de implantação e lançamento (decisão do Fabio: calendário B)
+
+| Período | Marco |
+|---|---|
+| 23 a 27/11/2026 | Equipamento chega; número comercial conectado na TalkWork; ingestão, sincronia e transcrição montadas; **gravação de teste** na sexta (27/11) |
+| 30/11 a 04/12 | Montagem, cortes, legendas e textos; configuração da TalkWork; modelos de mensagem enviados à Meta |
+| 07 a 11/12 | **Episódio piloto (EP00)** de ponta a ponta, com lead de teste caindo no ZXCRM e no WhatsApp |
+| 14 a 18/12 | Gravação do **EP01 e do EP02** |
+| 19/12 a 11/01/2027 | Ajustes; integração do Rafael testada; pauta e convidados de fevereiro fechados |
+| **12/01/2027 (terça)** | **Lançamento:** EP01 publicado. EP02 em 26/01. Quinzenal até julho de 2027 e depois semanal (§11) |
+
+Motivo: entre o fim de dezembro e meados de janeiro quem decide em operadora de
+ônibus está de férias ou na operação de fim de ano. Lançar em janeiro usa o
+pico de alcance do lançamento com o público olhando e já começa com episódio de
+reserva.
+
 ### Três quadros
 
 1. **Convidado da operação** (núcleo): gestor de operadora, consórcio ou
@@ -517,7 +533,7 @@ sala de reunião com logo e miniaturas · gravações e lives em clientes do Rio
 fazer tudo por este ambiente · leads automáticos desde o EP01, no CRM e no
 WhatsApp dos vendedores ao mesmo tempo · TalkWork como ferramenta de WhatsApp ·
 IA da TalkWork fora do horário · número comercial novo (pedido ao Rafael) ·
-primeiro episódio em 3 semanas.
+calendário B (lançamento em 12/01/2027, com EP01 e EP02 gravados em dezembro).
 
 **Decisões técnicas e de estratégia minhas (corrigíveis):** formulário da Meta e
 WhatsApp como portas de entrada · sem landing page · tipos de lead, prazos e cadência · régua de
