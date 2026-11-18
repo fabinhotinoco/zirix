@@ -257,9 +257,16 @@ material usa formulário com as 4 perguntas. Campanha e formulário seguem o pad
 digitação. Validar com um lead de teste na semana 2.
 
 Para o lead de WhatsApp também cair sozinho, falta uma peça do lado do ZXCRM,
-porque a API atual só lê. O pedido à equipe do ZXCRM (§9.4, item 5) passa a ser
-prioritário: integração nativa com o WhatsApp Business ou endpoint de escrita.
-As fases abaixo valem até isso existir.
+porque a API atual só lê. **Decisão do Fabio: tudo automático desde o EP01.** O pedido ao Rafael (§9.4,
+item 5) entra no caminho crítico, com prazo de 2 semanas. O número comercial usa
+a **API oficial do WhatsApp em modo de coexistência**: os vendedores continuam
+atendendo pelo aplicativo WhatsApp Business, e cada conversa nova também gera um
+evento que cria o card. Se a entrega do Rafael atrasar, as fases abaixo são o
+plano de contingência, e o lançamento não para.
+
+Formulários orgânicos da Meta também já caem no CRM (`metadata.is_organic`),
+então o formulário pode ser oferecido no perfil e nos stories, não só em
+anúncio.
 
 **Fase 1 — aplicativo WhatsApp Business (grátis):** o aplicativo não tem API,
 então o lead de WhatsApp **não chega sozinho ao Make**. O plantão cria o card no
@@ -368,7 +375,7 @@ D5 LinkedIn · D10 oferta de diagnóstico · D21 encerramento e nutrição.
    "Sem resposta".
 4. **Cadastro no CRM:** manual pelo plantão, no primeiro contato, com origem e
    código do episódio nas observações, até existir endpoint de escrita.
-5. **Pedido à equipe do ZXCRM (Jotapê), prioritário:** (a) **integração nativa
+5. **Pedido ao Rafael (criador do ZXCRM), prioritário e com prazo de 2 semanas (texto em `docs/pedido-crm-rafael.md`):** (a) **integração nativa
    com o WhatsApp Business**, como a do Instagram, em que cada conversa nova vira
    card com origem; ou (b) endpoint de escrita para criar card (`POST`), com
    origem, responsável, telefone, observações e `metadata`, para o Make criar o
@@ -473,8 +480,8 @@ fase 1 e API oficial na fase 2 · dono por segmento com plantão só para triage
 | Definir o 2º iPhone | Fabio e Saulo |
 | Criar o número de WhatsApp Business do podcast | Fabio |
 | Criar as origens e os motivos de perda no ZXCRM | Fabio |
-| Enviar o pedido à equipe do ZXCRM (escrita, apoio, Meta) | Fabio |
-| Rotacionar a chave da API do CRM | Fabio |
+| Enviar o pedido ao Rafael (`docs/pedido-crm-rafael.md`) | Fabio |
+| Trocar a chave antiga do CRM no cofre do Make e revogá-la | Fabio |
 | Termos de imagem e de gravação no cliente | `zirix-legal` |
 | Criar o canal do YouTube e a conta no Spotify for Creators | Fabio ou Saulo |
 | Liberar hosts e montar o setup do ambiente para a pós-produção | Claude, com aprovação do Fabio |
