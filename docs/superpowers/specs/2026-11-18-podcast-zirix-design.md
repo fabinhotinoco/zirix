@@ -268,6 +268,37 @@ Formulários orgânicos da Meta também já caem no CRM (`metadata.is_organic`),
 então o formulário pode ser oferecido no perfil e nos stories, não só em
 anúncio.
 
+**Todo lead cai em dois lugares ao mesmo tempo: no CRM e no WhatsApp dos
+vendedores (decisão do Fabio).** O Make é o centro da distribuição:
+
+```
+Formulário Meta ──► ZXCRM (nativo, já funciona)
+       └──────────► Make ──► WhatsApp: mensagem automática para o LEAD,
+                         │   pelo número comercial (em segundos)
+                         ├──► WhatsApp: aviso para o VENDEDOR responsável
+                         │   (resumo + link para abrir a conversa)
+                         └──► Slack (registro)
+
+WhatsApp do lead ──► número comercial (vendedores veem no aplicativo,
+       │              em coexistência com a API oficial)
+       └──────────► Make ──► ZXCRM (POST do Rafael) + aviso ao vendedor
+```
+
+- **O lead é atendido em segundos.** Depois de enviar o formulário, o lead recebe
+  no WhatsApp uma mensagem do número comercial, com o nome do vendedor
+  responsável. A conversa já começa aberta no aplicativo que os vendedores usam.
+- **O vendedor recebe um aviso no WhatsApp dele** com nome, empresa, frota,
+  cidade, episódio e o link direto para a conversa. A conversa com o cliente
+  fica sempre no número da Zirix, nunca no pessoal: o relacionamento é da
+  empresa.
+- **Roteamento:** pelo segmento respondido no formulário (§9.1). Sem segmento,
+  vai para o plantão do dia.
+- **Sem duplicar:** o data store do Make usa o telefone como chave.
+- **Requisitos:** API oficial do WhatsApp (Cloud API) no número comercial, em
+  coexistência. Modelos de mensagem aprovados pela Meta: resposta ao lead e
+  aviso ao vendedor. Módulo WhatsApp Business Cloud no Make. Cada mensagem de
+  modelo tem custo baixo por envio, cobrado pela Meta.
+
 **Fase 1 — aplicativo WhatsApp Business (grátis):** o aplicativo não tem API,
 então o lead de WhatsApp **não chega sozinho ao Make**. O plantão cria o card no
 ZXCRM no primeiro contato, com origem e código do episódio. As perguntas da isca
