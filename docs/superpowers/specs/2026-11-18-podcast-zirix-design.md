@@ -295,8 +295,14 @@ WhatsApp do lead ──► TalkWork (fila, vendedor, IA fora do horário)
 - **Quem constrói:** o Rafael, conforme `docs/pedido-crm-rafael.md`. O Make só
   entra se precisar fazer a ponte pela alternativa (endpoint de escrita +
   webhook).
-- **Fora do horário comercial,** a IA da TalkWork responde e qualifica (as
-  4 perguntas), seguindo as regras do §11.
+- **Fora do horário comercial (decisão do Fabio: usar a IA da TalkWork):** a IA
+  responde, faz as 4 perguntas de qualificação (recurso "qualificação de lead"
+  da TalkWork) e deixa a conversa pronta para o vendedor do segmento no dia
+  seguinte. Base de conhecimento e instruções escritas pelo Claude e revisadas
+  pelo Fabio, seguindo o §11: nada de preço, nada de promessa de recuperação ou
+  de disponibilidade, e o caso do Rio descrito como "implantado nos consórcios
+  operadores". Funciona com créditos pré-pagos: hoje a IA está desligada, sem
+  forma de pagamento cadastrada.
 
 **Contingência, se a integração do Rafael atrasar — aplicativo WhatsApp Business (grátis):** o aplicativo não tem API,
 então o lead de WhatsApp **não chega sozinho ao Make**. O plantão cria o card no
@@ -519,7 +525,8 @@ fase 1 e API oficial na fase 2 · dono por segmento com plantão só para triage
 | Criar as origens e os motivos de perda no ZXCRM | Fabio |
 | Enviar o pedido ao Rafael (`docs/pedido-crm-rafael.md`) | Fabio |
 | Trocar a chave antiga do CRM no cofre do Make e revogá-la | Fabio |
-| Escolher e conectar o número comercial na TalkWork (`docs/numero-comercial-whatsapp.md`) | Rafael, com apoio do Claude |
+| Escolher e conectar o número comercial na TalkWork (`docs/numero-comercial-whatsapp.md`), já solicitado | Rafael, com apoio do Claude |
+| Cadastrar a forma de pagamento e os créditos da IA na TalkWork | Fabio |
 | Termos de imagem e de gravação no cliente | `zirix-legal` |
 | Criar o canal do YouTube e a conta no Spotify for Creators | Fabio ou Saulo |
 | Liberar hosts e montar o setup do ambiente para a pós-produção | Claude, com aprovação do Fabio |
