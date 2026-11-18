@@ -462,6 +462,13 @@ partir da linha de base real. Meta inventada antes de ter dados vira ruído.
 - Confirmar que o repositório `zirix-cockpit` é privado: ele recebe dados de
   contrato.
 
+**Número de WhatsApp (verificado em 18/11/2026):** o único número conectado hoje
+na TalkWork é o dos **alertas operacionais do ZX ITS**. O podcast e as vendas
+usam um **número comercial separado**, na mesma conta da Zirix na Meta e na
+mesma TalkWork, escolhido pelo Rafael (guia em `docs/numero-comercial-whatsapp.md`).
+Motivo: a Meta limita números com qualidade baixa, e uma limitação no número dos
+alertas pararia a comunicação operacional com os clientes atuais.
+
 **Operação:**
 - **Convidado desmarca:** gravar um "Zirix explica" de reserva por mês.
 - **Calendário semanal:** só subir para semanal depois de 3 episódios
@@ -512,6 +519,7 @@ fase 1 e API oficial na fase 2 · dono por segmento com plantão só para triage
 | Criar as origens e os motivos de perda no ZXCRM | Fabio |
 | Enviar o pedido ao Rafael (`docs/pedido-crm-rafael.md`) | Fabio |
 | Trocar a chave antiga do CRM no cofre do Make e revogá-la | Fabio |
+| Escolher e conectar o número comercial na TalkWork (`docs/numero-comercial-whatsapp.md`) | Rafael, com apoio do Claude |
 | Termos de imagem e de gravação no cliente | `zirix-legal` |
 | Criar o canal do YouTube e a conta no Spotify for Creators | Fabio ou Saulo |
 | Liberar hosts e montar o setup do ambiente para a pós-produção | Claude, com aprovação do Fabio |
