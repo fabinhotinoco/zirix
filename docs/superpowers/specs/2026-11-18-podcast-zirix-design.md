@@ -243,30 +243,21 @@ Opus Clip ficam como plano B, se o fluxo próprio não segurar o semanal.
 
 ## 8. Conversão
 
-### 8.1 Porta única: WhatsApp
+### 8.1 Captura: formulário da Meta e WhatsApp, os dois automáticos
 
-**Um número de WhatsApp Business só do podcast/comercial**, compartilhado entre
-os vendedores (aparelhos vinculados), nunca o número pessoal de alguém.
+**Decisões do Fabio:** os leads do podcast caem sozinhos no ZXCRM, como os do
+Instagram já caem, **e ao mesmo tempo no WhatsApp dos vendedores**, tudo
+automático desde o EP01.
 
-**Captura automática no CRM (decisão do Fabio: os leads do podcast devem cair
-sozinhos no ZXCRM, como os do Instagram já caem).** O ZXCRM já recebe os leads
-de **formulário instantâneo da Meta** de forma nativa. Por isso, o formulário
-instantâneo é a **captura principal** do podcast: todo anúncio de episódio ou de
-material usa formulário com as 4 perguntas. Campanha e formulário seguem o padrão
-`Podcast | EP03 | <tema>`, para o card chegar identificado pelo `metadata`, sem
-digitação. Validar com um lead de teste na semana 2.
-
-Para o lead de WhatsApp também cair sozinho, falta uma peça do lado do ZXCRM,
-porque a API atual só lê. **Decisão do Fabio: tudo automático desde o EP01.** O pedido ao Rafael (§9.4,
-item 5) entra no caminho crítico, com prazo de 2 semanas. O número comercial usa
-a **API oficial do WhatsApp em modo de coexistência**: os vendedores continuam
-atendendo pelo aplicativo WhatsApp Business, e cada conversa nova também gera um
-evento que cria o card. Se a entrega do Rafael atrasar, as fases abaixo são o
-plano de contingência, e o lançamento não para.
-
-Formulários orgânicos da Meta também já caem no CRM (`metadata.is_organic`),
-então o formulário pode ser oferecido no perfil e nos stories, não só em
-anúncio.
+- **Número:** um **número comercial novo**, só para vendas e podcast, na mesma
+  conta da Zirix na Meta, conectado à TalkWork (já solicitado ao Rafael; ver
+  §11). Nunca o número pessoal de um vendedor.
+- **Formulário instantâneo da Meta** (anúncio ou orgânico, no perfil e nos
+  stories): o ZXCRM já recebe de forma nativa, com campanha, formulário e
+  respostas no `metadata` (verificado em 18/11/2026, inclusive
+  `metadata.is_organic`). Campanha e formulário seguem o padrão
+  `Podcast | EP03 | <tema>`, para o card chegar identificado sem digitação.
+  Validar com um lead de teste na semana 2.
 
 **Todo lead cai em dois lugares ao mesmo tempo: no CRM e no WhatsApp dos
 vendedores (decisão do Fabio).** O WhatsApp comercial roda na **TalkWork**
@@ -304,16 +295,10 @@ WhatsApp do lead ──► TalkWork (fila, vendedor, IA fora do horário)
   operadores". Funciona com créditos pré-pagos: hoje a IA está desligada, sem
   forma de pagamento cadastrada.
 
-**Contingência, se a integração do Rafael atrasar — aplicativo WhatsApp Business (grátis):** o aplicativo não tem API,
-então o lead de WhatsApp **não chega sozinho ao Make**. O plantão cria o card no
-ZXCRM no primeiro contato, com origem e código do episódio. As perguntas da isca
-são respostas rápidas salvas no aplicativo. O tempo até o primeiro contato do
-WhatsApp é medido pelo próprio plantão (hora da mensagem anotada no card).
-
-**Fase 2 — API oficial do WhatsApp (Cloud API, direta ou via provedor):** só
-quando o volume passar de cerca de 30 leads por mês ou o plantão não segurar os
-15 min. Ela traz webhook para o Make, robô de qualificação, captura automática
-do código do episódio e medição exata, com custo por conversa.
+**Contingência, se a entrega do Rafael atrasar:** a TalkWork continua
+recebendo e distribuindo as conversas na fila (isso não depende do Rafael), mas
+o card do lead de WhatsApp é criado à mão pelo vendedor no primeiro contato, com
+origem e código do episódio. O lançamento não para.
 
 ### 8.2 Chamados
 
@@ -328,8 +313,9 @@ do código do episódio e medição exata, com custo por conversa.
 
 Todo link leva o código do episódio e do canal, por exemplo
 `?utm_source=linkedin&utm_campaign=ep03`, e a mensagem pré-preenchida do
-WhatsApp leva o código (`[EP03-LI]`). O vendedor registra esse código no card do
-CRM.
+WhatsApp leva o código (`[EP03-LI]`). Como a primeira mensagem vai para as
+observações do card (pedido ao Rafael), o código chega ao CRM sem digitação. Na
+TalkWork, a conversa recebe a etiqueta do episódio.
 
 ### 8.4 Anúncios na Meta
 
@@ -382,8 +368,8 @@ D5 LinkedIn · D10 oferta de diagnóstico · D21 encerramento e nutrição.
 - **Make, cenário "Lead Zirix — Captação e Roteamento (v1)":** webhook, evita
   duplicar pelo e-mail, classifica em A/B/C, grava num data store e avisa no
   Slack.
-- **ZXCRM** (crm.zirix.com.br, versão com a marca Zirix do Tracked/Jotapê
-  Tecnologia): API externa **somente leitura** (`GET /external/crm/cards`,
+- **ZXCRM** (crm.zirix.com.br, sistema da Zirix criado pelo Rafael, mesma base de
+  código da TalkWork): API externa **somente leitura** (`GET /external/crm/cards`,
   autenticação pelo cabeçalho `x-trckd-api-key`), com filtro por `status`,
   `stage_id`, `source_id` e `updated_since`, e até 200 itens por página. Cada
   card traz: `status`, `stage_id`, `owner_id`, `source_id`, `deal_value`,
@@ -395,39 +381,46 @@ D5 LinkedIn · D10 oferta de diagnóstico · D21 encerramento e nutrição.
   Fonte: guia "Acesso Externo ao CRM — Guia de Integração" (Zirix
   Rastreamento), anexado na conversa de 18/11/2026.
 
+- **TalkWork** (talkwork.com.br, verificado em 18/11/2026 com a conta de
+  administrador do Fabio, só leitura): API oficial da Meta conectada (número dos
+  alertas do ZX ITS), 11 modelos aprovados, todos operacionais. Usuários: Fabio
+  e Rafael Campos (admins). Nenhum setor, etiqueta ou resposta rápida.
+  Qualificação de lead vazia. IA desligada e sem créditos. Módulos CRM e
+  Instagram da TalkWork não contratados (o CRM é o ZXCRM).
+
 **Mudanças necessárias:**
-1. **Cenário de captação:** aceitar lead **sem e-mail**, usando o telefone
-   normalizado (E.164) como chave. Hoje ele recusa, e lead de WhatsApp quase
-   nunca tem e-mail. Aplicar a régua de ônibus do §9.3 quando `segmento` for
-   ônibus. Incluir no aviso do Slack o código do episódio e o responsável do
-   plantão.
-2. **Leads Formulários Meta:** passar de leitura diária para entrada imediata no
-   cenário de captação. Se o ZXCRM já recebe os formulários de forma nativa
-   (a confirmar), manter só o aviso.
-3. **No ZXCRM, criar as origens:** "Podcast – Convidado", "Podcast – WhatsApp",
-   "Podcast – Formulário", "Podcast – LinkedIn", "Podcast – Instagram",
-   "Podcast – Prospecção". Criar também os motivos de perda: "Sem frota no
-   perfil", "Já tem fornecedor com contrato", "Sem orçamento no ciclo",
-   "Sem resposta".
-4. **Cadastro no CRM:** manual pelo plantão, no primeiro contato, com origem e
-   código do episódio nas observações, até existir endpoint de escrita.
-5. **Pedido ao Rafael (criador do ZXCRM), prioritário e com prazo de 2 semanas (texto em `docs/pedido-crm-rafael.md`):** (a) **integração nativa
-   com o WhatsApp Business**, como a do Instagram, em que cada conversa nova vira
-   card com origem; ou (b) endpoint de escrita para criar card (`POST`), com
-   origem, responsável, telefone, observações e `metadata`, para o Make criar o
-   card a partir da API oficial do WhatsApp; (c) endpoints de apoio (etapas,
-   vendedores, origens, motivos), previstos no item 7 da documentação. A entrada
-   nativa dos formulários da Meta já está confirmada pelo Fabio.
+1. **TalkWork (Claude configura depois da aprovação; o número precisa estar
+   conectado):** cadastrar Mauricio, Walner e André; criar os setores
+   Urbano/Consórcio, Intermunicipal/Fretamento e Plantão; criar as etiquetas
+   por episódio; configurar a qualificação de lead (4 perguntas), as respostas
+   rápidas e a IA fora do horário; criar e enviar para aprovação da Meta os
+   modelos do podcast.
+2. **ZXCRM:** criar as origens "Podcast – Convidado", "Podcast – WhatsApp",
+   "Podcast – Formulário", "Podcast – LinkedIn", "Podcast – Instagram" e
+   "Podcast – Prospecção", e os motivos de perda "Sem frota no perfil", "Já tem
+   fornecedor com contrato", "Sem orçamento no ciclo" e "Sem resposta".
+3. **Rafael, prioritário, prazo de 2 semanas** (`docs/pedido-crm-rafael.md`):
+   (a) conversa nova na TalkWork vira card no ZXCRM; (b) lead de formulário
+   `Podcast |` no ZXCRM dispara o modelo de mensagem na TalkWork e entra na fila
+   do setor; (c) endpoints de apoio de leitura (nomes de etapas, vendedores,
+   origens e motivos). Alternativa: `POST` de card com chave de escrita +
+   webhook de conversa nova, e a ponte fica no Make.
+4. **Make:** o cenário "Lead Zirix — Captação e Roteamento (v1)" continua para
+   os formulários do site. No podcast, o Make só entra se o Rafael optar pela
+   alternativa do item 3. Nesse caso, ele passa a aceitar lead sem e-mail (chave
+   = telefone E.164) e aplica a régua de ônibus do §9.3.
+5. **Segurança:** trocar a chave antiga do CRM no cofre do Make e revogá-la. A
+   chave nova já está guardada no ambiente do Claude como segredo de rede.
 
 ## 10. Medição
 
-**Relatório semanal**, gerado com dados do Make e da API de leitura do ZXCRM
-filtrada pelas origens do podcast:
+**Relatório semanal**, gerado com dados da API de leitura do ZXCRM (filtrada
+pelas origens e campanhas do podcast) e da TalkWork:
 
 | Métrica | Fonte |
 |---|---|
-| Leads por episódio e por canal | Make (captação) e código do episódio |
-| Tempo até o primeiro contato | Formulários: Make (chegada) × card no CRM (`created_at`), cruzados pelo telefone. WhatsApp na fase 1: anotado pelo plantão no card. |
+| Leads por episódio e por canal | ZXCRM (`metadata.campaign_name` e código do episódio nas observações) |
+| Tempo até o primeiro contato | TalkWork (chegada da conversa × primeira resposta humana); para formulário, `created_at` do card × primeira mensagem na TalkWork |
 | Lead → reunião → proposta → ganho | ZXCRM (etapas e status por origem) |
 | **Pipeline em mensalidade recorrente gerado** | ZXCRM (itens e valor por origem) |
 | Alcance e retenção por corte | Instagram, YouTube e LinkedIn (snapshots do Make e painéis nativos) |
@@ -497,16 +490,20 @@ urbano, intermunicipal e fretamento; Sudeste) · apresentadores (Fabio e Saulo)
 · produção por eles, atendimento pelos vendedores · equipe comercial · ZXCRM
 como CRM · anúncios na Meta · 2 iPhones (um estático, um móvel) · estúdio na
 sala de reunião com logo e miniaturas · gravações e lives em clientes do Rio ·
-fazer tudo por este ambiente.
+fazer tudo por este ambiente · leads automáticos desde o EP01, no CRM e no
+WhatsApp dos vendedores ao mesmo tempo · TalkWork como ferramenta de WhatsApp ·
+IA da TalkWork fora do horário · número comercial novo (pedido ao Rafael) ·
+primeiro episódio em 3 semanas.
 
-**Decisões técnicas e de estratégia minhas (corrigíveis):** WhatsApp como porta
-única · sem landing page · tipos de lead, prazos e cadência · régua de
+**Decisões técnicas e de estratégia minhas (corrigíveis):** formulário da Meta e
+WhatsApp como portas de entrada · sem landing page · tipos de lead, prazos e cadência · régua de
 prioridade para ônibus · divisão dos vendedores por segmento · plantão ·
 quadros e calendário de publicação · stack de pós-produção · armazenamento
 (Drive, HD, YouTube e Spotify) · lista de compras · câmera A em 4K · gravação
 interna dos transmissores como fonte de áudio · pós-produção disparada numa
-sessão do Claude, com duas aprovações · WhatsApp Business no aplicativo na
-fase 1 e API oficial na fase 2 · dono por segmento com plantão só para triagem.
+sessão do Claude, com duas aprovações · WhatsApp na TalkWork, com número
+comercial separado · dono por segmento com plantão só para triagem · lapelas
+Hollyland Lark Max 2.
 
 ## 14. Fora deste documento (fica para o plano de implantação)
 
@@ -521,7 +518,6 @@ fase 1 e API oficial na fase 2 · dono por segmento com plantão só para triage
 |---|---|
 | Comprar o kit de lapelas, os tripés e o HD | Fabio |
 | Definir o 2º iPhone | Fabio e Saulo |
-| Criar o número de WhatsApp Business do podcast | Fabio |
 | Criar as origens e os motivos de perda no ZXCRM | Fabio |
 | Enviar o pedido ao Rafael (`docs/pedido-crm-rafael.md`) | Fabio |
 | Trocar a chave antiga do CRM no cofre do Make e revogá-la | Fabio |
