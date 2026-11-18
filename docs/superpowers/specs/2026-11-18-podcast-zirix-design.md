@@ -147,7 +147,7 @@ ambiente (§6).
 
 | Item | Prioridade | Faixa |
 |---|---|---|
-| Lapelas sem fio com gravação interna: **3 transmissores** + receptor USB-C | 1 — essencial | R$ 1.500 a 4.000 (depende de ser 1 sistema de 3+ ou 2 kits de 2) |
+| Lapelas sem fio com gravação interna: **Hollyland Lark Max 2, Combo 4 pessoas** (4 transmissores, gravação interna 32-bit float). Antes de comprar, confirmar: 4 transmissores, receptor USB-C, produto novo com garantia no Brasil. Alternativa premium: DJI Mic 3 (2 TX + 1 avulso), que grava timecode. | 1 — essencial | R$ 2.160 a 2.930 |
 | 2 tripés com suporte de celular | 1 | R$ 150 a 300 cada |
 | HD externo 2 TB (arquivo do bruto) | 1 | R$ 400 a 550 |
 | 2 painéis LED com difusor | 2 | R$ 300 a 600 |
@@ -247,6 +247,19 @@ Opus Clip ficam como plano B, se o fluxo próprio não segurar o semanal.
 
 **Um número de WhatsApp Business só do podcast/comercial**, compartilhado entre
 os vendedores (aparelhos vinculados), nunca o número pessoal de alguém.
+
+**Captura automática no CRM (decisão do Fabio: os leads do podcast devem cair
+sozinhos no ZXCRM, como os do Instagram já caem).** O ZXCRM já recebe os leads
+de **formulário instantâneo da Meta** de forma nativa. Por isso, o formulário
+instantâneo é a **captura principal** do podcast: todo anúncio de episódio ou de
+material usa formulário com as 4 perguntas. Campanha e formulário seguem o padrão
+`Podcast | EP03 | <tema>`, para o card chegar identificado pelo `metadata`, sem
+digitação. Validar com um lead de teste na semana 2.
+
+Para o lead de WhatsApp também cair sozinho, falta uma peça do lado do ZXCRM,
+porque a API atual só lê. O pedido à equipe do ZXCRM (§9.4, item 5) passa a ser
+prioritário: integração nativa com o WhatsApp Business ou endpoint de escrita.
+As fases abaixo valem até isso existir.
 
 **Fase 1 — aplicativo WhatsApp Business (grátis):** o aplicativo não tem API,
 então o lead de WhatsApp **não chega sozinho ao Make**. O plantão cria o card no
@@ -355,11 +368,13 @@ D5 LinkedIn · D10 oferta de diagnóstico · D21 encerramento e nutrição.
    "Sem resposta".
 4. **Cadastro no CRM:** manual pelo plantão, no primeiro contato, com origem e
    código do episódio nas observações, até existir endpoint de escrita.
-5. **Pedido à equipe do ZXCRM (Jotapê):** (a) endpoint de escrita para criar card
-   (`POST`), com origem, responsável, telefone, observações e `metadata`;
-   (b) endpoints de apoio (etapas, vendedores, origens, motivos), previstos no
-   item 7 da documentação; (c) confirmar a entrada nativa dos formulários da
-   Meta.
+5. **Pedido à equipe do ZXCRM (Jotapê), prioritário:** (a) **integração nativa
+   com o WhatsApp Business**, como a do Instagram, em que cada conversa nova vira
+   card com origem; ou (b) endpoint de escrita para criar card (`POST`), com
+   origem, responsável, telefone, observações e `metadata`, para o Make criar o
+   card a partir da API oficial do WhatsApp; (c) endpoints de apoio (etapas,
+   vendedores, origens, motivos), previstos no item 7 da documentação. A entrada
+   nativa dos formulários da Meta já está confirmada pelo Fabio.
 
 ## 10. Medição
 
