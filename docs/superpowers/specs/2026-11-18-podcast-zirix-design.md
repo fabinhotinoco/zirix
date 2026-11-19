@@ -264,9 +264,11 @@ Opus Clip ficam como plano B, se o fluxo próprio não segurar o semanal.
 Instagram já caem, **e ao mesmo tempo no WhatsApp dos vendedores**, tudo
 automático desde o EP01.
 
-- **Número:** um **número comercial novo**, só para vendas e podcast, na mesma
-  conta da Zirix na Meta, conectado à TalkWork (já solicitado ao Rafael; ver
-  §11). Nunca o número pessoal de um vendedor.
+- **Número:** um **número comercial novo**, que é o **WhatsApp de vendas geral
+  da Zirix** (decisão do Fabio), na mesma conta da Zirix na Meta, conectado à
+  TalkWork (já solicitado ao Rafael; ver §11). Nunca o número pessoal de um
+  vendedor. Origem no CRM: mensagem com código de episódio (`[EP03-LI]`) →
+  "Podcast – WhatsApp"; sem código → "Comercial – WhatsApp".
 - **Formulário instantâneo da Meta** (anúncio ou orgânico, no perfil e nos
   stories): o ZXCRM já recebe de forma nativa, com campanha, formulário e
   respostas no `metadata` (verificado em 18/11/2026, inclusive
@@ -424,7 +426,8 @@ D5 LinkedIn · D10 oferta de diagnóstico · D21 encerramento e nutrição.
    modelos do podcast.
 2. **ZXCRM:** criar 4 origens: "Podcast – Formulário" (lead de formulário com
    campanha `Podcast |`; mapeamento automático pedido ao Rafael), "Podcast –
-   WhatsApp", "Podcast – Convidado" e "Podcast – Prospecção". O canal (LinkedIn,
+   WhatsApp", "Podcast – Convidado", "Podcast – Prospecção" e "Comercial –
+   WhatsApp". O canal (LinkedIn,
    Instagram, YouTube) é medido pelo código do episódio, não pela origem. Criar também os motivos de perda "Sem frota no perfil", "Já tem
    fornecedor com contrato", "Sem orçamento no ciclo" e "Sem resposta".
 3. **Rafael, prioritário, prazo de 2 semanas** (`docs/pedido-crm-rafael.md`):
@@ -532,7 +535,7 @@ como CRM · anúncios na Meta · 2 iPhones (um estático, um móvel) · estúdio
 sala de reunião com logo e miniaturas · gravações e lives em clientes do Rio ·
 fazer tudo por este ambiente · leads automáticos desde o EP01, no CRM e no
 WhatsApp dos vendedores ao mesmo tempo · TalkWork como ferramenta de WhatsApp ·
-IA da TalkWork fora do horário · número comercial novo (pedido ao Rafael) ·
+IA da TalkWork fora do horário · número comercial novo como WhatsApp de vendas geral (pedido ao Rafael) ·
 calendário B (lançamento em 12/01/2027, com EP01 e EP02 gravados em dezembro).
 
 **Decisões técnicas e de estratégia minhas (corrigíveis):** formulário da Meta e
