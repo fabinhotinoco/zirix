@@ -1,6 +1,6 @@
 # Podcast Zirix — estratégia e operação
 
-**Status:** proposta para aprovação · **Data:** 18/11/2026 · **Dono:** Fabio Tinoco (Diretor Comercial)
+**Status:** aprovado por Fabio Tinoco em 19/11/2026 · **Data:** 18/11/2026 · **Dono:** Fabio Tinoco (Diretor Comercial)
 
 ---
 
@@ -92,6 +92,22 @@ reserva.
 3. **Zirix explica** (curto, sem convidado): Fabio e Saulo explicam um tema
    (por exemplo, como ler um relatório de consumo). Episódio de reserva para
    quando um convidado desmarcar e o calendário não pode furar.
+
+### Especialistas da Zirix como convidados (decisão do Fabio)
+
+Todos os especialistas da Zirix participam como convidados. Lista com nome e
+especialidade a ser enviada pelo Fabio. Para o podcast não virar propaganda
+(anti-objetivo do §2):
+- **Proporção:** pelo menos metade dos episódios com convidado de operadora,
+  consórcio ou fretadora. Especialista da Zirix entra no quadro **"Zirix
+  explica"** ou **ao lado** de um convidado de operadora, respondendo a dores
+  dele.
+- **No ritmo quinzenal:** 1 episódio com operadora e 1 com especialista por
+  mês. No semanal: 2 e 2.
+- **Os episódios com especialista são a reserva do calendário:** gravam-se com
+  antecedência e cobrem a desmarcação de um convidado externo.
+- Especialista fala de operação e de dado, não de produto, e segue as regras
+  do §11.
 
 ### Banco de temas inicial
 
