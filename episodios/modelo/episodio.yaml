@@ -1,0 +1,17 @@
+# Modelo de configuração de episódio. Copie para episodios/EPxx/episodio.yaml.
+# Caminhos de mídia são relativos a trabalho/EPxx/ (fora do git).
+codigo: EP00
+titulo: "Piloto"
+data_gravacao: 2026-12-07
+local: estudio            # estudio | externo
+camera_a: camera_a.mov    # iPhone 16, 4K 30 fps, plano geral (câmera mestre)
+camera_b: camera_b.mov    # opcional: câmera móvel, 1080p 30 fps
+falantes:                 # um WAV por transmissor = fonte oficial de áudio
+  fabio: {arquivo: tx1.wav, nome: "Fabio Tinoco"}
+  saulo: {arquivo: tx2.wav, nome: "Saulo"}
+  convidado: {arquivo: tx3.wav, nome: "Nome do convidado", cargo: "Cargo"}
+enquadramento:            # recorte 9:16 de cada pessoa, em pixels da câmera A (3840x2160)
+  fabio:     {x: 300,  y: 0, w: 1215, h: 2160}
+  saulo:     {x: 1312, y: 0, w: 1215, h: 2160}
+  convidado: {x: 2325, y: 0, w: 1215, h: 2160}
+fontes: {}                # links do Google Drive, preenchidos para "python -m producao baixar"
