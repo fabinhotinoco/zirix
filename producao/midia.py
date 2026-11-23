@@ -115,3 +115,19 @@ def normalizar_loudness(src: Path, dst: Path, alvo: float = -16.0) -> Path:
                f":offset={medida['target_offset']}:linear=true")
     _ffmpeg("-i", str(src), "-af", segundo, "-ar", "48000", str(dst))
     return Path(dst)
+
+
+def aplicar_alinhamento(src: Path, dst: Path, atraso: float, deriva: float, duracao_ref: float,
+                        taxa: int = 48000) -> Path:
+    """Coloca um áudio no relógio da câmera A: corrige a deriva, desloca e corta.
+
+    `atraso` > 0: o áudio começou depois da A (ganha silêncio no início).
+    """
+    filtros = [f"aresample={taxa}", f"asetrate={taxa * (1 - deriva):.6f}", f"aresample={taxa}"]
+    if atraso >= 0:
+        filtros.append(f"adelay={int(round(atraso * 1000))}:all=1")
+    else:
+        filtros += [f"atrim=start={-atraso:.4f}", "asetpts=PTS-STARTPTS"]
+    filtros += ["apad", f"atrim=end={duracao_ref:.4f}"]
+    _ffmpeg("-i", str(src), "-af", ",".join(filtros), "-ac", "1", "-c:a", "pcm_s16le", str(dst))
+    return Path(dst)

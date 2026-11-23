@@ -61,3 +61,62 @@ def ffprobe_campo(caminho: Path, campo: str) -> str:
 def ffprobe_resolucao(caminho: Path) -> tuple[int, int]:
     s = ffprobe_stream(caminho)
     return int(s["width"]), int(s["height"])
+
+
+RAIZ_REPO = Path(__file__).resolve().parents[2]
+
+
+def rodar_cli(args: list[str], raiz: Path) -> subprocess.CompletedProcess:
+    """Roda `python -m producao --raiz <raiz> ...` a partir do repositório."""
+    import os
+    import sys
+    env = {**os.environ, "PYTHONPATH": str(RAIZ_REPO)}
+    return subprocess.run([sys.executable, "-m", "producao", "--raiz", str(raiz), *args],
+                          cwd=RAIZ_REPO, env=env, capture_output=True, text=True)
+
+
+def voz(segundos: float, taxa: int, freq: float = 180.0) -> np.ndarray:
+    """Tom com envelope irregular (sílabas aleatórias): não periódico, como a fala.
+
+    Envelope periódico deixaria a sincronia ambígua (vários picos de correlação).
+    """
+    n = int(segundos * taxa)
+    t = np.arange(n) / taxa
+    silaba = taxa // 8
+    env = np.repeat(np.random.default_rng(int(freq)).uniform(0.2, 1.0, n // silaba + 1), silaba)[:n]
+    return (0.3 * np.sin(2 * np.pi * freq * t) * env).astype(np.float32)
+
+
+def silencio(segundos: float, taxa: int) -> np.ndarray:
+    return (0.001 * np.random.default_rng(1).normal(size=int(segundos * taxa))).astype(np.float32)
+
+
+def montar_episodio_sintetico(raiz: Path, codigo: str = "EP99", com_b: bool = True) -> Path:
+    """40 s: fabio fala 0-20 s, saulo 20-40 s. Câmera B começa 2 s depois da A.
+
+    Lapelas começam 1 s depois da A (como um transmissor ligado depois).
+    """
+    taxa = 48000
+    pasta = raiz / "trabalho" / codigo
+    pasta.mkdir(parents=True, exist_ok=True)
+    fabio = np.concatenate([voz(20, taxa, 180), silencio(20, taxa)])
+    saulo = np.concatenate([silencio(20, taxa), voz(20, taxa, 260)])
+    mix = gravar_pcm16(pasta / "mix_camera.wav", 0.5 * (fabio + saulo), taxa)
+    gravar_pcm16(pasta / "tx1.wav", fabio[taxa:], taxa)
+    gravar_pcm16(pasta / "tx2.wav", saulo[taxa:], taxa)
+    rodar("ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi", "-i",
+          "testsrc2=size=1280x720:rate=30:duration=40", "-i", str(mix), "-c:v", "libx264",
+          "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest", str(pasta / "camera_a.mp4"))
+    if com_b:
+        rodar("ffmpeg", "-y", "-loglevel", "error", "-ss", "2", "-i", str(pasta / "camera_a.mp4"),
+              "-vf", "hue=h=90", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac",
+              str(pasta / "camera_b.mp4"))
+    yaml_ep = raiz / "episodios" / codigo / "episodio.yaml"
+    yaml_ep.parent.mkdir(parents=True, exist_ok=True)
+    yaml_ep.write_text(
+        f"codigo: {codigo}\ntitulo: Sintetico\ncamera_a: camera_a.mp4\n"
+        + ("camera_b: camera_b.mp4\n" if com_b else "")
+        + "falantes:\n  fabio: {arquivo: tx1.wav, nome: Fabio}\n  saulo: {arquivo: tx2.wav, nome: Saulo}\n"
+        "enquadramento:\n  fabio: {x: 400, y: 0, w: 1216, h: 2160}\n  saulo: {x: 2200, y: 0, w: 1216, h: 2160}\n",
+        encoding="utf-8")
+    return pasta
