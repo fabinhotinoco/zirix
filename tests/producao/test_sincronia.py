@@ -50,3 +50,20 @@ def test_tempo_em_outro():
 def test_gravacao_curta_sem_deriva():
     ref = fala_sintetica(60)
     assert alinhar(ref, ref[TAXA:], TAXA).deriva == 0.0
+
+
+def test_transmissor_com_pre_e_pos_gravacao_longas():
+    """Transmissor ligado 90 s antes da câmera e desligado 90 s depois."""
+    ref = fala_sintetica(600)
+    antes, depois = fala_sintetica(90), fala_sintetica(90)
+    outro = np.concatenate([antes, ref, depois])
+    al = alinhar(ref, outro, TAXA)
+    assert al.atraso == pytest.approx(-90.0, abs=0.02)
+    assert abs(al.deriva) < 3e-6
+
+
+def test_deriva_absurda_e_recusada():
+    ref = fala_sintetica(400)
+    outro = fala_sintetica(400)  # sem relação com a referência
+    with pytest.raises(ValueError, match="sincronia"):
+        alinhar(ref, outro, TAXA)

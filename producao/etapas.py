@@ -19,19 +19,32 @@ def _json(caminho: Path, dados) -> None:
     caminho.write_text(json.dumps(dados, ensure_ascii=False, indent=1), encoding="utf-8")
 
 
+def _parcial(destino: Path) -> Path:
+    return destino.with_name(destino.stem + ".parcial" + destino.suffix)
+
+
+def _cfr(src: Path, destino: Path) -> Path:
+    """Conversão para fps constante, feita uma vez só (é a etapa mais lenta)."""
+    if destino.exists():
+        return destino
+    midia.normalizar_cfr(src, _parcial(destino))
+    _parcial(destino).rename(destino)
+    return destino
+
+
 def preparar(ep: Episodio, refazer: bool = False) -> None:
     p = ep.pasta
     saidas = [p / "alinhamento.json", p / "falantes.json", p / "audio_final.wav"]
     if _feito(*saidas) and not refazer:
         print("preparar: já feito (use --refazer para refazer)")
         return
-    a_cfr = midia.normalizar_cfr(ep.camera_a, p / "a_cfr.mp4")
+    a_cfr = _cfr(ep.camera_a, p / "a_cfr.mp4")
     ref, taxa = midia.ler_wav(midia.extrair_audio(a_cfr, p / "a_16k.wav"))
     dur_ref = midia.duracao(a_cfr)
     alinhamento: dict[str, dict] = {}
 
     if ep.camera_b is not None:
-        b_cfr = midia.normalizar_cfr(ep.camera_b, p / "b_cfr.mp4")
+        b_cfr = _cfr(ep.camera_b, p / "b_cfr.mp4")
         b, _ = midia.ler_wav(midia.extrair_audio(b_cfr, p / "b_16k.wav"))
         al_b = sincronia.alinhar(ref, b, taxa)
         alinhamento["camera_b"] = {**asdict(al_b), "duracao": midia.duracao(b_cfr)}
@@ -83,7 +96,8 @@ def montar(ep: Episodio, inicio: float, fim: float, refazer: bool = False) -> No
     planos = montagem.decidir_planos(trechos, duracao, cobertura)
     _json(p / "planos.json", [asdict(x) for x in planos])
     _json(p / "montagem.json", {"inicio": inicio, "fim": fim})
-    montagem.renderizar(ep_cfr, planos, al_b, p / "audio_final.wav", p / "episodio.mp4", inicio, fim)
+    montagem.renderizar(ep_cfr, planos, al_b, p / "audio_final.wav", _parcial(p / "episodio.mp4"), inicio, fim)
+    _parcial(p / "episodio.mp4").rename(p / "episodio.mp4")
     print(f"montar: {p / 'episodio.mp4'} pronto para revisão (parada 2)")
 
 
@@ -93,17 +107,13 @@ def cortar(ep: Episodio, raiz: Path, refazer: bool = False) -> None:
     if not lista.exists() or not mod_cortes.aprovada(lista):
         raise SystemExit(f"cortar: {lista} precisa existir e estar aprovado (aprovado: true)")
     cortes = mod_cortes.ler_lista(lista)
-    deslocamento = json.loads((p / "montagem.json").read_text(encoding="utf-8"))["inicio"]
     palavras = transcricao.carregar(p / "palavras.json")
     trechos = mod_falantes.carregar(p / "falantes.json")
-    rel_palavras = [transcricao.Palavra(w.inicio - deslocamento, w.fim - deslocamento, w.texto) for w in palavras]
-    rel_trechos = [mod_falantes.Trecho(t.inicio - deslocamento, t.fim - deslocamento, t.falante) for t in trechos]
     (p / "cortes").mkdir(exist_ok=True)
     for c in cortes:
         saida = p / "cortes" / f"{c.id}.mp4"
         if saida.exists() and not refazer:
             continue
         c = mod_cortes.ajustar_bordas(c, palavras)
-        c_rel = replace(c, inicio=max(0.0, c.inicio - deslocamento), fim=c.fim - deslocamento)
-        mod_cortes.renderizar(ep, c_rel, rel_palavras, rel_trechos, p / "episodio.mp4", saida)
+        mod_cortes.renderizar(ep, c, palavras, trechos, p / "a_cfr.mp4", p / "audio_final.wav", saida)
         print(f"cortar: {saida}")

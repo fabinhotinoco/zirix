@@ -109,5 +109,5 @@ def mixar_lapelas(faixas_alinhadas: dict[str, Path], saida: Path) -> Path:
         entradas = [arg for f in faixas_alinhadas.values() for arg in ("-i", str(f))]
         _ffmpeg(*entradas, "-filter_complex",
                 f"amix=inputs={len(faixas_alinhadas)}:normalize=0:duration=longest",
-                "-ac", "1", "-ar", "48000", str(bruto))
+                "-ac", "1", "-ar", "48000", "-c:a", "pcm_f32le", str(bruto))
         return normalizar_loudness(bruto, saida)

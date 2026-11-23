@@ -53,12 +53,24 @@ def ler_lista(caminho: Path) -> list[Corte]:
 
 
 def ajustar_bordas(c: Corte, palavras: list[Palavra], folga: float = 0.15) -> Corte:
-    """Leva início e fim para a borda de palavra mais próxima, com folga."""
+    """Leva início e fim para a borda de palavra mais próxima.
+
+    A folga nunca passa da metade do intervalo até a palavra vizinha, para o
+    corte não começar nem terminar dentro dela. Depois do ajuste, a duração é
+    validada de novo (30 a 90 s).
+    """
     if not palavras:
         return c
-    ini = min(palavras, key=lambda p: abs(p.inicio - c.inicio)).inicio
-    fim = min(palavras, key=lambda p: abs(p.fim - c.fim)).fim
-    return replace(c, inicio=max(0.0, ini - folga), fim=fim + folga)
+    ordem = sorted(palavras, key=lambda p: p.inicio)
+    i = min(range(len(ordem)), key=lambda k: abs(ordem[k].inicio - c.inicio))
+    j = min(range(len(ordem)), key=lambda k: abs(ordem[k].fim - c.fim))
+    folga_ini = folga if i == 0 else min(folga, max(0.0, ordem[i].inicio - ordem[i - 1].fim) / 2)
+    folga_fim = folga if j == len(ordem) - 1 else min(folga, max(0.0, ordem[j + 1].inicio - ordem[j].fim) / 2)
+    novo = replace(c, inicio=max(0.0, ordem[i].inicio - folga_ini), fim=ordem[j].fim + folga_fim)
+    d = novo.fim - novo.inicio
+    if not DURACAO_MIN <= d <= DURACAO_MAX:
+        raise ValueError(f"corte {c.id} ficou com {d:.1f} s depois do ajuste; o permitido é de 30 a 90 s")
+    return novo
 
 
 def _tempo_ass(t: float) -> str:
@@ -114,18 +126,24 @@ def _largura(video: Path) -> int:
 
 
 def renderizar(ep: Episodio, c: Corte, palavras: list[Palavra], trechos: list[Trecho],
-               episodio_mp4: Path, saida: Path) -> Path:
-    escala = _largura(episodio_mp4) / LARGURA_REF_4K
+               video_a: Path, audio: Path, saida: Path) -> Path:
+    """Corte vertical recortado da câmera A (4K, sem as inserções da B).
+
+    Tempos na linha do tempo da câmera A. O áudio vem do áudio final, cortado
+    uma vez só (sem emendas que estalam). Escreve em arquivo parcial e renomeia.
+    """
+    escala = _largura(video_a) / LARGURA_REF_4K
     intervalos = enquadrar(trechos, c.inicio, c.fim, ep.enquadramento, escala)
+    saida = Path(saida)
+    parcial = saida.with_name(saida.stem + ".parcial" + saida.suffix)
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
         partes = []
         for i, (a, b, r) in enumerate(intervalos):
             parte = tmp / f"p{i:04d}.mp4"
-            _ffmpeg("-ss", f"{c.inicio + a:.3f}", "-i", str(episodio_mp4), "-t", f"{b - a:.3f}",
+            _ffmpeg("-ss", f"{c.inicio + a:.3f}", "-i", str(video_a), "-t", f"{b - a:.3f}", "-an",
                     "-vf", f"crop={r.w}:{r.h}:{r.x}:{r.y},scale={LARGURA}:{ALTURA},setsar=1,fps={FPS}",
-                    "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p",
-                    "-c:a", "aac", "-ar", "48000", "-ac", "2", str(parte))
+                    "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p", str(parte))
             partes.append(parte)
         lista = tmp / "lista.txt"
         lista.write_text("".join(f"file '{p}'\n" for p in partes), encoding="utf-8")
@@ -133,11 +151,15 @@ def renderizar(ep: Episodio, c: Corte, palavras: list[Palavra], trechos: list[Tr
         _ffmpeg("-f", "concat", "-safe", "0", "-i", str(lista), "-c", "copy", str(corpo))
         ass = tmp / "legenda.ass"
         ass.write_text(legenda_ass(palavras, c.inicio, c.fim), encoding="utf-8")
-        _ffmpeg("-i", str(corpo), "-loop", "1", "-t", f"{CARTELA_SEG}", "-i", str(ESTILO / "cartela.png"),
+        dur = c.fim - c.inicio
+        _ffmpeg("-i", str(corpo), "-ss", f"{c.inicio:.3f}", "-t", f"{dur:.3f}", "-i", str(audio),
+                "-loop", "1", "-t", f"{CARTELA_SEG}", "-i", str(ESTILO / "cartela.png"),
                 "-f", "lavfi", "-t", f"{CARTELA_SEG}", "-i", "anullsrc=r=48000:cl=stereo",
                 "-filter_complex",
-                f"[0:v]ass={ass}[v0];[1:v]scale={LARGURA}:{ALTURA},setsar=1,fps={FPS},format=yuv420p[v1];"
-                f"[v0][0:a][v1][2:a]concat=n=2:v=1:a=1[v][a]",
+                f"[0:v]ass={ass}[v0];[1:a]aresample=48000,aformat=channel_layouts=stereo[a0];"
+                f"[2:v]scale={LARGURA}:{ALTURA},setsar=1,fps={FPS},format=yuv420p[v1];"
+                f"[v0][a0][v1][3:a]concat=n=2:v=1:a=1[v][a]",
                 "-map", "[v]", "-map", "[a]", "-c:v", "libx264", "-preset", "veryfast", "-crf", "20",
-                "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", str(saida))
-    return Path(saida)
+                "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", str(parcial))
+    parcial.rename(saida)
+    return saida

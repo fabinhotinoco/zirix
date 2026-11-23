@@ -10,6 +10,15 @@ O setup script do ambiente "Podcast Zirix" já instala tudo. Para instalar à m�
 
     python3 -m pip install -r requirements-producao.txt
 
+## Antes de gravar (iPhone)
+
+- **HDR desligado** (Ajustes > Câmera > Gravar Vídeo > HDR Vídeo; no app
+  Blackmagic Camera, codec sem HDR). A ferramenta recusa vídeo HLG/Dolby Vision,
+  que ficaria com cores lavadas e diferentes entre as câmeras.
+- Câmera A em 4K a 30 fps; câmera B em 1080p a 30 fps.
+- Transmissores podem ser ligados antes e desligados depois das câmeras: a
+  sincronia acha a sobreposição sozinha.
+
 ## Fluxo de um episódio
 
 1. Copie `episodios/modelo/episodio.yaml` para `episodios/EPxx/episodio.yaml` e
@@ -24,7 +33,7 @@ O setup script do ambiente "Podcast Zirix" já instala tudo. Para instalar à m�
 | `python3 -m producao preparar EPxx` | Converte para 30 fps constante, sincroniza B e as lapelas com A (corrigindo a deriva), identifica quem fala e mixa o áudio em −16 LUFS |
 | `python3 -m producao transcrever EPxx` | Gera `palavras.json` e `transcricao.txt` (`[mm:ss] Nome: texto`) |
 | `python3 -m producao montar EPxx --inicio S --fim S` | **Parada 2:** gera `episodio.mp4` para revisão |
-| `python3 -m producao cortar EPxx` | **Parada 1:** exige `episodios/EPxx/cortes.yaml` com `aprovado: true` |
+| `python3 -m producao cortar EPxx` | **Parada 1:** exige `episodios/EPxx/cortes.yaml` com `aprovado: true`. Os cortes saem da câmera A em 4K (sem as inserções da B) e não dependem do `montar` |
 
 `cortes.yaml`: o Claude propõe a lista a partir de `transcricao.txt`. São de 4
 a 6 cortes, de 30 a 90 s cada, com tempos na linha do tempo da câmera A.

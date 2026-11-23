@@ -85,8 +85,24 @@ def gravar_wav(caminho: Path, sinal: np.ndarray, taxa: int) -> Path:
     return Path(caminho)
 
 
+HDR_TRC = {"arib-std-b67", "smpte2084"}  # HLG e PQ (Dolby Vision/HDR10)
+
+
+def transferencia_de_cor(caminho: Path) -> str:
+    r = _rodar(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
+                "stream=color_transfer", "-of", "default=nw=1:nk=1", str(caminho)])
+    return r.stdout.strip()
+
+
 def normalizar_cfr(src: Path, dst: Path, fps: int = 30) -> Path:
-    """Converte para taxa de quadros constante (o iPhone grava com taxa variável)."""
+    """Converte para taxa de quadros constante (o iPhone grava com taxa variável).
+
+    Recusa vídeo HDR: o iPhone grava HLG/Dolby Vision por padrão e a conversão
+    para 8 bits sem tonemapping deixa as cores lavadas e diferentes entre A e B.
+    Grave com HDR desligado (ver producao/README.md).
+    """
+    if transferencia_de_cor(src) in HDR_TRC:
+        raise ValueError(f"{src}: vídeo gravado em HDR. Desligue o HDR no iPhone e grave de novo.")
     _ffmpeg("-i", str(src), "-vf", f"fps={fps}", "-fps_mode", "cfr", "-r", str(fps),
             "-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-pix_fmt", "yuv420p",
             "-c:a", "aac", "-b:a", "192k", str(dst))
@@ -118,16 +134,38 @@ def normalizar_loudness(src: Path, dst: Path, alvo: float = -16.0) -> Path:
 
 
 def aplicar_alinhamento(src: Path, dst: Path, atraso: float, deriva: float, duracao_ref: float,
-                        taxa: int = 48000) -> Path:
+                        taxa: int = 48000, bloco_seg: float = 30.0) -> Path:
     """Coloca um áudio no relógio da câmera A: corrige a deriva, desloca e corta.
 
-    `atraso` > 0: o áudio começou depois da A (ganha silêncio no início).
+    Mapa de tempo: o instante t da câmera A corresponde a u = t(1 - deriva) - atraso
+    no relógio do áudio. A reamostragem é feita em numpy, por interpolação, em
+    blocos e sobre arquivo mapeado em disco (60 min a 48 kHz não cabem confortáveis
+    em memória). Os filtros do ffmpeg não servem aqui: o `asetrate` arredonda a
+    taxa para 1 Hz (~20 ppm) e o `atempo` ignora variações tão pequenas.
+    Saída em float 32 para não cortar picos acima de 0 dBFS do transmissor.
     """
-    filtros = [f"aresample={taxa}", f"asetrate={taxa * (1 - deriva):.6f}", f"aresample={taxa}"]
-    if atraso >= 0:
-        filtros.append(f"adelay={int(round(atraso * 1000))}:all=1")
-    else:
-        filtros += [f"atrim=start={-atraso:.4f}", "asetpts=PTS-STARTPTS"]
-    filtros += ["apad", f"atrim=end={duracao_ref:.4f}"]
-    _ffmpeg("-i", str(src), "-af", ",".join(filtros), "-ac", "1", "-c:a", "pcm_s16le", str(dst))
+    import tempfile as _tmp
+    with _tmp.TemporaryDirectory() as tmp:
+        bruto = Path(tmp) / "entrada.f32"
+        _ffmpeg("-i", str(src), "-ac", "1", "-ar", str(taxa), "-f", "f32le", str(bruto))
+        entrada = np.memmap(bruto, dtype="<f4", mode="r") if bruto.stat().st_size else np.zeros(1, "<f4")
+        total = int(round(duracao_ref * taxa))
+        saida_bruta = Path(tmp) / "saida.f32"
+        with open(saida_bruta, "wb") as out:
+            passo = int(bloco_seg * taxa)
+            for n0 in range(0, total, passo):
+                n = np.arange(n0, min(n0 + passo, total), dtype=np.float64)
+                pos = (n / taxa * (1 - deriva) - atraso) * taxa  # posição no áudio de origem
+                lo = max(0, int(np.floor(pos[0])) - 1)
+                hi = min(len(entrada), int(np.ceil(pos[-1])) + 2)
+                if hi <= lo:
+                    out.write(np.zeros(len(n), "<f4").tobytes())
+                    continue
+                trecho = np.asarray(entrada[lo:hi], dtype=np.float64)
+                indices_entrada = np.arange(lo, hi, dtype=np.float64)
+                valores = np.interp(pos, indices_entrada, trecho, left=0.0, right=0.0)
+                out.write(valores.astype("<f4").tobytes())
+        del entrada
+        _ffmpeg("-f", "f32le", "-ar", str(taxa), "-ac", "1", "-i", str(saida_bruta),
+                "-c:a", "pcm_f32le", str(dst))
     return Path(dst)

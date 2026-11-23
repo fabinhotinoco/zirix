@@ -55,3 +55,29 @@ def test_ponta_a_ponta_sintetico(tmp_path):
         saida = pasta / "cortes" / f"{c}.mp4"
         assert ffprobe_resolucao(saida) == (1080, 1920)
         assert duracao(saida) == pytest.approx(33.0, abs=0.5)
+
+
+def test_cortes_nao_dependem_do_episodio_montado(tmp_path):
+    """Os cortes saem da câmera A em 4K (sem inserções da B), não do episodio.mp4."""
+    montar_episodio_sintetico(tmp_path)
+    pasta = tmp_path / "trabalho/EP99"
+    _ok(rodar_cli(["preparar", "EP99"], raiz=tmp_path))
+    (pasta / "palavras.json").write_text("[]")
+    (tmp_path / "episodios/EP99/cortes.yaml").write_text(CORTES.format(aprovado="true"))
+    _ok(rodar_cli(["cortar", "EP99"], raiz=tmp_path))
+    assert (pasta / "cortes/c1.mp4").exists() and not (pasta / "episodio.mp4").exists()
+
+
+def test_montar_interrompido_nao_deixa_arquivo_final(tmp_path, monkeypatch):
+    from producao import etapas, montagem
+    from producao.episodio import carregar
+    montar_episodio_sintetico(tmp_path, com_b=False)
+    _ok(rodar_cli(["preparar", "EP99"], raiz=tmp_path))
+
+    def falha(ep, planos, al_b, audio, saida, ini, fim):
+        saida.write_bytes(b"parcial")
+        raise RuntimeError("interrompido")
+    monkeypatch.setattr(montagem, "renderizar", falha)
+    with pytest.raises(RuntimeError):
+        etapas.montar(carregar("EP99", raiz=tmp_path), 0.5, 39.5)
+    assert not (tmp_path / "trabalho/EP99/episodio.mp4").exists()

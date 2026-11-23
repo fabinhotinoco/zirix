@@ -30,3 +30,39 @@ def test_normalizar_loudness_chega_a_menos_16(video_sintetico, tmp_path):
     wav = extrair_audio(video_sintetico, tmp_path / "a.wav", taxa=48000)
     normalizado = normalizar_loudness(wav, tmp_path / "n.wav")
     assert abs(medir_lufs(normalizado) - (-16.0)) <= 1.0
+
+
+def test_aplicar_alinhamento_corrige_deriva_pequena(tmp_path):
+    from producao.midia import aplicar_alinhamento, gravar_wav
+    from producao.sincronia import alinhar
+    from test_sincronia import fala_sintetica
+    taxa = 16000
+    ref = fala_sintetica(600)
+    fator = 1.00001                       # 10 ppm: abaixo do passo de 1 Hz do asetrate
+    t = np.arange(int(len(ref) / fator)) * fator
+    outro = np.interp(t, np.arange(len(ref)), ref).astype(np.float32)
+    al = alinhar(ref, outro, taxa)
+    src = gravar_wav(tmp_path / "tx.wav", outro, taxa)
+    saida = aplicar_alinhamento(src, tmp_path / "al.wav", al.atraso, al.deriva, len(ref) / taxa, taxa=taxa)
+    corrigido, _ = ler_wav(saida)
+    assert abs(alinhar(ref, corrigido, taxa).deriva) < 3e-6
+
+
+def test_aplicar_alinhamento_preserva_pico_acima_de_0dbfs(tmp_path):
+    from producao.midia import aplicar_alinhamento
+    sinal = np.zeros(48000, np.float32)
+    sinal[24000] = 1.5                    # pico de 32-bit float acima de 0 dBFS
+    src = gravar_float32(tmp_path / "tx.wav", sinal, 48000)
+    saida, _ = ler_wav(aplicar_alinhamento(src, tmp_path / "al.wav", 0.0, 0.0, 1.0))
+    assert float(np.abs(saida).max()) > 1.2
+
+
+def test_normalizar_cfr_recusa_hdr(tmp_path):
+    import pytest
+    from apoio import rodar
+    hdr = tmp_path / "hdr.mp4"
+    rodar("ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc2=size=320x240:rate=30:duration=1",
+          "-c:v", "libx264", "-pix_fmt", "yuv420p", "-color_primaries", "bt2020", "-color_trc", "arib-std-b67",
+          "-colorspace", "bt2020nc", str(hdr))
+    with pytest.raises(ValueError, match="HDR"):
+        normalizar_cfr(hdr, tmp_path / "cfr.mp4")

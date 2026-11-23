@@ -21,7 +21,8 @@ def _lista(tmp_path, cortes, aprovado=True):
 def test_ajusta_para_borda_de_palavra():
     p = [Palavra(10.0, 10.4, "a"), Palavra(10.5, 11.0, "frota"), Palavra(49.6, 50.2, "fim")]
     c = ajustar_bordas(Corte("c1", 10.45, 49.9, "x"), p)
-    assert c.inicio == pytest.approx(10.35) and c.fim == pytest.approx(50.35)
+    # 'frota' começa 0,1 s depois de 'a': a folga cai para metade do intervalo
+    assert c.inicio == pytest.approx(10.45) and c.fim == pytest.approx(50.35)
 
 
 def test_lista_valida(tmp_path):
@@ -70,7 +71,37 @@ def test_renderiza_vertical_com_cartela(tmp_path):
                   {"fabio": Falante("fabio", tmp_path / "f.wav", "Fabio")},
                   {"fabio": Recorte(1000, 0, 1216, 2160)})
     palavras = [Palavra(0.2, 0.6, "Olá"), Palavra(0.7, 1.2, "frota")]
-    saida = renderizar(ep, Corte("c1", 0, 6, "x"), palavras, [Trecho(0, 10, "fabio")], video,
+    from apoio import rodar
+    audio = tmp_path / "audio.wav"
+    rodar("ffmpeg", "-y", "-loglevel", "error", "-i", str(video), "-vn", str(audio))
+    saida = renderizar(ep, Corte("c1", 0, 6, "x"), palavras, [Trecho(0, 10, "fabio")], video, audio,
                        tmp_path / "c1.mp4")
     assert ffprobe_resolucao(saida) == (1080, 1920)
     assert duracao(saida) == pytest.approx(9.0, abs=0.15)
+
+
+def test_folga_nao_invade_palavra_vizinha():
+    p = [Palavra(9.8, 10.0, "x"), Palavra(10.0, 10.4, "a"), Palavra(49.6, 50.2, "fim"),
+         Palavra(50.25, 50.6, "seguinte")]
+    c = ajustar_bordas(Corte("c1", 10.0, 50.2, "x"), p)
+    assert c.inicio == pytest.approx(10.0) and c.fim == pytest.approx(50.225)
+
+
+def test_ajuste_que_sai_de_30_a_90_e_recusado():
+    p = [Palavra(10.0, 10.4, "a"), Palavra(39.3, 39.6, "fim")]
+    with pytest.raises(ValueError, match="30 a 90"):   # vira 9,85 a 39,75 = 29,9 s
+        ajustar_bordas(Corte("c1", 10.0, 40.0, "x"), p)
+
+
+def test_renderiza_de_video_4k_com_audio_separado(tmp_path):
+    from apoio import gerar_video, rodar
+    video = gerar_video(tmp_path / "a4k.mp4", segundos=8, largura=3840, altura=2160)
+    audio = tmp_path / "audio.wav"
+    rodar("ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi", "-i", "sine=f=300:d=8:r=48000", str(audio))
+    ep = Episodio("EP99", "t", tmp_path, video, None,
+                  {"fabio": Falante("fabio", tmp_path / "f.wav", "Fabio")},
+                  {"fabio": Recorte(1000, 0, 1216, 2160)})
+    saida = renderizar(ep, Corte("c1", 1, 5, "x"), [], [Trecho(0, 8, "fabio")], video, audio,
+                       tmp_path / "c1.mp4")
+    assert ffprobe_resolucao(saida) == (1080, 1920)
+    assert duracao(saida) == pytest.approx(7.0, abs=0.15)

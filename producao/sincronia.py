@@ -57,19 +57,37 @@ def estimar_atraso(ref: np.ndarray, outro: np.ndarray, taxa: int, max_seg: float
     return _lag_no_pico(_envelope(ref, taxa), _envelope(outro, taxa), max_lag) / TAXA_ENVELOPE
 
 
+DERIVA_MAXIMA = 2e-4  # 200 ppm: relógios de aparelhos reais ficam bem abaixo disso
+
+
 def alinhar(ref: np.ndarray, outro: np.ndarray, taxa: int, janela_seg: float = 60.0) -> Alinhamento:
+    """Atraso e deriva de `outro` em relação a `ref`.
+
+    Primeiro acha a sobreposição com uma correlação do arquivo inteiro (o
+    transmissor costuma ser ligado antes da câmera e desligado depois). Depois
+    mede o atraso em duas janelas DENTRO da sobreposição, no início e no fim.
+    """
     dur_ref, dur_outro = len(ref) / taxa, len(outro) / taxa
-    if dur_outro < 3 * janela_seg:
-        return Alinhamento(estimar_atraso(ref, outro, taxa, max_seg=dur_ref), 0.0)
+    grosso = estimar_atraso(ref, outro, taxa, max_seg=max(dur_ref, dur_outro))
+    ini = max(0.0, grosso)
+    fim = min(dur_ref, grosso + dur_outro)
+    if fim - ini < 3 * janela_seg:
+        return Alinhamento(grosso, 0.0)
 
     w = int(janela_seg * taxa)
-    inicio_fim = len(outro) - w
-    a0 = estimar_atraso(ref, outro[:w], taxa, max_seg=dur_ref)
-    pos_fim = estimar_atraso(ref, outro[inicio_fim:], taxa, max_seg=dur_ref)
-    a1 = pos_fim - inicio_fim / taxa
-    t0 = a0 + janela_seg / 2
-    t1 = pos_fim + janela_seg / 2
+
+    def atraso_em(t_ref: float) -> float:
+        a = int(t_ref * taxa)
+        # posição deste trecho da referência dentro do outro
+        u = estimar_atraso(outro, ref[a:a + w], taxa, max_seg=dur_outro)
+        return t_ref - u
+
+    t0, t1 = ini + 1.0, fim - janela_seg - 1.0
+    a0, a1 = atraso_em(t0), atraso_em(t1)
     deriva = (a1 - a0) / (t1 - t0)
+    if abs(deriva) > DERIVA_MAXIMA or abs(a0 - grosso) > 1.0:
+        raise ValueError(f"sincronia não confiável (atraso {a0:.3f} s, deriva {deriva * 1e6:.0f} ppm): "
+                         "confira se o arquivo é da mesma gravação")
     return Alinhamento(atraso=a0 - deriva * t0, deriva=deriva)
 
 
