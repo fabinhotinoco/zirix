@@ -153,7 +153,7 @@ def gerar(saida: Path, patrocinadores: list[Path | str], cor: str | None = None,
                 else:
                     bruto = monocromatico(Path(item), cor_apoio) if eh_arquivo else nome_como_logo(str(item), cor_apoio)
                 # nomes em texto mantêm o mesmo tamanho; só logos de arquivo são ajustados à caixa
-                lg = caber(bruto, slot_w - 40, slot_h - 50) if eh_arquivo or bruto.width > slot_w - 40 else bruto
+                lg = caber(bruto, slot_w - 40, slot_h - 20) if eh_arquivo or bruto.width > slot_w - 40 else bruto
                 im.alpha_composite(lg, (x + (slot_w - lg.width) // 2, y0 + (slot_h - lg.height) // 2))
             elif not patrocinadores:
                 d.rounded_rectangle([x, y0, x + slot_w, y0 + slot_h], 14, outline=t["texto"], width=3)
