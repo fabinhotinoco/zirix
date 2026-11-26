@@ -14,7 +14,7 @@
 | **Marcos Nunes** | Ecossistema Zirix e CCO. Ministra os treinamentos dos sistemas | Treinamento de equipe · por que o sistema sozinho não resolve · rotina de CCO |
 | **Arthur** | ZXbus e ZX ITS | Implantação em frota grande sem parar a operação · do pátio ao CCO |
 | **Evandro** | ZXbus e ZX ITS, com vasta experiência em transporte público urbano | Indicadores cobrados pelo poder concedente · concessão e operação urbana |
-| **João Pedro (Jotapê, software house parceira)** | Desenvolvimento de software | Como nasce um sistema de gestão de frota · integração entre sistemas (sempre ao lado de alguém da operação, para não virar conversa de fornecedor) |
+| **João Pedro (Jotapê, software house parceira e apoiadora)** | Desenvolvimento de software. **Desenvolveu o ZXtrack junto com a Zirix** | Bastidores do ZXtrack: como nasce uma plataforma de telemetria (decisões, arquitetura, o que mudou ouvindo cliente) · integração entre sistemas |
 | **Saulo** | Apresentador. Especialista em ZXbus e ZX ITS | Conduz. Pode assumir um "Zirix explica" solo |
 
 ## Primeiro convidado (piloto, definido pelo Fabio em 26/11/2026)
@@ -65,6 +65,7 @@ do cliente (regra do §4):
 | EP03 | Davi Reis (Massy) | Telemetria pela rede CAN | Aprofunda o dado depois de ouvir o dono |
 | EP04 | Marcelo (Ideal) | O que a operação espera da tecnologia | Segunda voz de operação, agora do dia a dia |
 | EP05 | Rui (Streamax) | IA embarcada e videotelemetria | Fecha o ciclo com o tema mais "futuro" |
+| EP06 | João Pedro (Jotapê) + Fabio | Bastidores do ZXtrack: como se constrói uma plataforma de telemetria | Único episódio sobre a solução da casa, depois de 5 episódios de confiança. Formato de engenharia (decisões, erros, aprendizados), não de demonstração. Dizer no ar que a Jotapê é parceira e apoiadora. |
 
 ## Proposta anterior para os 3 primeiros episódios (substituída pelo novo plano)
 
