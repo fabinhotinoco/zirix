@@ -1,7 +1,7 @@
 # Zirix Podcast · Piloto · Ricardo Canela
 
 **Tema:** *O que ninguém vê: a instalação que faz a tecnologia embarcada funcionar*
-**Convidado:** Ricardo Canela, especialista em instalação de equipamento embarcado em veículos
+**Convidado:** Ricardo Canela, especialista em instalação de equipamento embarcado em veículos e consultor reconhecido no mercado (externo à Zirix)
 **Apresentadores:** Fabio Tinoco e Saulo
 **Solução em foco:** ZXtrack · **Duração alvo:** 40 a 50 min
 
@@ -19,6 +19,11 @@ engenharia e do cuidado, não da venda.
   sai na edição.
 - Sem preço, sem prometer resultado e sem citar cliente sem autorização.
 - Histórias de campo, sim, mas sem expor empresa nem motorista.
+- **Convidado independente:** o Ricardo fala como consultor, não como
+  fornecedor da Zirix. Não pedir que ele elogie o ZXtrack nem compare marcas.
+  A Zirix aparece pela qualidade das perguntas e pelo cuidado com o tema.
+- Ele pode citar a consultoria dele uma vez, na apresentação e no fechamento
+  (onde encontrá-lo). Vale a troca: a audiência dele também conhece a Zirix.
 
 ## Roteiro
 
@@ -70,3 +75,13 @@ engenharia e do cuidado, não da venda.
 - [ ] Ricardo recebe esta pauta com 2 a 3 dias de antecedência (sem decorar: é conversa)
 - [ ] Se for mostrar equipamento, deixar sobre a mesa para a câmera móvel filmar em close
 - [ ] Confirmar com o Ricardo se pode citar números e casos reais (ou tudo em termos gerais)
+- [ ] Aprovação do Ricardo para o corte final antes de publicar (cortesia com convidado externo; prazo de 48 h, sem direito a reescrever a conversa)
+- [ ] Combinar a divulgação conjunta: ele publica o episódio e 1 ou 2 cortes nas redes dele, com colaboração no Instagram e menção no LinkedIn
+- [ ] Pacote para o convidado no dia do lançamento: link do episódio, 3 cortes verticais, 1 arte com a foto dele e texto sugerido
+
+## Depois da gravação (relacionamento)
+
+- Agradecimento do Fabio no mesmo dia.
+- O Ricardo é consultor: além de convidado, pode indicar clientes e abrir
+  portas. Tratar como relação de parceria, com conversa a parte sobre um
+  eventual programa de indicação, **nunca** como condição para o episódio.

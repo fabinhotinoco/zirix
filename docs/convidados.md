@@ -19,9 +19,14 @@
 
 ## Primeiro convidado (piloto, definido pelo Fabio em 26/11/2026)
 
-**Ricardo Canela**, especialista em instalação de equipamento embarcado em
-veículos. Solução em foco: **ZXtrack**. Linha editorial: tecnologia embarcada.
+**Ricardo Canela**, convidado **externo**: especialista em instalação de
+equipamento embarcado em veículos e consultor reconhecido no mercado. Solução
+em foco: **ZXtrack**. Linha editorial: tecnologia embarcada.
 Pauta em `docs/pautas/ep-piloto-ricardo-canela.md`.
+
+Por ser externo e independente, ele dá ao piloto uma credibilidade que um
+especialista da casa não daria. O episódio precisa respeitar isso: a Zirix
+pergunta e ele opina com liberdade, sem pedir que endosse produto.
 
 ## Proposta anterior para os 3 primeiros episódios (substituída pelo novo plano)
 
