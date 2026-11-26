@@ -51,7 +51,7 @@ dados da porta CAN. Solução em foco: **ZXtrack**. Tema provisório:
 | **Marcelo** (Diretor) | Ideal (empresa de ônibus, **cliente da Zirix**) | **Operadora, diretor** | "O que a operação espera da tecnologia embarcada, e o que ainda não entrega" | Cliente: autorização por escrito para citar a relação e os resultados. Sem preço nem contrato. Termo de imagem. |
 | **Donos da Novacap** | Novacap (empresa de ônibus, **cliente da Zirix**) | **Operadora, decisor** | "Por que o dono de uma empresa de ônibus investe em tecnologia, e como mede o retorno" | Voz de quem assina o cheque: retorno, gestão, pessoas. Cliente: autorização por escrito para citar a relação e os resultados. Dois donos + dois apresentadores = **4 microfones**: confirmar com o filmmaker. Sem preço nem contrato. |
 | **Daniel Lopes** (Diretor) | Consórcios de ônibus da cidade do Rio de Janeiro | **Setor / institucional** | "Tecnologia em escala: como um sistema de transporte inteiro passa a operar com dado" | Maior alcance e autoridade da lista. Tema **político e de segurança é zona de risco** (tarifa, subsídio, concessão, violência contra ônibus): conversa prévia para deixar fora; o foco é tecnologia, padronização entre operadoras e gestão. Encaixe natural com o **ZX ITS**. Confirmar se o consórcio é cliente. |
-| **Rui** | Streamax (fabricante de videotelemetria: câmeras, MDVR, ADAS e DMS) | Fabricante / fornecedor | "IA embarcada: o que a câmera já entende do motorista e da via" | É o episódio que leva **IA** para o podcast. Videotelemetria costuma ser vendida como segurança patrimonial: aqui o foco é **condução, fadiga, distração e prevenção de acidente**, nunca roubo (§11). Sem anúncio de produto. Dizer se a Streamax é fornecedora da Zirix. |
+| **Rui** | Streamax (fabricante de videotelemetria; **fornecedora da Zirix**: o **ZX ITS** é o **XPad** da Streamax com o software da Zirix) | Parceiro de hardware | **Episódio de lançamento do ZX ITS**: "IA embarcada no ônibus: o que nasce quando hardware e software se juntam" | Ainda não lançado: nada do ZX ITS vai ao ar antes da data oficial. Episódio declaradamente de lançamento (pode falar do produto, sem preço). Dizer no ar a parceria com a Streamax. Foco em condução, fadiga, distração, prevenção de acidente e operação, nunca roubo (§11). |
 
 ## Convidados que são clientes (Novacap e Ideal)
 
@@ -67,19 +67,22 @@ dados da porta CAN. Solução em foco: **ZXtrack**. Tema provisório:
 
 ## Ordem proposta (a confirmar com a Mariana)
 
-Alternar fornecedor/consultor e operação, para o podcast não virar feira de
-fornecedores. Com duas operadoras disponíveis, metade do primeiro ciclo é voz
-do cliente (regra do §4):
+Duas fases. A primeira é do **ZXtrack** (já rodando). A segunda abre o
+**ZX ITS**: primeiro o problema, contado por quem opera a cidade, depois a
+solução, no episódio de lançamento com a Streamax.
 
 | # | Convidado | Tema | Por quê nessa posição |
 |---|---|---|---|
 | Piloto / EP01 | Ricardo Canela (consultor) | Instalação que faz a tecnologia funcionar | Independente, prático, abre com credibilidade |
-| EP02 | Donos da Novacap | Por que investir em tecnologia e como medir o retorno | O decisor falando para decisores: maior poder de prova social e de lead |
+| EP02 | Donos da Novacap (cliente) | Por que investir em tecnologia e como medir o retorno | O decisor falando para decisores |
 | EP03 | Davi Reis (Massy) | Telemetria pela rede CAN | Aprofunda o dado depois de ouvir o dono |
-| EP04 | Marcelo (Ideal) | O que a operação espera da tecnologia | Segunda voz de operação, agora do dia a dia |
-| EP05 | Rui (Streamax) | IA embarcada e videotelemetria | Fecha o ciclo com o tema mais "futuro" |
-| EP06 | João Pedro (Jotapê) + Fabio | Bastidores do ZXtrack: como se constrói uma plataforma de telemetria | Único episódio sobre a solução da casa, depois de 5 episódios de confiança. Formato de engenharia (decisões, erros, aprendizados), não de demonstração. Dizer no ar que a Jotapê é parceira e apoiadora. |
-| EP07 (abre a fase ZX ITS) | Daniel Lopes (consórcios do Rio) | Tecnologia em escala no transporte da cidade | O nome de maior peso abre a segunda fase, quando o ZX ITS entra no foco (a partir de jan/2027). Se a Mariana preferir impacto no lançamento, ele pode trocar de lugar com o EP02. |
+| EP04 | Marcelo, diretor da Ideal (cliente) | O que a operação espera da tecnologia | Segunda voz de operação |
+| EP05 | João Pedro (Jotapê) + Fabio | Bastidores do ZXtrack | Fecha a fase ZXtrack com a solução da casa, depois de 4 episódios de confiança |
+| EP06 (abre a fase ZX ITS) | Daniel Lopes (consórcios do Rio) | Tecnologia em escala no transporte da cidade | Apresenta o **problema** do sistema urbano; prepara o lançamento sem citar o produto |
+| EP07 (lançamento do ZX ITS) | Rui (Streamax) + Fabio | IA embarcada no ônibus: XPad + software Zirix | A **solução**. Gravar perto da data oficial; pode virar evento ou live, com cortes e anúncios próprios |
+
+**Sigilo:** até o lançamento oficial, nenhum episódio, corte ou legenda cita o
+ZX ITS, o XPad ou a parceria em detalhes. Combinar com Daniel e Rui.
 
 ## Proposta anterior para os 3 primeiros episódios (substituída pelo novo plano)
 
