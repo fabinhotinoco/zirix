@@ -15,7 +15,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw
 
-from fundo_tv import VERMELHO, _logo, caber, fonte, original
+from fundo_tv import ASSINATURA, VERMELHO, _logo, caber, fonte, original
 
 BRANCO = (255, 255, 255)
 TEXTO_CLARO = (255, 232, 230)
@@ -35,7 +35,7 @@ def _bloco_marca(im: Image.Image, larg_logo: int, y: int, tam_podcast: int, tam_
     _centro(d, im.width, y, "P O D C A S T", fonte(tam_podcast), BRANCO)
     y += int(tam_podcast * 1.35)
     if subtitulo:
-        _centro(d, im.width, y, "a conversa de quem opera ônibus", fonte(tam_sub, False), TEXTO_CLARO)
+        _centro(d, im.width, y, " ".join(ASSINATURA), fonte(tam_sub, False), TEXTO_CLARO)
         y += int(tam_sub * 1.4)
     return y
 

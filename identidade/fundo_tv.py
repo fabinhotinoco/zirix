@@ -27,7 +27,7 @@ FUNDO = (248, 247, 245)
 FAIXA = (239, 237, 233)
 CORES = {"vermelho": VERMELHO, "grafite": GRAFITE, "cinza": CINZA}
 MAX_PATROCINADORES = 4
-ASSINATURA = ("a conversa de quem", "opera ônibus")  # duas linhas no layout horizontal
+ASSINATURA = ("a tecnologia que", "move frotas")  # duas linhas no layout horizontal
 
 
 def fonte(tam: int, negrito: bool = True) -> ImageFont.FreeTypeFont:

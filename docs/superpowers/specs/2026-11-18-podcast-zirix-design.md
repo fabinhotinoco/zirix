@@ -52,6 +52,8 @@ que a pessoa viu.
 | Influenciador | Gerente de manutenção, de frota, de tráfego | Disponibilidade da frota, consumo, quebra, motorista |
 | Segmentos | Urbano/consórcio · intermunicipal · fretamento | Dores diferentes; cada episódio declara para quem é |
 
+**Assinatura (decisão do Fabio, 26/11/2026):** "a tecnologia que move frotas".
+
 **Posicionamento:** o podcast de quem opera ônibus, feito por quem está dentro
 da operação (tecnologia embarcada nos consórcios do Rio). Fala de operação, não
 de produto.

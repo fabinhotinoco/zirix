@@ -28,7 +28,7 @@ engenharia e do cuidado, não da venda.
 ## Roteiro
 
 ### Abertura (3 min)
-- Fabio apresenta o podcast: "a conversa de quem move frotas" (ou a frase escolhida).
+- Fabio apresenta o podcast: "Zirix Podcast, a tecnologia que move frotas".
 - Saulo apresenta o Ricardo: trajetória e quantos veículos já passaram pelas mãos dele.
 
 ### Bloco 1 · Quem é o instalador de tecnologia embarcada (8 min)
