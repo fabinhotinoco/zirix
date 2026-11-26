@@ -17,7 +17,13 @@
 | **João Pedro (Jotapê, software house parceira)** | Desenvolvimento de software | Como nasce um sistema de gestão de frota · integração entre sistemas (sempre ao lado de alguém da operação, para não virar conversa de fornecedor) |
 | **Saulo** | Apresentador. Especialista em ZXbus e ZX ITS | Conduz. Pode assumir um "Zirix explica" solo |
 
-## Proposta para os 3 primeiros episódios
+## Primeiro convidado (piloto, definido pelo Fabio em 26/11/2026)
+
+**Ricardo Canela**, especialista em instalação de equipamento embarcado em
+veículos. Solução em foco: **ZXtrack**. Linha editorial: tecnologia embarcada.
+Pauta em `docs/pautas/ep-piloto-ricardo-canela.md`.
+
+## Proposta anterior para os 3 primeiros episódios (substituída pelo novo plano)
 
 | Episódio | Gravação | Formato | Convidado | Tema (provisório) | Por quê |
 |---|---|---|---|---|---|
