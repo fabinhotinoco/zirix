@@ -73,8 +73,8 @@ de produto.
 |---|---|
 | 23 a 27/11/2026 | Equipamento chega; número comercial conectado na TalkWork; ingestão, sincronia e transcrição montadas; **gravação de teste** na sexta (27/11) |
 | 30/11 a 04/12 | Montagem, cortes, legendas e textos; configuração da TalkWork; modelos de mensagem enviados à Meta |
-| 07 a 11/12 | **Episódio piloto (EP00)** de ponta a ponta, com lead de teste caindo no ZXCRM e no WhatsApp |
-| 14 a 18/12 | Gravação do **EP01 e do EP02** |
+| Dezembro, data a confirmar | **Piloto com o Ricardo Canela** (ZXtrack), com filmmaker profissional convidado pela Mariana, de ponta a ponta e com lead de teste caindo no ZXCRM e no WhatsApp. Pauta em `docs/pautas/ep-piloto-ricardo-canela.md` |
+| Até 18/12 | Gravação do **EP01 e do EP02** (se o piloto passar de 11/12, ver risco abaixo) |
 | 19/12 a 11/01/2027 | Ajustes; integração do Rafael testada; pauta e convidados de fevereiro fechados |
 | **12/01/2027 (terça)** | **Lançamento:** EP01 publicado. EP02 em 26/01. Quinzenal até julho de 2027 e depois semanal (§11) |
 
@@ -82,6 +82,12 @@ Motivo: entre o fim de dezembro e meados de janeiro quem decide em operadora de
 ônibus está de férias ou na operação de fim de ano. Lançar em janeiro usa o
 pico de alcance do lançamento com o público olhando e já começa com episódio de
 reserva.
+
+**Risco de calendário (26/11/2026):** com o piloto em data aberta, o
+lançamento em 12/01 só se mantém se o piloto acontecer até 11/12 e EP01 e EP02
+forem gravados até 18/12. Se o piloto ficar para a segunda quinzena, a
+alternativa é publicar o próprio piloto como EP01 (se a qualidade permitir) ou
+lançar em 26/01.
 
 ### Três quadros
 
@@ -276,9 +282,9 @@ Opus Clip ficam como plano B, se o fluxo próprio não segurar o semanal.
 
 | Canal | O que vai | Quem publica |
 |---|---|---|
-| **YouTube** (canal da Zirix) | Episódio completo + cortes como Shorts | Fabio ou Saulo |
-| **Spotify for Creators** | Episódio (vídeo e áudio), RSS para Apple Podcasts e Amazon Music | Fabio ou Saulo |
-| **Instagram** (@zirixrastreamento) | Reels (cortes), stories no lançamento, lives no cliente | Fabio ou Saulo |
+| **YouTube** (canal da Zirix) | Episódio completo + cortes como Shorts | Mariana |
+| **Spotify for Creators** | Episódio (vídeo e áudio), RSS para Apple Podcasts e Amazon Music | Mariana |
+| **Instagram** (@zirixrastreamento) | Reels (cortes), stories no lançamento, lives no cliente | Mariana |
 | **LinkedIn — perfil pessoal do Fabio** | Corte horizontal de 3 a 5 min e cortes verticais, com texto de opinião | Fabio |
 | **WhatsApp** (número comercial, na TalkWork) | Envio individual a leads que já conversaram, em cadência (a API oficial não publica Status) | Vendedores |
 
@@ -391,6 +397,7 @@ Sem landing page. Ela só passa a valer se houver anúncio fora da Meta.
 |---|---|
 | **Fabio** (Diretor Comercial) | Apresenta e produz. Cuida dos convidados (tipo A) do convite ao pós-gravação. É a voz da Zirix no LinkedIn. |
 | **Saulo** | Apresenta e produz. Responsável pela gravação, áudio e descarga. |
+| **Mariana** (mídias sociais da Zirix) | Dona do conteúdo nas redes: define pauta e calendário editorial com o Fabio, aprova os cortes, publica em todos os canais (exceto o LinkedIn pessoal do Fabio) e coordena o filmmaker. |
 | **Mauricio** e **Walner** | Atendem o WhatsApp do podcast, qualificam e fecham. **Dono por segmento:** um fica com urbano e consórcios, o outro com intermunicipal e fretamento. **Plantão alternado por dia** só para o primeiro contato de quem ainda não disse o segmento e para cobrir ausência do dono. Depois de identificado o segmento, o lead passa para o dono. |
 | **André** (externo) | Visitas presenciais aos leads prioridade A e aos convidados que pedirem diagnóstico. |
 
