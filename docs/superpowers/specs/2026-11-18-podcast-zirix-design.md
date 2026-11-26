@@ -109,12 +109,28 @@ especialidade a ser enviada pelo Fabio. Para o podcast não virar propaganda
 - Especialista fala de operação e de dado, não de produto, e segue as regras
   do §11.
 
-### Banco de temas inicial
+### Foco e banco de temas (atualizado em 26/11/2026, decisão do Fabio)
 
-Licitações e concessões · eletrificação da frota · tarifa zero · consumo de
-diesel · disponibilidade e manutenção · segurança, ADAS e DMS (com as ressalvas
-do §11) · gestão de motoristas · indicadores do poder concedente · fretamento
-corporativo e escolar · Lei 12.587 (Política Nacional de Mobilidade Urbana).
+**Duas soluções:** **ZXtrack** (rastreamento e gestão de frotas), que já está
+rodando e abre o podcast, e **ZX ITS** (transporte público por ônibus), que entra
+a partir de janeiro de 2027.
+
+**Linha editorial:** tecnologia embarcada e soluções únicas e inovadoras, em
+conversas com especialistas em telemetria, tecnologia, gestão de frota e
+desenvolvimento de hardware e software.
+
+**ZXtrack:** telemetria e dado de condução na prática · custo por km e consumo ·
+manutenção preditiva · gestão de motoristas e jornada · videotelemetria, ADAS e
+DMS (com as ressalvas do §11) · integração de sistemas e APIs · como nasce um
+hardware embarcado · firmware e conectividade · indicadores de frota para a
+diretoria.
+
+**ZX ITS (a partir de janeiro de 2027):** licitações e concessões · eletrificação
+da frota · tarifa zero · disponibilidade e manutenção · indicadores do poder
+concedente · CCO na prática · fretamento corporativo e escolar · Lei 12.587.
+
+**Fora da pauta, sempre:** roubo, furto, recuperação de veículo, violência e
+segurança pública. Ver §11.
 
 ## 5. Produção
 
@@ -489,6 +505,11 @@ partir da linha de base real. Meta inventada antes de ter dados vira ruído.
 ## 11. Regras e riscos
 
 **Precisão (vale para episódio, corte, legenda e WhatsApp):**
+- **Tema proibido (decisão do Fabio):** nunca mencionar roubo, furto,
+  recuperação de veículo, violência ou segurança pública, nem em episódio,
+  corte, legenda, título, anúncio, material de isca, resposta da IA da TalkWork
+  ou mensagem de WhatsApp. O podcast fala de tecnologia embarcada, inovação e
+  gestão. Se um convidado puxar o assunto, o trecho sai na edição.
 - Rastreamento é **obrigação de meio**. Nunca prometer recuperação de veículo,
   pronta-resposta ou acionamento de autoridade.
 - Caso do Rio: a solução está implantada **nos consórcios operadores** do Rio,
