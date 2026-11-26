@@ -106,43 +106,47 @@ def _logo(rgb: tuple[int, int, int] | None, largura: int, altura: int) -> Image.
 
 
 def gerar(saida: Path, patrocinadores: list[Path | str], cor: str | None = None, faixa: bool = True,
-          tema: str = "claro", layout: str = "horizontal", apoio_original: bool = False) -> Path:
+          tema: str = "claro", layout: str = "horizontal", apoio_original: bool = False,
+          escala: int = 1) -> Path:
     """`patrocinadores`: arquivo de logo (PNG/JPG) ou, se não for arquivo, o nome da empresa.
 
     tema: claro | branco | vermelho. layout: horizontal | centralizado.
     apoio_original: faixa de apoio branca com os logos nas cores originais.
+    escala: 1 = Full HD (1920x1080); 2 = 4K (3840x2160), desenhado nativamente (não é ampliação).
     """
     if len(patrocinadores) > MAX_PATROCINADORES:
         raise ValueError(f"no máximo {MAX_PATROCINADORES} patrocinadores na faixa")
+    S = lambda v: int(round(v * escala))  # noqa: E731 — coordenadas do layout Full HD na escala pedida
+    LW, LH = S(W), S(H)
     t = TEMAS[tema]
     cor_apoio = CORES[cor or t["apoio"]]
-    im = Image.new("RGBA", (W, H), t["fundo"] + (255,))
+    im = Image.new("RGBA", (LW, LH), t["fundo"] + (255,))
     d = ImageDraw.Draw(im)
     base = 0 if faixa else 110
 
     if layout == "horizontal":
-        lg = _logo(t["marca"], 760, 300)
-        im.alpha_composite(lg, (200, 430 + base - lg.height // 2))
-        d.rectangle([1030, 280 + base, 1038, 600 + base], fill=t["destaque"])
-        d.text((1090, 300 + base), "PODCAST", font=fonte(124), fill=t["destaque"])
-        d.text((1096, 470 + base), "a conversa de quem", font=fonte(46, False), fill=t["texto"])
-        d.text((1096, 530 + base), "opera ônibus", font=fonte(46, False), fill=t["texto"])
+        lg = _logo(t["marca"], S(760), S(300))
+        im.alpha_composite(lg, (S(200), S(430 + base) - lg.height // 2))
+        d.rectangle([S(1030), S(280 + base), S(1038), S(600 + base)], fill=t["destaque"])
+        d.text((S(1090), S(300 + base)), "PODCAST", font=fonte(S(124)), fill=t["destaque"])
+        d.text((S(1096), S(470 + base)), "a conversa de quem", font=fonte(S(46), False), fill=t["texto"])
+        d.text((S(1096), S(530 + base)), "opera ônibus", font=fonte(S(46), False), fill=t["texto"])
     else:
-        lg = _logo(t["marca"], 820, 300)
-        im.alpha_composite(lg, ((W - lg.width) // 2, 150 + base))
-        f = fonte(96); txt = "P O D C A S T"
-        d.text(((W - d.textlength(txt, font=f)) / 2, 150 + base + lg.height + 40), txt, font=f, fill=t["destaque"])
-        sub = "a conversa de quem opera ônibus"; fs = fonte(40, False)
-        d.text(((W - d.textlength(sub, font=fs)) / 2, 150 + base + lg.height + 175), sub, font=fs, fill=t["texto"])
+        lg = _logo(t["marca"], S(820), S(300))
+        im.alpha_composite(lg, ((LW - lg.width) // 2, S(150 + base)))
+        f = fonte(S(96)); txt = "P O D C A S T"
+        d.text(((LW - d.textlength(txt, font=f)) / 2, S(150 + base) + lg.height + S(40)), txt, font=f, fill=t["destaque"])
+        sub = "a conversa de quem opera ônibus"; fs = fonte(S(40), False)
+        d.text(((LW - d.textlength(sub, font=fs)) / 2, S(150 + base) + lg.height + S(175)), sub, font=fs, fill=t["texto"])
 
     if faixa:
         cor_faixa = (255, 255, 255) if apoio_original else t["faixa"]
         rotulo = VERMELHO if apoio_original else t["destaque"]
-        d.rectangle([0, 800, W, H], fill=cor_faixa)
+        d.rectangle([0, S(800), LW, LH], fill=cor_faixa)
         if not apoio_original:
-            d.rectangle([0, 800, W, 806], fill=t["linha"])
-        d.text((200, 900), "APOIO", font=fonte(34), fill=rotulo)
-        slot_w, slot_h, gap, x0, y0 = 300, 130, 40, 420, 860
+            d.rectangle([0, S(800), LW, S(806)], fill=t["linha"])
+        d.text((S(200), S(900)), "APOIO", font=fonte(S(34)), fill=rotulo)
+        slot_w, slot_h, gap, x0, y0 = S(300), S(130), S(40), S(420), S(860)
         for i in range(MAX_PATROCINADORES):
             x = x0 + i * (slot_w + gap)
             if i < len(patrocinadores):
@@ -152,13 +156,16 @@ def gerar(saida: Path, patrocinadores: list[Path | str], cor: str | None = None,
                     bruto = original(Path(item)) if eh_arquivo else nome_como_logo(str(item), GRAFITE)
                 else:
                     bruto = monocromatico(Path(item), cor_apoio) if eh_arquivo else nome_como_logo(str(item), cor_apoio)
+                if not eh_arquivo and escala != 1:
+                    bruto = bruto.resize((bruto.width * escala, bruto.height * escala), Image.LANCZOS)
                 # nomes em texto mantêm o mesmo tamanho; só logos de arquivo são ajustados à caixa
-                lg = caber(bruto, slot_w - 40, slot_h - 20) if eh_arquivo or bruto.width > slot_w - 40 else bruto
+                lg = (caber(bruto, slot_w - S(40), slot_h - S(20))
+                      if eh_arquivo or bruto.width > slot_w - S(40) else bruto)
                 im.alpha_composite(lg, (x + (slot_w - lg.width) // 2, y0 + (slot_h - lg.height) // 2))
             elif not patrocinadores:
-                d.rounded_rectangle([x, y0, x + slot_w, y0 + slot_h], 14, outline=t["texto"], width=3)
-                tx = "SEU LOGO AQUI"
-                d.text((x + (slot_w - d.textlength(tx, font=fonte(24))) / 2, y0 + 50), tx, font=fonte(24), fill=t["texto"])
+                d.rounded_rectangle([x, y0, x + slot_w, y0 + slot_h], S(14), outline=t["texto"], width=S(3))
+                tx = "SEU LOGO AQUI"; ft = fonte(S(24))
+                d.text((x + (slot_w - d.textlength(tx, font=ft)) / 2, y0 + S(50)), tx, font=ft, fill=t["texto"])
     im.convert("RGB").save(saida)
     return Path(saida)
 
@@ -172,7 +179,9 @@ if __name__ == "__main__":
     ap.add_argument("--tema", choices=sorted(TEMAS), default="claro")
     ap.add_argument("--apoio-original", action="store_true",
                     help="faixa de apoio branca, com os logos nas cores originais")
+    ap.add_argument("--4k", dest="quatro_k", action="store_true", help="gera em 3840x2160 (4K)")
     ap.add_argument("--layout", choices=["horizontal", "centralizado"], default="horizontal")
     ap.add_argument("--sem-faixa", action="store_true")
     a = ap.parse_args()
-    print(gerar(a.saida, a.patrocinadores, a.cor, not a.sem_faixa, a.tema, a.layout, a.apoio_original))
+    print(gerar(a.saida, a.patrocinadores, a.cor, not a.sem_faixa, a.tema, a.layout, a.apoio_original,
+                2 if a.quatro_k else 1))
