@@ -10,7 +10,7 @@
 | Nome | Especialidade | Temas em que é a melhor voz |
 |---|---|---|
 | **Rodrigo Simonin** | 25 anos de experiência. CCO, supervisão de CCO e operacional, hardware e configuração. Sênior em ZXbus, ZX ITS e todo o ecossistema Zirix | Como funciona um CCO por dentro · o que o CCO precisa ver em tempo real · supervisão de operação |
-| **Davi Reis** | Telemetria, videotelemetria e firmware. Mais de 20 anos em sistemas de geolocalização | Telemetria e consumo de diesel · videotelemetria, ADAS e DMS (o que funciona e onde estão os limites) · dado do barramento CAN |
+| **Davi Reis** (Massy, apoiadora do podcast) | Telemetria via **G40pro** com dados coletados da porta **CAN** dos veículos. Mais de 20 anos em sistemas de geolocalização | Telemetria pela rede CAN: o que dá para ler do veículo, como vira indicador de consumo, condução e manutenção · videotelemetria, ADAS e DMS |
 | **Marcos Nunes** | Ecossistema Zirix e CCO. Ministra os treinamentos dos sistemas | Treinamento de equipe · por que o sistema sozinho não resolve · rotina de CCO |
 | **Arthur** | ZXbus e ZX ITS | Implantação em frota grande sem parar a operação · do pátio ao CCO |
 | **Evandro** | ZXbus e ZX ITS, com vasta experiência em transporte público urbano | Indicadores cobrados pelo poder concedente · concessão e operação urbana |
@@ -27,6 +27,22 @@ Pauta em `docs/pautas/ep-piloto-ricardo-canela.md`.
 Por ser externo e independente, ele dá ao piloto uma credibilidade que um
 especialista da casa não daria. O episódio precisa respeitar isso: a Zirix
 pergunta e ele opina com liberdade, sem pedir que endosse produto.
+
+## Segundo convidado confirmado (definido pelo Fabio em 26/11/2026)
+
+**Davi Reis**, da **Massy**, especialista em telemetria via **G40pro** com
+dados da porta CAN. Solução em foco: **ZXtrack**. Tema provisório:
+*"O que o veículo já sabe e o gestor ainda não usa: telemetria pela rede CAN"*.
+
+- **Transparência:** a Massy é apoiadora do podcast. Dizer isso na apresentação
+  do Davi. Público técnico perdoa patrocínio, não perdoa propaganda escondida.
+- **G40pro como exemplo, não como anúncio:** o episódio fala de telemetria CAN
+  em geral; o G40pro entra como caso prático, sem preço nem comparação com
+  concorrentes.
+- **Sem sobreposição com o piloto:** com o Ricardo, a rede CAN aparece só do
+  lado da instalação (conexão física, riscos à parte elétrica e à garantia).
+  O que se lê da CAN e como vira indicador fica para o Davi. A pergunta 8 da
+  pauta do Ricardo foi ajustada para isso.
 
 ## Proposta anterior para os 3 primeiros episódios (substituída pelo novo plano)
 

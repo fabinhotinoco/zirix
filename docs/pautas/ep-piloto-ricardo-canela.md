@@ -45,7 +45,7 @@ engenharia e do cuidado, não da venda.
 7. Leve e pesado: o que muda de um carro de frota para um caminhão ou ônibus?
 
 ### Bloco 3 · Telemetria, câmeras e o veículo moderno (10 min)
-8. Ler dado da rede CAN: o que dá para tirar do veículo e onde estão os limites?
+8. Conectar na rede CAN: como fazer sem risco para a parte elétrica do veículo? (o que se lê da CAN fica para o episódio do Davi Reis)
 9. Câmeras, ADAS e DMS: por que a posição e a calibração mudam tudo?
 10. Como instalar sem afetar a garantia de fábrica e a parte elétrica do veículo?
 
@@ -65,7 +65,7 @@ engenharia e do cuidado, não da venda.
 | Erro de instalação mais comum | Pergunta 4 | "O equipamento não estava com defeito…" |
 | Instalação ruim = dado ruim | Pergunta 5 | O impacto no relatório do gestor |
 | História de campo | Pergunta 6 | Melhor candidato a corte com mais alcance |
-| Rede CAN explicada em 60 s | Pergunta 8 | Corte educativo, bom para o LinkedIn |
+| Conectar na CAN sem risco | Pergunta 8 | Corte educativo, bom para o LinkedIn |
 | Checklist de instalação | Pergunta 12 | Vira material de isca (PDF) |
 | O que exigir de quem instala | Pergunta 13 | Gancho comercial sem ser venda |
 
