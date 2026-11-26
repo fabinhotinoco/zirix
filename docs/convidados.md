@@ -48,9 +48,21 @@ dados da porta CAN. Solução em foco: **ZXtrack**. Tema provisório:
 
 | Convidado | Empresa | Tipo | Tema provável | Cuidados |
 |---|---|---|---|---|
-| **Marcelo** | Ideal | A confirmar: se for a operadora de ônibus, é **voz do cliente**, o convidado mais valioso para a regra do §4 | "O que a operação espera da tecnologia embarcada, e o que ainda não entrega" | Sem citar contrato, preço ou fornecedores pelo nome. Termo de imagem. Confirmar cargo. |
-| **Donos da Novacap** | Novacap (empresa de ônibus) | **Operadora, decisor** | "Por que o dono de uma empresa de ônibus investe em tecnologia, e como mede o retorno" | Voz de quem assina o cheque: retorno, gestão, pessoas. Se a Novacap for cliente da Zirix, autorização formal para citar a relação. Dois donos + dois apresentadores = **4 microfones**: confirmar com o filmmaker. Sem preço nem contrato. |
+| **Marcelo** (Diretor) | Ideal (empresa de ônibus, **cliente da Zirix**) | **Operadora, diretor** | "O que a operação espera da tecnologia embarcada, e o que ainda não entrega" | Cliente: autorização por escrito para citar a relação e os resultados. Sem preço nem contrato. Termo de imagem. |
+| **Donos da Novacap** | Novacap (empresa de ônibus, **cliente da Zirix**) | **Operadora, decisor** | "Por que o dono de uma empresa de ônibus investe em tecnologia, e como mede o retorno" | Voz de quem assina o cheque: retorno, gestão, pessoas. Cliente: autorização por escrito para citar a relação e os resultados. Dois donos + dois apresentadores = **4 microfones**: confirmar com o filmmaker. Sem preço nem contrato. |
 | **Rui** | Streamax (fabricante de videotelemetria: câmeras, MDVR, ADAS e DMS) | Fabricante / fornecedor | "IA embarcada: o que a câmera já entende do motorista e da via" | É o episódio que leva **IA** para o podcast. Videotelemetria costuma ser vendida como segurança patrimonial: aqui o foco é **condução, fadiga, distração e prevenção de acidente**, nunca roubo (§11). Sem anúncio de produto. Dizer se a Streamax é fornecedora da Zirix. |
+
+## Convidados que são clientes (Novacap e Ideal)
+
+- São **casos reais**, o ativo mais forte do podcast. Antes da gravação,
+  levantar com eles 1 ou 2 resultados que aceitem citar (ex.: indicador que
+  melhorou, processo que mudou), em termos que eles aprovem.
+- **Conversa prévia de 15 min** com o Fabio: alinhar o que pode e o que não pode
+  ir ao ar e ouvir se há alguma insatisfação aberta. Problema pendente se
+  resolve antes, nunca no microfone.
+- Aprovação do corte final em 48 h, como com todo convidado externo.
+- Eles falam da própria operação; a Zirix aparece como parte da história, sem
+  depoimento ensaiado.
 
 ## Ordem proposta (a confirmar com a Mariana)
 
