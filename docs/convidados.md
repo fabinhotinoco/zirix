@@ -49,18 +49,22 @@ dados da porta CAN. Solução em foco: **ZXtrack**. Tema provisório:
 | Convidado | Empresa | Tipo | Tema provável | Cuidados |
 |---|---|---|---|---|
 | **Marcelo** | Ideal | A confirmar: se for a operadora de ônibus, é **voz do cliente**, o convidado mais valioso para a regra do §4 | "O que a operação espera da tecnologia embarcada, e o que ainda não entrega" | Sem citar contrato, preço ou fornecedores pelo nome. Termo de imagem. Confirmar cargo. |
+| **Donos da Novacap** | Novacap (empresa de ônibus) | **Operadora, decisor** | "Por que o dono de uma empresa de ônibus investe em tecnologia, e como mede o retorno" | Voz de quem assina o cheque: retorno, gestão, pessoas. Se a Novacap for cliente da Zirix, autorização formal para citar a relação. Dois donos + dois apresentadores = **4 microfones**: confirmar com o filmmaker. Sem preço nem contrato. |
 | **Rui** | Streamax (fabricante de videotelemetria: câmeras, MDVR, ADAS e DMS) | Fabricante / fornecedor | "IA embarcada: o que a câmera já entende do motorista e da via" | É o episódio que leva **IA** para o podcast. Videotelemetria costuma ser vendida como segurança patrimonial: aqui o foco é **condução, fadiga, distração e prevenção de acidente**, nunca roubo (§11). Sem anúncio de produto. Dizer se a Streamax é fornecedora da Zirix. |
 
 ## Ordem proposta (a confirmar com a Mariana)
 
-Alternar fornecedor e operação, para o podcast não virar feira de fornecedores:
+Alternar fornecedor/consultor e operação, para o podcast não virar feira de
+fornecedores. Com duas operadoras disponíveis, metade do primeiro ciclo é voz
+do cliente (regra do §4):
 
 | # | Convidado | Tema | Por quê nessa posição |
 |---|---|---|---|
 | Piloto / EP01 | Ricardo Canela (consultor) | Instalação que faz a tecnologia funcionar | Independente, prático, abre com credibilidade |
-| EP02 | Marcelo (Ideal) | O que a operação espera da tecnologia | Voz do cliente logo no início dá prova social |
-| EP03 | Davi Reis (Massy) | Telemetria pela rede CAN | Aprofunda o dado depois de ouvir a operação |
-| EP04 | Rui (Streamax) | IA embarcada e videotelemetria | Fecha o primeiro ciclo com o tema mais "futuro" |
+| EP02 | Donos da Novacap | Por que investir em tecnologia e como medir o retorno | O decisor falando para decisores: maior poder de prova social e de lead |
+| EP03 | Davi Reis (Massy) | Telemetria pela rede CAN | Aprofunda o dado depois de ouvir o dono |
+| EP04 | Marcelo (Ideal) | O que a operação espera da tecnologia | Segunda voz de operação, agora do dia a dia |
+| EP05 | Rui (Streamax) | IA embarcada e videotelemetria | Fecha o ciclo com o tema mais "futuro" |
 
 ## Proposta anterior para os 3 primeiros episódios (substituída pelo novo plano)
 
