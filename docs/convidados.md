@@ -44,6 +44,24 @@ dados da porta CAN. Solução em foco: **ZXtrack**. Tema provisório:
   O que se lê da CAN e como vira indicador fica para o Davi. A pergunta 8 da
   pauta do Ricardo foi ajustada para isso.
 
+## Também disponíveis (informado pelo Fabio em 26/11/2026)
+
+| Convidado | Empresa | Tipo | Tema provável | Cuidados |
+|---|---|---|---|---|
+| **Marcelo** | Ideal | A confirmar: se for a operadora de ônibus, é **voz do cliente**, o convidado mais valioso para a regra do §4 | "O que a operação espera da tecnologia embarcada, e o que ainda não entrega" | Sem citar contrato, preço ou fornecedores pelo nome. Termo de imagem. Confirmar cargo. |
+| **Rui** | Streamax (fabricante de videotelemetria: câmeras, MDVR, ADAS e DMS) | Fabricante / fornecedor | "IA embarcada: o que a câmera já entende do motorista e da via" | É o episódio que leva **IA** para o podcast. Videotelemetria costuma ser vendida como segurança patrimonial: aqui o foco é **condução, fadiga, distração e prevenção de acidente**, nunca roubo (§11). Sem anúncio de produto. Dizer se a Streamax é fornecedora da Zirix. |
+
+## Ordem proposta (a confirmar com a Mariana)
+
+Alternar fornecedor e operação, para o podcast não virar feira de fornecedores:
+
+| # | Convidado | Tema | Por quê nessa posição |
+|---|---|---|---|
+| Piloto / EP01 | Ricardo Canela (consultor) | Instalação que faz a tecnologia funcionar | Independente, prático, abre com credibilidade |
+| EP02 | Marcelo (Ideal) | O que a operação espera da tecnologia | Voz do cliente logo no início dá prova social |
+| EP03 | Davi Reis (Massy) | Telemetria pela rede CAN | Aprofunda o dado depois de ouvir a operação |
+| EP04 | Rui (Streamax) | IA embarcada e videotelemetria | Fecha o primeiro ciclo com o tema mais "futuro" |
+
 ## Proposta anterior para os 3 primeiros episódios (substituída pelo novo plano)
 
 | Episódio | Gravação | Formato | Convidado | Tema (provisório) | Por quê |
