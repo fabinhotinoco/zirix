@@ -216,6 +216,17 @@ maior que o HEVC do iPhone.
 
 ## 6. Pós-produção: o que acontece neste ambiente
 
+> **Atualização de 26/11/2026 (decisão do Fabio):** a edição passa a ser do
+> **filmmaker e da Mariana**. O filmmaker entrega o **bruto à Mariana**, os dois
+> editam o episódio e os cortes, e a Mariana publica. O fluxo abaixo deixa de
+> ser o caminho principal e vira **apoio opcional**, usado quando a Mariana
+> pedir: transcrição completa, sugestão de cortes com minutagem, legendas em
+> arquivo (SRT/ASS), títulos, descrições e capítulos, e o relatório de leads
+> por episódio (§10, que continua comigo). Regras que continuam valendo para
+> quem editar: §11 (tema proibido, sem preço, sem cliente sem autorização),
+> código `[EPxx-YY]` no chamado de cada corte (§8.1) e cópia do bruto no HD
+> da Zirix antes de qualquer edição.
+
 ### 6.1 Fluxo de cada episódio
 
 0. **Como é disparado:** Fabio ou Saulo abrem uma sessão do Claude no ambiente

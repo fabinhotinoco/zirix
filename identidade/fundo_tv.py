@@ -27,6 +27,7 @@ FUNDO = (248, 247, 245)
 FAIXA = (239, 237, 233)
 CORES = {"vermelho": VERMELHO, "grafite": GRAFITE, "cinza": CINZA}
 MAX_PATROCINADORES = 4
+ASSINATURA = ("a conversa de quem", "opera ônibus")  # duas linhas no layout horizontal
 
 
 def fonte(tam: int, negrito: bool = True) -> ImageFont.FreeTypeFont:
@@ -107,7 +108,7 @@ def _logo(rgb: tuple[int, int, int] | None, largura: int, altura: int) -> Image.
 
 def gerar(saida: Path, patrocinadores: list[Path | str], cor: str | None = None, faixa: bool = True,
           tema: str = "claro", layout: str = "horizontal", apoio_original: bool = False,
-          escala: int = 1) -> Path:
+          escala: int = 1, assinatura: tuple[str, ...] = ASSINATURA) -> Path:
     """`patrocinadores`: arquivo de logo (PNG/JPG) ou, se não for arquivo, o nome da empresa.
 
     tema: claro | branco | vermelho. layout: horizontal | centralizado.
@@ -129,14 +130,14 @@ def gerar(saida: Path, patrocinadores: list[Path | str], cor: str | None = None,
         im.alpha_composite(lg, (S(200), S(430 + base) - lg.height // 2))
         d.rectangle([S(1030), S(280 + base), S(1038), S(600 + base)], fill=t["destaque"])
         d.text((S(1090), S(300 + base)), "PODCAST", font=fonte(S(124)), fill=t["destaque"])
-        d.text((S(1096), S(470 + base)), "a conversa de quem", font=fonte(S(46), False), fill=t["texto"])
-        d.text((S(1096), S(530 + base)), "opera ônibus", font=fonte(S(46), False), fill=t["texto"])
+        for i, linha in enumerate(assinatura):
+            d.text((S(1096), S(470 + 60 * i + base)), linha, font=fonte(S(46), False), fill=t["texto"])
     else:
         lg = _logo(t["marca"], S(820), S(300))
         im.alpha_composite(lg, ((LW - lg.width) // 2, S(150 + base)))
         f = fonte(S(96)); txt = "P O D C A S T"
         d.text(((LW - d.textlength(txt, font=f)) / 2, S(150 + base) + lg.height + S(40)), txt, font=f, fill=t["destaque"])
-        sub = "a conversa de quem opera ônibus"; fs = fonte(S(40), False)
+        sub = " ".join(assinatura); fs = fonte(S(40), False)
         d.text(((LW - d.textlength(sub, font=fs)) / 2, S(150 + base) + lg.height + S(175)), sub, font=fs, fill=t["texto"])
 
     if faixa:
@@ -182,6 +183,8 @@ if __name__ == "__main__":
     ap.add_argument("--4k", dest="quatro_k", action="store_true", help="gera em 3840x2160 (4K)")
     ap.add_argument("--layout", choices=["horizontal", "centralizado"], default="horizontal")
     ap.add_argument("--sem-faixa", action="store_true")
+    ap.add_argument("--assinatura", nargs="+", default=list(ASSINATURA),
+                    help="frase de assinatura, uma linha por argumento")
     a = ap.parse_args()
     print(gerar(a.saida, a.patrocinadores, a.cor, not a.sem_faixa, a.tema, a.layout, a.apoio_original,
-                2 if a.quatro_k else 1))
+                2 if a.quatro_k else 1, tuple(a.assinatura)))
