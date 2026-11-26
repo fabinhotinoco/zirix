@@ -56,7 +56,18 @@ def caber(im: Image.Image, w: int, h: int) -> Image.Image:
     return im.resize((max(1, int(im.width * k)), max(1, int(im.height * k))), Image.LANCZOS)
 
 
-def gerar(saida: Path, patrocinadores: list[Path], cor: str = "grafite", faixa: bool = True) -> Path:
+def nome_como_logo(nome: str, rgb: tuple[int, int, int]) -> Image.Image:
+    """Provisório enquanto não há o arquivo do logo: o nome da empresa em texto."""
+    f = fonte(50)
+    tmp = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+    w = int(tmp.textlength(nome, font=f)) + 10
+    im = Image.new("RGBA", (w, 90), (0, 0, 0, 0))
+    ImageDraw.Draw(im).text((5, 5), nome, font=f, fill=rgb + (255,))
+    return im.crop(im.getbbox())
+
+
+def gerar(saida: Path, patrocinadores: list[Path | str], cor: str = "grafite", faixa: bool = True) -> Path:
+    """`patrocinadores`: arquivo de logo (PNG/JPG) ou, se não for arquivo, o nome da empresa."""
     if len(patrocinadores) > MAX_PATROCINADORES:
         raise ValueError(f"no máximo {MAX_PATROCINADORES} patrocinadores na faixa")
     im = Image.new("RGBA", (W, H), FUNDO + (255,))
@@ -79,7 +90,11 @@ def gerar(saida: Path, patrocinadores: list[Path], cor: str = "grafite", faixa: 
         for i in range(MAX_PATROCINADORES):
             x = x0 + i * (slot_w + gap)
             if i < len(patrocinadores):
-                lg = caber(monocromatico(patrocinadores[i], CORES[cor]), slot_w - 40, slot_h - 30)
+                item = patrocinadores[i]
+                bruto = (monocromatico(Path(item), CORES[cor]) if Path(item).is_file()
+                         else nome_como_logo(str(item), CORES[cor]))
+                # nomes em texto mantêm o mesmo tamanho; só logos de arquivo são ajustados à caixa
+                lg = caber(bruto, slot_w - 40, slot_h - 50) if Path(item).is_file() or bruto.width > slot_w - 40 else bruto
                 im.alpha_composite(lg, (x + (slot_w - lg.width) // 2, y0 + (slot_h - lg.height) // 2))
             elif not patrocinadores:
                 d.rounded_rectangle([x, y0, x + slot_w, y0 + slot_h], 14, outline=(200, 198, 194), width=3)
@@ -93,7 +108,8 @@ def gerar(saida: Path, patrocinadores: list[Path], cor: str = "grafite", faixa: 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("saida", type=Path)
-    ap.add_argument("--patrocinadores", type=Path, nargs="*", default=[])
+    ap.add_argument("--patrocinadores", nargs="*", default=[],
+                    help="arquivo do logo ou nome da empresa (texto provisório)")
     ap.add_argument("--cor", choices=sorted(CORES), default="grafite")
     ap.add_argument("--sem-faixa", action="store_true")
     a = ap.parse_args()
