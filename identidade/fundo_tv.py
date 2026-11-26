@@ -66,41 +66,74 @@ def nome_como_logo(nome: str, rgb: tuple[int, int, int]) -> Image.Image:
     return im.crop(im.getbbox())
 
 
-def gerar(saida: Path, patrocinadores: list[Path | str], cor: str = "grafite", faixa: bool = True) -> Path:
-    """`patrocinadores`: arquivo de logo (PNG/JPG) ou, se não for arquivo, o nome da empresa."""
+TEMAS = {
+    # fundo, faixa, linha da faixa, cor do logo/destaque, cor do texto, cor dos apoiadores
+    "claro":    dict(fundo=FUNDO, faixa=FAIXA, linha=VERMELHO, marca=None, destaque=VERMELHO,
+                     texto=(70, 70, 70), apoio="grafite"),
+    "branco":   dict(fundo=(255, 255, 255), faixa=(255, 255, 255), linha=VERMELHO, marca=None,
+                     destaque=VERMELHO, texto=(70, 70, 70), apoio="vermelho"),
+    "vermelho": dict(fundo=VERMELHO, faixa=(178, 40, 37), linha=(255, 255, 255), marca=(255, 255, 255),
+                     destaque=(255, 255, 255), texto=(255, 232, 230), apoio="branco"),
+}
+CORES["branco"] = (255, 255, 255)
+
+
+def _logo(rgb: tuple[int, int, int] | None, largura: int, altura: int) -> Image.Image:
+    lg = Image.open(AQUI / "logo-zirix.png").convert("RGBA")
+    if rgb is not None:  # repinta mantendo a transparência (as ondas continuam em degradê)
+        novo = Image.new("RGBA", lg.size, rgb + (0,))
+        novo.putalpha(lg.getchannel("A"))
+        lg = novo
+    return caber(lg, largura, altura)
+
+
+def gerar(saida: Path, patrocinadores: list[Path | str], cor: str | None = None, faixa: bool = True,
+          tema: str = "claro", layout: str = "horizontal") -> Path:
+    """`patrocinadores`: arquivo de logo (PNG/JPG) ou, se não for arquivo, o nome da empresa.
+
+    tema: claro | branco | vermelho. layout: horizontal | centralizado.
+    """
     if len(patrocinadores) > MAX_PATROCINADORES:
         raise ValueError(f"no máximo {MAX_PATROCINADORES} patrocinadores na faixa")
-    im = Image.new("RGBA", (W, H), FUNDO + (255,))
+    t = TEMAS[tema]
+    cor_apoio = CORES[cor or t["apoio"]]
+    im = Image.new("RGBA", (W, H), t["fundo"] + (255,))
     d = ImageDraw.Draw(im)
-    topo = 0 if faixa else 110  # sem faixa, o bloco principal desce para o centro
+    base = 0 if faixa else 110
 
-    logo = Image.open(AQUI / "logo-zirix.png").convert("RGBA")
-    logo = caber(logo, 760, 300)
-    im.alpha_composite(logo, (200, 300 + topo - logo.height // 2 + 130))
-    d.rectangle([1030, 280 + topo, 1038, 600 + topo], fill=VERMELHO)
-    d.text((1090, 300 + topo), "PODCAST", font=fonte(124), fill=VERMELHO)
-    d.text((1096, 470 + topo), "a conversa de quem", font=fonte(46, False), fill=(70, 70, 70))
-    d.text((1096, 530 + topo), "opera ônibus", font=fonte(46, False), fill=(70, 70, 70))
+    if layout == "horizontal":
+        lg = _logo(t["marca"], 760, 300)
+        im.alpha_composite(lg, (200, 430 + base - lg.height // 2))
+        d.rectangle([1030, 280 + base, 1038, 600 + base], fill=t["destaque"])
+        d.text((1090, 300 + base), "PODCAST", font=fonte(124), fill=t["destaque"])
+        d.text((1096, 470 + base), "a conversa de quem", font=fonte(46, False), fill=t["texto"])
+        d.text((1096, 530 + base), "opera ônibus", font=fonte(46, False), fill=t["texto"])
+    else:
+        lg = _logo(t["marca"], 820, 300)
+        im.alpha_composite(lg, ((W - lg.width) // 2, 150 + base))
+        f = fonte(96); txt = "P O D C A S T"
+        d.text(((W - d.textlength(txt, font=f)) / 2, 150 + base + lg.height + 40), txt, font=f, fill=t["destaque"])
+        sub = "a conversa de quem opera ônibus"; fs = fonte(40, False)
+        d.text(((W - d.textlength(sub, font=fs)) / 2, 150 + base + lg.height + 175), sub, font=fs, fill=t["texto"])
 
     if faixa:
-        d.rectangle([0, 800, W, H], fill=FAIXA)
-        d.rectangle([0, 800, W, 806], fill=VERMELHO)
-        d.text((200, 900), "APOIO", font=fonte(34), fill=VERMELHO)
+        d.rectangle([0, 800, W, H], fill=t["faixa"])
+        d.rectangle([0, 800, W, 806], fill=t["linha"])
+        d.text((200, 900), "APOIO", font=fonte(34), fill=t["destaque"])
         slot_w, slot_h, gap, x0, y0 = 300, 130, 40, 420, 860
         for i in range(MAX_PATROCINADORES):
             x = x0 + i * (slot_w + gap)
             if i < len(patrocinadores):
                 item = patrocinadores[i]
-                bruto = (monocromatico(Path(item), CORES[cor]) if Path(item).is_file()
-                         else nome_como_logo(str(item), CORES[cor]))
+                eh_arquivo = Path(str(item)).is_file()
+                bruto = monocromatico(Path(item), cor_apoio) if eh_arquivo else nome_como_logo(str(item), cor_apoio)
                 # nomes em texto mantêm o mesmo tamanho; só logos de arquivo são ajustados à caixa
-                lg = caber(bruto, slot_w - 40, slot_h - 50) if Path(item).is_file() or bruto.width > slot_w - 40 else bruto
+                lg = caber(bruto, slot_w - 40, slot_h - 50) if eh_arquivo or bruto.width > slot_w - 40 else bruto
                 im.alpha_composite(lg, (x + (slot_w - lg.width) // 2, y0 + (slot_h - lg.height) // 2))
             elif not patrocinadores:
-                d.rounded_rectangle([x, y0, x + slot_w, y0 + slot_h], 14, outline=(200, 198, 194), width=3)
-                t = "SEU LOGO AQUI"
-                d.text((x + (slot_w - d.textlength(t, font=fonte(24))) / 2, y0 + 50), t,
-                       font=fonte(24), fill=(170, 168, 164))
+                d.rounded_rectangle([x, y0, x + slot_w, y0 + slot_h], 14, outline=t["texto"], width=3)
+                tx = "SEU LOGO AQUI"
+                d.text((x + (slot_w - d.textlength(tx, font=fonte(24))) / 2, y0 + 50), tx, font=fonte(24), fill=t["texto"])
     im.convert("RGB").save(saida)
     return Path(saida)
 
@@ -110,7 +143,9 @@ if __name__ == "__main__":
     ap.add_argument("saida", type=Path)
     ap.add_argument("--patrocinadores", nargs="*", default=[],
                     help="arquivo do logo ou nome da empresa (texto provisório)")
-    ap.add_argument("--cor", choices=sorted(CORES), default="grafite")
+    ap.add_argument("--cor", choices=sorted(CORES), default=None, help="cor dos apoiadores (padrão: a do tema)")
+    ap.add_argument("--tema", choices=sorted(TEMAS), default="claro")
+    ap.add_argument("--layout", choices=["horizontal", "centralizado"], default="horizontal")
     ap.add_argument("--sem-faixa", action="store_true")
     a = ap.parse_args()
-    print(gerar(a.saida, a.patrocinadores, a.cor, not a.sem_faixa))
+    print(gerar(a.saida, a.patrocinadores, a.cor, not a.sem_faixa, a.tema, a.layout))
