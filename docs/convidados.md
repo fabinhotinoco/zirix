@@ -14,7 +14,7 @@
 | **Marcos Nunes** | Ecossistema Zirix e CCO. Ministra os treinamentos dos sistemas | Treinamento de equipe · por que o sistema sozinho não resolve · rotina de CCO |
 | **Arthur** | ZXbus e ZX ITS | Implantação em frota grande sem parar a operação · do pátio ao CCO |
 | **Evandro** | ZXbus e ZX ITS, com vasta experiência em transporte público urbano | Indicadores cobrados pelo poder concedente · concessão e operação urbana |
-| **João Pedro (Jotapê, software house parceira e apoiadora)** | Desenvolvimento de software. **Desenvolveu o ZXtrack junto com a Zirix** | Bastidores do ZXtrack: como nasce uma plataforma de telemetria (decisões, arquitetura, o que mudou ouvindo cliente) · integração entre sistemas |
+| **João Pedro (Jotapê, software house parceira e apoiadora)** | Desenvolvimento de software. **Desenvolveu o ZXtrack junto com a Zirix** | **Sistemas de geolocalização e suas lógicas; a evolução e a IA no rastreamento** (EP05) · *Futuro:* bastidores do ZXtrack |
 | **Saulo** | Apresentador. Especialista em ZXbus e ZX ITS | Conduz. Pode assumir um "Zirix explica" solo |
 
 ## Primeiro convidado (piloto, definido pelo Fabio em 26/11/2026)
@@ -82,12 +82,30 @@ solução, no episódio de lançamento com a Streamax.
 | EP02 | Donos da Novacap (cliente) | Por que investir em tecnologia e como medir o retorno | O decisor falando para decisores |
 | EP03 | Davi Reis (Massy) | Videotelemetria pela rede CAN | Aprofunda o dado depois de ouvir o dono |
 | EP04 | Marcelo, diretor da Ideal (cliente) | O que a operação espera da tecnologia | Segunda voz de operação |
-| EP05 | João Pedro (Jotapê) + Fabio | Bastidores do ZXtrack | Fecha a fase ZXtrack com a solução da casa, depois de 4 episódios de confiança |
+| EP05 | João Pedro (Jotapê) + Fabio | Geolocalização por dentro: as lógicas, a evolução e a IA no rastreamento | Fecha a fase ZXtrack com o tema mais amplo e educativo; prepara o terreno para a IA do ZX ITS |
 | EP06 (abre a fase ZX ITS) | Daniel Lopes (consórcios do Rio) | Tecnologia em escala no transporte da cidade | Apresenta o **problema** do sistema urbano; prepara o lançamento sem citar o produto |
 | EP07 (lançamento do ZX ITS) | Rui (Streamax) + Fabio | IA embarcada no ônibus: XPad + software Zirix | A **solução**. Gravar perto da data oficial; pode virar evento ou live, com cortes e anúncios próprios |
 
 **Sigilo:** até o lançamento oficial, nenhum episódio, corte ou legenda cita o
 ZX ITS, o XPad ou a parceria em detalhes. Combinar com Daniel e Rui.
+
+## EP05: João Pedro (Jotapê) · decisão do Fabio em 27/11/2026
+
+**Tema:** sistemas de geolocalização em geral e suas lógicas, a evolução e a
+IA no rastreamento. Tema provisório: *"Geolocalização por dentro: como o
+rastreamento pensa, de onde veio e para onde a IA está levando"*.
+
+- **Linhas da conversa:** como um rastreador decide quando e o que enviar
+  (intervalos, ângulo, ignição, economia de dados); GPS, GNSS e rede celular
+  (2G desligando, 4G, LTE-M); de onde veio o rastreamento e o que mudou;
+  onde a IA já entra na plataforma (detecção de padrões e anomalias,
+  previsão de manutenção, rotas, leitura automática de eventos).
+- **Diferença para o EP07 (Rui):** o João fala da IA **na plataforma e nos
+  dados**; o Rui, da IA **embarcada na câmera do ônibus**. Os dois se
+  complementam.
+- **Cuidado:** "rastreamento" puxa o tema proibido. O foco é **lógica, dado e
+  gestão**; nada de roubo, recuperação ou segurança.
+- **Bastidores do ZXtrack** ficam no banco de temas para o futuro.
 
 ## Proposta anterior para os 3 primeiros episódios (substituída pelo novo plano)
 
