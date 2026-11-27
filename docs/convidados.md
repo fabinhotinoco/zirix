@@ -10,7 +10,7 @@
 | Nome | Especialidade | Temas em que é a melhor voz |
 |---|---|---|
 | **Rodrigo Simonin** | 25 anos de experiência. CCO, supervisão de CCO e operacional, hardware e configuração. Sênior em ZXbus, ZX ITS e todo o ecossistema Zirix | Como funciona um CCO por dentro · o que o CCO precisa ver em tempo real · supervisão de operação |
-| **Davi Reis** (Massy, apoiadora do podcast) | Telemetria via **G40pro** com dados coletados da porta **CAN** dos veículos. Mais de 20 anos em sistemas de geolocalização | Telemetria pela rede CAN: o que dá para ler do veículo, como vira indicador de consumo, condução e manutenção · videotelemetria, ADAS e DMS |
+| **Davi Reis** (Massy, apoiadora do podcast) | Telemetria via **G40pro** com dados coletados da porta **CAN** dos veículos. Mais de 20 anos em sistemas de geolocalização | **Videotelemetria pela rede CAN**: a imagem da câmera cruzada com o dado do veículo (velocidade, frenagem, RPM, consumo) para entender o que aconteceu e por quê |
 | **Marcos Nunes** | Ecossistema Zirix e CCO. Ministra os treinamentos dos sistemas | Treinamento de equipe · por que o sistema sozinho não resolve · rotina de CCO |
 | **Arthur** | ZXbus e ZX ITS | Implantação em frota grande sem parar a operação · do pátio ao CCO |
 | **Evandro** | ZXbus e ZX ITS, com vasta experiência em transporte público urbano | Indicadores cobrados pelo poder concedente · concessão e operação urbana |
@@ -32,7 +32,12 @@ pergunta e ele opina com liberdade, sem pedir que endosse produto.
 
 **Davi Reis**, da **Massy**, especialista em telemetria via **G40pro** com
 dados da porta CAN. Solução em foco: **ZXtrack**. Tema provisório:
-*"O que o veículo já sabe e o gestor ainda não usa: telemetria pela rede CAN"*.
+*"Videotelemetria pela rede CAN: quando a imagem encontra o dado do veículo"*.
+
+- **Diferença para o EP07 (Rui, Streamax):** o Davi mostra a videotelemetria
+  integrada aos dados da CAN no ZXtrack, para frota em geral. O Rui fala da IA
+  embarcada no ônibus, no lançamento do ZX ITS. Combinar com os dois para não
+  repetir exemplos.
 
 - **Transparência:** a Massy é apoiadora do podcast. Dizer isso na apresentação
   do Davi. Público técnico perdoa patrocínio, não perdoa propaganda escondida.
@@ -75,7 +80,7 @@ solução, no episódio de lançamento com a Streamax.
 |---|---|---|---|
 | Piloto / EP01 | Ricardo Canela (consultor) | Instalação que faz a tecnologia funcionar | Independente, prático, abre com credibilidade |
 | EP02 | Donos da Novacap (cliente) | Por que investir em tecnologia e como medir o retorno | O decisor falando para decisores |
-| EP03 | Davi Reis (Massy) | Telemetria pela rede CAN | Aprofunda o dado depois de ouvir o dono |
+| EP03 | Davi Reis (Massy) | Videotelemetria pela rede CAN | Aprofunda o dado depois de ouvir o dono |
 | EP04 | Marcelo, diretor da Ideal (cliente) | O que a operação espera da tecnologia | Segunda voz de operação |
 | EP05 | João Pedro (Jotapê) + Fabio | Bastidores do ZXtrack | Fecha a fase ZXtrack com a solução da casa, depois de 4 episódios de confiança |
 | EP06 (abre a fase ZX ITS) | Daniel Lopes (consórcios do Rio) | Tecnologia em escala no transporte da cidade | Apresenta o **problema** do sistema urbano; prepara o lançamento sem citar o produto |
