@@ -105,7 +105,15 @@ rastreamento pensa, de onde veio e para onde a IA está levando"*.
   complementam.
 - **Cuidado:** "rastreamento" puxa o tema proibido. O foco é **lógica, dado e
   gestão**; nada de roubo, recuperação ou segurança.
-- **Bastidores do ZXtrack** ficam no banco de temas para o futuro.
+- **Bastidores do ZXtrack** ficam no banco de temas para o futuro, com o
+  **Rodrigo Simonin** (Zirix) como convidado (decisão do Fabio, 27/11/2026).
+  Ver "Episódios futuros".
+
+## Episódios futuros (já decididos, sem data)
+
+| Tema | Convidado | Observações |
+|---|---|---|
+| **Bastidores do ZXtrack**: como se construiu, decisões, o que mudou ouvindo cliente | **Rodrigo Simonin** (Zirix; 25 anos de experiência, CCO, hardware e configuração) | Único episódio centrado numa solução da casa na fase ZXtrack. Formato de engenharia e operação, não demonstração de tela. O João Pedro (Jotapê) pode participar como segundo convidado, se fizer sentido. Entra depois do primeiro ciclo, quando o público já confia no podcast. |
 
 ## Proposta anterior para os 3 primeiros episódios (substituída pelo novo plano)
 
